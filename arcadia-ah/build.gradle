@@ -1,0 +1,25 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.140'
+}
+version = ah_version
+group = mod_group_id
+base { archivesName = 'arcadia-ah' }
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+neoForge {
+    version = project.neo_version
+    parchment { mappingsVersion = '2024.11.17'; minecraftVersion = '1.21.1' }
+    mods { "arcadia_ah" { sourceSet(sourceSets.main) } }
+}
+
+dependencies {
+    compileOnly project(':arcadia-lib')
+    compileOnly project(':arcadia-pets')
+    jarJar("com.zaxxer:HikariCP:[5.1.0,6.0.0)") { version { prefer '5.1.0' } }
+    implementation "com.zaxxer:HikariCP:5.1.0"
+    jarJar("com.mysql:mysql-connector-j:[8.3.0,9.0.0)") { version { prefer '8.3.0' } }
+    implementation "com.mysql:mysql-connector-j:8.3.0"
+}
+
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }

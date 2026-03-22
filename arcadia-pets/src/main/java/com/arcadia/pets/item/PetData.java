@@ -1,0 +1,254 @@
+package com.arcadia.pets.item;
+
+import com.arcadia.pets.skill.PetSkill;
+import com.arcadia.pets.skill.PetSkills;
+import com.arcadia.pets.skill.SkillInstance;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
+
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.UUID;
+
+public record PetData(
+        UUID petId,
+        String mobType,
+        PetRarity rarity,
+        EnumMap<PetStat, Integer> stats,
+        boolean modifierApplied,
+        String customName,
+        int hunger,
+        int happiness,
+        List<SkillInstance> skills
+) {
+
+    public PetData(UUID petId, String mobType, PetRarity rarity, EnumMap<PetStat, Integer> stats, boolean modifierApplied, String customName, int hunger, int happiness) {
+        this(petId, mobType, rarity, stats, modifierApplied, customName, hunger, happiness, new ArrayList<>());
+    }
+
+    private static final String TAG_PET_ID = "PetId";
+    private static final String TAG_MOB_TYPE = "MobType";
+    private static final String TAG_RARITY = "Rarity";
+    private static final String TAG_STATS = "Stats";
+    private static final String TAG_MODIFIER_APPLIED = "ModifierApplied";
+    private static final String TAG_CUSTOM_NAME = "CustomName";
+
+    /**
+     * Serializes this PetData into a CompoundTag.
+     */
+    public CompoundTag toTag() {
+        CompoundTag tag = new CompoundTag();
+        tag.putUUID(TAG_PET_ID, petId);
+        tag.putString(TAG_MOB_TYPE, mobType);
+        tag.putInt(TAG_RARITY, rarity.ordinal());
+        tag.putBoolean(TAG_MODIFIER_APPLIED, modifierApplied);
+        tag.putString(TAG_CUSTOM_NAME, customName != null ? customName : "");
+        tag.putInt("Hunger", hunger);
+        tag.putInt("Happiness", happiness);
+
+        CompoundTag statsTag = new CompoundTag();
+        for (var entry : stats.entrySet()) {
+            statsTag.putInt(entry.getKey().name(), entry.getValue());
+        }
+        tag.put(TAG_STATS, statsTag);
+
+        ListTag skillsTag = new ListTag();
+        for (SkillInstance skill : skills) {
+            skillsTag.add(skill.toTag());
+        }
+        tag.put("Skills", skillsTag);
+
+        return tag;
+    }
+
+    /**
+     * Deserializes a PetData from a CompoundTag.
+     */
+    public static PetData fromTag(CompoundTag tag) {
+        UUID id = tag.getUUID(TAG_PET_ID);
+        String mob = tag.getString(TAG_MOB_TYPE);
+        PetRarity rarity = PetRarity.fromId(tag.getInt(TAG_RARITY));
+        boolean modifier = tag.getBoolean(TAG_MODIFIER_APPLIED);
+        String name = tag.getString(TAG_CUSTOM_NAME);
+        if (name.isEmpty()) {
+            name = null;
+        }
+
+        EnumMap<PetStat, Integer> statsMap = new EnumMap<>(PetStat.class);
+        CompoundTag statsTag = tag.getCompound(TAG_STATS);
+        for (PetStat stat : PetStat.values()) {
+            if (statsTag.contains(stat.name())) {
+                statsMap.put(stat, statsTag.getInt(stat.name()));
+            } else {
+                statsMap.put(stat, 0);
+            }
+        }
+
+        int hunger    = tag.contains("Hunger")    ? tag.getInt("Hunger")    : 100;
+        int happiness = tag.contains("Happiness") ? tag.getInt("Happiness") : 100;
+
+        List<SkillInstance> skills = new ArrayList<>();
+        if (tag.contains("Skills")) {
+            ListTag skillsList = tag.getList("Skills", Tag.TAG_COMPOUND);
+            for (int i = 0; i < skillsList.size(); i++) {
+                SkillInstance instance = SkillInstance.fromTag(skillsList.getCompound(i));
+                if (instance != null) skills.add(instance);
+            }
+        }
+
+        return new PetData(id, mob, rarity, statsMap, modifier, name, hunger, happiness, skills);
+    }
+
+    /**
+     * Checks if any skill at level 0 should be revealed (previous skill reached Lv 10)
+     * and returns a new PetData with those skills advanced to level 1. Returns {@code this}
+     * if nothing changed.
+     */
+    public PetData withUnlockedSkills() {
+        List<SkillInstance> updated = new ArrayList<>(skills);
+        boolean changed = false;
+        for (int i = 1; i < updated.size(); i++) {
+            if (updated.get(i).level() == 0 && updated.get(i - 1).level() >= 10) {
+                SkillInstance s = updated.get(i);
+                updated.set(i, new SkillInstance(s.skill(), 1, s.effectiveness()));
+                changed = true;
+            }
+        }
+        if (!changed) return this;
+        return new PetData(petId, mobType, rarity, stats, modifierApplied, customName,
+                hunger, happiness, updated);
+    }
+
+    /**
+     * Returns the sum of all stat star values.
+     */
+    public int totalStars() {
+        int total = 0;
+        for (int value : stats.values()) {
+            total += value;
+        }
+        return total;
+    }
+
+    /**
+     * Applies this PetData to an ItemStack via the CUSTOM_DATA component.
+     */
+    public void applyToStack(ItemStack stack) {
+        CompoundTag tag = toTag();
+        stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+    }
+
+    /**
+     * Reads PetData from an ItemStack's CUSTOM_DATA component.
+     * Returns null if no data is present.
+     */
+    public static PetData fromStack(ItemStack stack) {
+        CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
+        if (customData == null || !customData.contains(TAG_PET_ID)) return null;
+        return fromTag(customData.getUnsafe());
+    }
+
+    /**
+     * Builds tooltip lines for this pet, including rarity, stats, and total stars.
+     */
+    public List<Component> buildTooltip() {
+        List<Component> lines = new ArrayList<>();
+
+        // Rarity line
+        lines.add(rarity.getStyledName());
+
+        // Mob type line
+        String mobName = mobType;
+        if (mobName.contains(":")) {
+            mobName = mobName.substring(mobName.indexOf(':') + 1);
+        }
+        mobName = mobName.substring(0, 1).toUpperCase() + mobName.substring(1).replace('_', ' ');
+        lines.add(Component.translatable("arcadia_prestige.gui.pet.type_label", mobName).withStyle(ChatFormatting.GRAY));
+
+        // Custom name if present
+        if (customName != null && !customName.isEmpty()) {
+            lines.add(Component.translatable("arcadia_prestige.gui.pet.name_tooltip", customName).withStyle(ChatFormatting.AQUA));
+        }
+
+        // Gene bars: 2 compact lines (POW/END/AGI then WIT/CHM/LCK)
+        // Uses filled █ / empty ░ blocks, color-coded by star count
+        lines.add(Component.empty());
+        PetStat[] statOrder = PetStat.values();
+        for (int lineNum = 0; lineNum < 2; lineNum++) {
+            MutableComponent barLine = Component.empty();
+            for (int col = 0; col < 3; col++) {
+                int idx = lineNum * 3 + col;
+                if (idx >= statOrder.length) continue;
+                PetStat stat  = statOrder[idx];
+                int     stars = stats.getOrDefault(stat, 0);
+                if (col > 0) barLine.append(Component.literal("  "));
+                barLine.append(Component.literal(stat.getIcon() + " ").withStyle(ChatFormatting.GRAY));
+                ChatFormatting barColor = stars >= 5 ? ChatFormatting.AQUA
+                        : stars >= 4 ? ChatFormatting.GREEN
+                        : stars >= 3 ? ChatFormatting.YELLOW
+                        : stars >= 2 ? ChatFormatting.GOLD
+                        :              ChatFormatting.RED;
+                for (int s = 1; s <= 5; s++) {
+                    barLine.append(Component.literal(s <= stars ? "\u2588" : "\u2591")
+                            .withStyle(s <= stars ? barColor : ChatFormatting.DARK_GRAY));
+                }
+            }
+            lines.add(barLine);
+        }
+
+        // Skills — one line each with a styled [Lv X] badge; locked skills show as "???"
+        if (!skills.isEmpty()) {
+            lines.add(Component.empty());
+            lines.add(Component.translatable("arcadia_prestige.gui.pet.skills_label")
+                    .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+            for (SkillInstance instance : skills) {
+                MutableComponent skillLine;
+                if (instance.level() == 0) {
+                    // Locked — identity hidden until previous skill reaches Lv 10
+                    skillLine = Component.literal("\uD83D\uDD12 ").withStyle(ChatFormatting.DARK_GRAY)
+                            .append(Component.literal("???").withStyle(ChatFormatting.DARK_GRAY))
+                            .append(Component.literal(" [Locked]").withStyle(ChatFormatting.DARK_RED))
+                            .append(Component.literal(" — Max previous skill to reveal").withStyle(ChatFormatting.DARK_GRAY));
+                } else {
+                    PetSkill skill = instance.skill();
+                    ChatFormatting badgeColor = instance.level() >= 10 ? ChatFormatting.GOLD
+                            : instance.level() >= 7 ? ChatFormatting.LIGHT_PURPLE
+                            : instance.level() >= 4 ? ChatFormatting.BLUE
+                            :                         ChatFormatting.DARK_BLUE;
+                    skillLine = Component.literal("\u2605 ").withStyle(ChatFormatting.YELLOW)
+                            .append(skill.getDisplayName().copy().withStyle(ChatFormatting.WHITE))
+                            .append(Component.literal(" [Lv " + instance.level() + "]").withStyle(badgeColor))
+                            .append(Component.literal(" — ").withStyle(ChatFormatting.DARK_GRAY))
+                            .append(skill.getDescription(instance.level(), instance.effectiveness())
+                                    .copy().withStyle(ChatFormatting.GRAY));
+                    lines.add(skillLine);
+                    // Compact XP bar (only if not max level)
+                    if (instance.level() < 10) {
+                        int needed = SkillInstance.xpForNextLevel(instance.level());
+                        int filled = needed > 0 ? Math.min(5, instance.xp() * 5 / needed) : 0;
+                        MutableComponent bar = Component.literal("  ");
+                        for (int b = 0; b < 5; b++) {
+                            bar.append(Component.literal(b < filled ? "\u2593" : "\u2591")
+                                    .withStyle(b < filled ? ChatFormatting.AQUA : ChatFormatting.DARK_GRAY));
+                        }
+                        bar.append(Component.literal(" " + instance.xp() + "/" + needed + " XP")
+                                .withStyle(ChatFormatting.DARK_GRAY));
+                        lines.add(bar);
+                    }
+                    continue;
+                }
+                lines.add(skillLine);
+            }
+        }
+
+        return lines;
+    }
+}
