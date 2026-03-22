@@ -1,0 +1,18 @@
+// Root build script — only defines the collectJars task.
+// Subproject configuration lives in each module's own build.gradle.
+
+tasks.register('collectJars', Copy) {
+    description = 'Copies all subproject jars (excluding sources) into mod-jars/.'
+    group = 'build'
+
+    dependsOn subprojects.collect { it.tasks.named('jar') }
+
+    from subprojects.collect { sub ->
+        sub.tasks.named('jar').map { it.outputs.files }
+    }
+
+    // Drop -sources jars if any slip through
+    exclude '**/*-sources.jar'
+
+    into layout.projectDirectory.dir('mod-jars')
+}
