@@ -1,4 +1,4 @@
-package com.arcadia.ah.item;
+package com.arcadia.lib.item;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
@@ -13,8 +13,9 @@ import net.minecraft.world.level.Level;
 import java.util.List;
 
 /**
- * Arcadia Token — a premium currency item awarded through the daily reward system.
- * Has no direct right-click behaviour; it is spent at the Arcadia shop (future feature).
+ * Arcadia Token — placeholder for the Azuriom site currency (arcadia-echoes-of-power.fr).
+ * Currently awarded through the daily reward system; future integration will sync with
+ * the website economy.
  */
 public class ArcadiaTokenItem extends Item {
 

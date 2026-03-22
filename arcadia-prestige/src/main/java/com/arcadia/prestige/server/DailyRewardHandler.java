@@ -2,7 +2,7 @@ package com.arcadia.prestige.server;
 
 import com.arcadia.pets.PetsModItems;
 import com.arcadia.pets.server.PetManager;
-import com.arcadia.ah.AhModItems;
+import com.arcadia.lib.LibModItems;
 import com.arcadia.lib.data.DatabaseManager;
 import com.arcadia.lib.data.PlayerDataHandler;
 import com.arcadia.pets.item.PetData;
@@ -383,6 +383,6 @@ public final class DailyRewardHandler {
 
     private static ItemStack treat(int count)   { return new ItemStack(PetsModItems.PET_TREAT.get(), count); }
     private static ItemStack snack(int count)   { return new ItemStack(PetsModItems.PET_SNACK.get(), count); }
-    private static ItemStack token(int count)   { return new ItemStack(AhModItems.ARCADIA_TOKEN.get(), count); }
+    private static ItemStack token(int count)   { return new ItemStack(LibModItems.ARCADIA_TOKEN.get(), count); }
     private static ItemStack essence(int count) { return new ItemStack(PetsModItems.STAR_ESSENCE.get(), count); }
 }

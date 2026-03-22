@@ -1,1 +1,13 @@
-{}
+{
+  "item.arcadia_pets.pet_item":                "Pet",
+  "item.arcadia_pets.common_pet_bag":          "Common Pet Crate",
+  "item.arcadia_pets.uncommon_pet_bag":        "Uncommon Pet Crate",
+  "item.arcadia_pets.rare_pet_bag":            "Rare Pet Crate",
+  "item.arcadia_pets.epic_pet_bag":            "Epic Pet Crate",
+  "item.arcadia_pets.legendary_pet_bag":       "Legendary Pet Crate",
+  "item.arcadia_pets.legendary_guaranteed_bag":"Legendary Fusion Crate",
+  "item.arcadia_pets.star_essence":            "Star Essence",
+  "item.arcadia_pets.pet_treat":               "Pet Treat",
+  "item.arcadia_pets.pet_snack":               "Pet Snack",
+  "item.arcadia_pets.pet_collection_book":     "Pet Collection"
+}

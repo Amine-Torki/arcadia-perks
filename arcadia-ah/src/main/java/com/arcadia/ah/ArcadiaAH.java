@@ -15,7 +15,6 @@ public final class ArcadiaAH {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public ArcadiaAH(IEventBus modBus) {
-        AhModItems.ITEMS.register(modBus);
         AhModMenus.MENUS.register(modBus);
 
         modBus.addListener(AhPacketHandler::onRegisterPayloadHandlers);

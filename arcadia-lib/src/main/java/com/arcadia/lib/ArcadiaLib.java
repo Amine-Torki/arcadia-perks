@@ -6,5 +6,7 @@ import net.neoforged.fml.common.Mod;
 @Mod("arcadia_lib")
 public final class ArcadiaLib {
     public static final String MOD_ID = "arcadia_lib";
-    public ArcadiaLib(IEventBus modBus) {}
+    public ArcadiaLib(IEventBus modBus) {
+        LibModItems.ITEMS.register(modBus);
+    }
 }
