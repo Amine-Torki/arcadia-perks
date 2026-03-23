@@ -15,6 +15,7 @@ import com.arcadia.pets.skill.PetSkill;
 import com.arcadia.pets.skill.PetSkills;
 import com.arcadia.pets.skill.SkillInstance;
 import com.mojang.brigadier.Command;
+import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import net.minecraft.commands.CommandSourceStack;
@@ -194,6 +195,39 @@ public final class PetsCommands {
                             .executes(ctx -> petRestore(ctx.getSource(),
                                     EntityArgument.getPlayer(ctx, "target"),
                                     StringArgumentType.getString(ctx, "petId")))
+                        )
+                    )
+                )
+                .then(Commands.literal("aftershock")
+                    .requires(src -> src.hasPermission(2))
+                    .then(Commands.literal("hostile")
+                        .then(Commands.argument("value", BoolArgumentType.bool())
+                            .executes(ctx -> {
+                                PetsGlobalFlags.AFTERSHOCK_ON_HOSTILE = BoolArgumentType.getBool(ctx, "value");
+                                ctx.getSource().sendSuccess(() -> Component.literal(
+                                        "§6[Arcadia] Aftershock on hostile mobs: §e" + PetsGlobalFlags.AFTERSHOCK_ON_HOSTILE), true);
+                                return Command.SINGLE_SUCCESS;
+                            })
+                        )
+                    )
+                    .then(Commands.literal("neutral")
+                        .then(Commands.argument("value", BoolArgumentType.bool())
+                            .executes(ctx -> {
+                                PetsGlobalFlags.AFTERSHOCK_ON_NEUTRAL = BoolArgumentType.getBool(ctx, "value");
+                                ctx.getSource().sendSuccess(() -> Component.literal(
+                                        "§6[Arcadia] Aftershock on neutral/passive mobs: §e" + PetsGlobalFlags.AFTERSHOCK_ON_NEUTRAL), true);
+                                return Command.SINGLE_SUCCESS;
+                            })
+                        )
+                    )
+                    .then(Commands.literal("players")
+                        .then(Commands.argument("value", BoolArgumentType.bool())
+                            .executes(ctx -> {
+                                PetsGlobalFlags.AFTERSHOCK_ON_PLAYERS = BoolArgumentType.getBool(ctx, "value");
+                                ctx.getSource().sendSuccess(() -> Component.literal(
+                                        "§6[Arcadia] Aftershock on players: §e" + PetsGlobalFlags.AFTERSHOCK_ON_PLAYERS), true);
+                                return Command.SINGLE_SUCCESS;
+                            })
                         )
                     )
                 )

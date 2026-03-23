@@ -10,6 +10,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 
@@ -33,6 +34,9 @@ public class PetMultiRevealScreen extends Screen {
     private static final int CARD_GAP  = 4;
     private static final int STRIP_GAP = 6;
     private static final float MIN_VEL = 2.0f;
+    /** Max total height of the roulette area — kept constant for 1-3 strips;
+     *  for 4 strips the per-strip height is reduced to fit in the same space. */
+    private static final int MAX_STRIPS_H = 3 * (CARD_H + 10) + 2 * STRIP_GAP; // 252px
 
     private static final int MINI_W   = 82;
     private static final int MINI_H   = 100;
@@ -62,6 +66,10 @@ public class PetMultiRevealScreen extends Screen {
     /** Last card whose detail card is shown (sticky until another is hovered). */
     private int currentDetailCard = -1;
 
+    // Stars pop animation (phase 1)
+    private final int[]     starsRevealed;   // how many stars shown so far per card
+    private final boolean[] specialTriggered; // whether we've fired the 25+ special event per card
+
     // ── Constructor ───────────────────────────────────────────────────────────
 
     public PetMultiRevealScreen(List<PetData> results, PetRarity minimumRarity) {
@@ -70,15 +78,17 @@ public class PetMultiRevealScreen extends Screen {
         this.minimumRarity = minimumRarity;
         this.count = results.size();
 
-        scrollTarget   = new float[count];
-        scrollPos      = new float[count];
-        prevScrollPos  = new float[count];
-        scrollVel      = new float[count];
-        decay          = new float[count];
-        landed         = new boolean[count];
-        resultIdx      = new int[count];
-        strips         = new ArrayList<>(count);
-        lastCardUnder  = new int[count];
+        scrollTarget     = new float[count];
+        scrollPos        = new float[count];
+        prevScrollPos    = new float[count];
+        scrollVel        = new float[count];
+        decay            = new float[count];
+        landed           = new boolean[count];
+        resultIdx        = new int[count];
+        strips           = new ArrayList<>(count);
+        lastCardUnder    = new int[count];
+        starsRevealed    = new int[count];
+        specialTriggered = new boolean[count];
         Arrays.fill(lastCardUnder, -1);
 
         ThreadLocalRandom rand = ThreadLocalRandom.current();
@@ -122,6 +132,7 @@ public class PetMultiRevealScreen extends Screen {
                 prevScrollPos[i] = scrollTarget[i];
                 scrollVel[i] = 0;
                 landed[i] = true;
+                starsRevealed[i] = results.get(i).totalStars(); // skip animation
             }
             landedCount = count;
             phase = 1;
@@ -141,34 +152,57 @@ public class PetMultiRevealScreen extends Screen {
                 scrollPos[i] += scrollVel[i];
                 scrollVel[i] = Math.max(MIN_VEL, scrollVel[i] * decay[i]);
 
-                // Roulette tick sound — one sound per tick across all strips
+                // Roulette tick sound — one sound per tick across all strips (MASTER source)
                 int cardUnder = (int) ((scrollPos[i] - CARD_W / 2.0f) / (CARD_W + CARD_GAP));
                 if (cardUnder != lastCardUnder[i] && cardUnder >= 0) {
                     lastCardUnder[i] = cardUnder;
-                    if (!clickedThisTick && minecraft != null && minecraft.player != null) {
+                    if (!clickedThisTick && minecraft != null) {
                         clickedThisTick = true;
                         float speed = Math.min(1f, (scrollVel[i] - MIN_VEL)
                                 / (scrollTarget[i] * (1f - decay[i]) - MIN_VEL + 0.001f));
-                        minecraft.player.playSound(
-                                SoundEvents.UI_BUTTON_CLICK.value(), 0.3f, 1.3f - speed * 0.8f);
+                        minecraft.getSoundManager().play(
+                                PetRevealScreen.uiSound(SoundEvents.UI_BUTTON_CLICK, 0.3f, 1.3f - speed * 0.8f));
                     }
                 }
 
-                // Snap when target reached; play a landing ding with rising pitch
+                // Snap when target reached; play a rarity-appropriate landing sound
                 if (scrollPos[i] >= scrollTarget[i]) {
                     scrollPos[i] = scrollTarget[i];
                     prevScrollPos[i] = scrollTarget[i];
                     scrollVel[i] = 0;
                     landed[i] = true;
                     landedCount++;
-                    if (minecraft != null && minecraft.player != null) {
-                        minecraft.player.playSound(SoundEvents.ANVIL_LAND, 0.5f, 1.1f + i * 0.12f);
+                    if (minecraft != null) {
+                        PetRevealScreen.playLandingSound(minecraft, results.get(i).rarity());
                     }
                     if (landedCount == count) phase = 1;
                 }
             }
         } else {
             ticksPhase1++;
+            // Stars pop animation: reveal 1 star every 2 ticks per card, staggered by card index
+            if (minecraft != null) {
+                for (int i = 0; i < count; i++) {
+                    int total = results.get(i).totalStars();
+                    if (starsRevealed[i] >= total) continue;
+                    int startTick = i * 8; // 8-tick stagger between cards
+                    int elapsed = ticksPhase1 - startTick;
+                    if (elapsed < 0) continue;
+                    int targetRevealed = Math.min(total, elapsed / 2 + 1);
+                    if (targetRevealed > starsRevealed[i]) {
+                        starsRevealed[i] = targetRevealed;
+                        // XP ding per star
+                        minecraft.getSoundManager().play(
+                                PetRevealScreen.uiSound(SoundEvents.EXPERIENCE_ORB_PICKUP, 0.25f, 0.9f + starsRevealed[i] * 0.04f));
+                    }
+                    // 25+ stars special event when fully revealed
+                    if (starsRevealed[i] >= total && total >= 25 && !specialTriggered[i]) {
+                        specialTriggered[i] = true;
+                        minecraft.getSoundManager().play(
+                                PetRevealScreen.uiSound(SoundEvents.TOTEM_USE, 0.7f, 1.1f));
+                    }
+                }
+            }
         }
     }
 
@@ -196,8 +230,9 @@ public class PetMultiRevealScreen extends Screen {
     // Phase 0 ─────────────────────────────────────────────────────────────────
 
     private void renderStrips(GuiGraphics g, float partialTick) {
-        int slotH   = CARD_H + 10;   // 5px padding top + bottom
-        int totalH  = count * slotH + (count - 1) * STRIP_GAP;
+        // Keep total height constant regardless of strip count: cap at 3-strip height
+        int slotH  = count <= 3 ? CARD_H + 10 : (MAX_STRIPS_H - (count - 1) * STRIP_GAP) / count;
+        int totalH = count * slotH + (count - 1) * STRIP_GAP;
         int areaTop = height / 2 - totalH / 2;
         int cx      = width / 2;
 
@@ -213,13 +248,14 @@ public class PetMultiRevealScreen extends Screen {
 
             g.fill(0, stripTop, width, stripTop + slotH, 0xCC000000);
 
+            int effCardH = slotH - 10; // actual card height = slot minus top+bottom padding
             List<PetData> strip = strips.get(i);
             for (int j = 0; j < strip.size(); j++) {
                 int cardCX = (int) (j * (CARD_W + CARD_GAP) + CARD_W / 2.0f - scroll);
                 int sx = cx + cardCX;
                 if (sx < -CARD_W || sx > width + CARD_W) continue;
                 drawRouletteCard(g, sx - CARD_W / 2, cardTopY, strip.get(j),
-                        j == resultIdx[i] && landed[i]);
+                        j == resultIdx[i] && landed[i], effCardH);
             }
 
             // Golden selector frame
@@ -229,30 +265,25 @@ public class PetMultiRevealScreen extends Screen {
             g.fill(sl, sb - 2, sr, sb, 0xFFFFD700);
             g.fill(sl, st, sl + 2, sb, 0xFFFFD700);
             g.fill(sr - 2, st, sr, sb, 0xFFFFD700);
-
-            if (count > 1) {
-                g.drawString(font, "#" + (i + 1), sl - 20, cardTopY + CARD_H / 2 - 4,
-                        0x88AAAAAA, false);
-            }
         }
     }
 
-    private void drawRouletteCard(GuiGraphics g, int x, int y, PetData data, boolean selected) {
+    private void drawRouletteCard(GuiGraphics g, int x, int y, PetData data, boolean selected, int cardH) {
         int rc = rarityColor(data.rarity());
-        g.fill(x, y, x + CARD_W, y + CARD_H, 0xCC000000 | (rc & 0x00FFFFFF));
-        g.fill(x + 2, y + 2, x + CARD_W - 2, y + CARD_H - 2, 0xCC101020);
+        g.fill(x, y, x + CARD_W, y + cardH, 0xCC000000 | (rc & 0x00FFFFFF));
+        g.fill(x + 2, y + 2, x + CARD_W - 2, y + cardH - 2, 0xCC101020);
         if (selected) {
             g.fill(x, y, x + CARD_W, y + 2, 0xFFFFD700);
-            g.fill(x, y + CARD_H - 2, x + CARD_W, y + CARD_H, 0xFFFFD700);
-            g.fill(x, y, x + 2, y + CARD_H, 0xFFFFD700);
-            g.fill(x + CARD_W - 2, y, x + CARD_W, y + CARD_H, 0xFFFFD700);
+            g.fill(x, y + cardH - 2, x + CARD_W, y + cardH, 0xFFFFD700);
+            g.fill(x, y, x + 2, y + cardH, 0xFFFFD700);
+            g.fill(x + CARD_W - 2, y, x + CARD_W, y + cardH, 0xFFFFD700);
         }
         g.drawCenteredString(font, data.rarity().getDisplayName(),
                 x + CARD_W / 2, y + 8, chatColor(data.rarity()));
         g.drawCenteredString(font, mobName(data.mobType(), 8),
                 x + CARD_W / 2, y + 26, 0xFFFFFF);
         g.drawCenteredString(font, data.totalStars() + "\u2605",
-                x + CARD_W / 2, y + CARD_H - 18, 0xFFD700);
+                x + CARD_W / 2, y + cardH - 18, 0xFFD700);
     }
 
     // Phase 1 minicards ───────────────────────────────────────────────────────
@@ -268,7 +299,7 @@ public class PetMultiRevealScreen extends Screen {
             boolean hover = mouseX >= cx && mouseX < cx + MINI_W
                     && mouseY >= cardY && mouseY < cardY + MINI_H;
             if (hover) { currentDetailCard = i; anyHovered = true; }
-            drawMiniCard(g, cx, cardY, results.get(i), hover || i == currentDetailCard);
+            drawMiniCard(g, cx, cardY, results.get(i), hover || i == currentDetailCard, i);
         }
 
         if (!anyHovered && currentDetailCard < 0 && ticksPhase1 > 10) {
@@ -278,8 +309,19 @@ public class PetMultiRevealScreen extends Screen {
         }
     }
 
-    private void drawMiniCard(GuiGraphics g, int x, int y, PetData data, boolean active) {
+    private void drawMiniCard(GuiGraphics g, int x, int y, PetData data, boolean active, int cardIdx) {
         int rc = rarityColor(data.rarity());
+        int revealed = starsRevealed[cardIdx];
+        int total = data.totalStars();
+        boolean fullyRevealed = revealed >= total;
+        boolean special = fullyRevealed && total >= 25;
+
+        // Gold glow for 25+ stars once fully revealed
+        if (special) {
+            int ga = 50 + (int) (30 * Math.sin(ticksPhase1 * 0.2));
+            g.fill(x - 4, y - 4, x + MINI_W + 4, y + MINI_H + 4, (ga << 24) | 0xFFD700);
+        }
+
         int border = active ? rc : (rc & 0x00FFFFFF) | 0xAA000000;
         g.fill(x, y, x + MINI_W, y + MINI_H, active ? 0xE8181828 : 0xCC101020);
         g.fill(x, y, x + MINI_W, y + 2, border);
@@ -292,8 +334,9 @@ public class PetMultiRevealScreen extends Screen {
         g.drawCenteredString(font,
                 Component.literal(mobName(data.mobType(), 9)).withStyle(s -> s.withBold(true)),
                 x + MINI_W / 2, y + 26, 0xFFFFFF);
-        g.drawCenteredString(font, data.totalStars() + " \u2605",
-                x + MINI_W / 2, y + MINI_H - 22, 0xFFD700);
+        // Stars pop in one at a time
+        g.drawCenteredString(font, revealed + " \u2605",
+                x + MINI_W / 2, y + MINI_H - 22, special ? 0xFFD700 : 0xCCAA00);
         if (active) {
             g.drawCenteredString(font,
                     Component.translatable("arcadia_prestige.gui.multi_reveal.inspect"),
@@ -416,6 +459,7 @@ public class PetMultiRevealScreen extends Screen {
                     prevScrollPos[i] = scrollTarget[i];
                     scrollVel[i] = 0;
                     landed[i] = true;
+                    starsRevealed[i] = results.get(i).totalStars(); // skip star animation
                 }
                 landedCount = count;
                 phase = 1;

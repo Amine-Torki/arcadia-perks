@@ -21,5 +21,13 @@ public final class PetsGlobalFlags {
     public static volatile boolean PETS_ENABLED =
             System.getProperty("arcadia.pets.enabled", "true").equalsIgnoreCase("true");
 
+    // ── Aftershock target category flags ──────────────────────────────────────
+    /** Whether the pet aftershock ability triggers against hostile mobs (extends Monster). */
+    public static volatile boolean AFTERSHOCK_ON_HOSTILE = true;
+    /** Whether the pet aftershock ability triggers against neutral/passive mobs. */
+    public static volatile boolean AFTERSHOCK_ON_NEUTRAL = true;
+    /** Whether the pet aftershock ability triggers against players. */
+    public static volatile boolean AFTERSHOCK_ON_PLAYERS = false;
+
     private PetsGlobalFlags() {}
 }

@@ -40,6 +40,7 @@ public final class PetHudRenderer {
 
         HudSettings.ensureLoaded();
         if (!HudSettings.showPetPortrait) return;
+        if (mc.options.hideGui) return;
 
         // Advance the smoothed HP display value each render frame
         ClientPetState.tickDisplayHp();

@@ -146,7 +146,16 @@ public final class PetEventHandler {
     public static void onMobDamagedByPlayer(LivingDamageEvent.Pre event) {
         if (event.getEntity().level().isClientSide()) return;
         if (applyingAftershock) return;
-        if (event.getEntity() instanceof ServerPlayer) return;
+
+        // Category-based target filter (admin-configurable)
+        net.minecraft.world.entity.LivingEntity target = event.getEntity();
+        if (target instanceof ServerPlayer) {
+            if (!PetsGlobalFlags.AFTERSHOCK_ON_PLAYERS) return;
+        } else if (target instanceof net.minecraft.world.entity.monster.Monster) {
+            if (!PetsGlobalFlags.AFTERSHOCK_ON_HOSTILE) return;
+        } else {
+            if (!PetsGlobalFlags.AFTERSHOCK_ON_NEUTRAL) return;
+        }
 
         if (!(event.getSource().getEntity() instanceof ServerPlayer player)) return;
         if (PetManager.getBehaviourMode(player.getUUID()) != PetBehaviourMode.ATTACK) return;
@@ -265,8 +274,11 @@ public final class PetEventHandler {
 
         if (!(left.getItem() instanceof PetItem)) return;
         // Block all anvil operations on pets except star essence upgrade.
+        // For rename-only (right = empty): setOutput to unchanged left item so the event
+        // is marked handled and vanilla rename logic is skipped.
         if (!(right.getItem() instanceof StarEssenceItem)) {
-            event.setOutput(ItemStack.EMPTY);
+            event.setOutput(left.copy()); // return unchanged item — blocks rename
+            event.setCost(0);
             return;
         }
 

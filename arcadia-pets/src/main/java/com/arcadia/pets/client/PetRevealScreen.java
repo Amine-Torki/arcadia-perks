@@ -11,8 +11,10 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -141,11 +143,11 @@ public class PetRevealScreen extends Screen {
             int cardUnder = (int) ((scrollPosition - CARD_WIDTH / 2.0f) / (CARD_WIDTH + CARD_GAP));
             if (cardUnder != lastCardUnderArrow && cardUnder >= 0) {
                 lastCardUnderArrow = cardUnder;
-                if (minecraft != null && minecraft.player != null) {
+                if (minecraft != null) {
                     float speedRatio = Math.min(1f, (scrollVelocity - MIN_VELOCITY)
                             / (scrollTarget * (1f - decay) - MIN_VELOCITY + 0.001f));
                     float pitch = 1.3f - speedRatio * 0.8f;
-                    minecraft.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.4f, pitch);
+                    minecraft.getSoundManager().play(uiSound(SoundEvents.UI_BUTTON_CLICK, 0.4f, pitch));
                 }
             }
 
@@ -156,8 +158,8 @@ public class PetRevealScreen extends Screen {
                 phase = 1;
                 ticksInPhase = 0;
                 currentStatRevealing = 0;
-                if (minecraft != null && minecraft.player != null) {
-                    minecraft.player.playSound(SoundEvents.ANVIL_LAND, 0.5f, 1.2f);
+                if (minecraft != null) {
+                    playLandingSound(minecraft, result.rarity());
                 }
             }
 
@@ -166,13 +168,13 @@ public class PetRevealScreen extends Screen {
             int totalItems = 6 + result.skills().size();
             if (ticksInPhase % 12 == 0 && currentStatRevealing < totalItems) {
                 currentStatRevealing++;
-                if (minecraft != null && minecraft.player != null) {
+                if (minecraft != null) {
                     if (currentStatRevealing <= 6) {
                         // Stat reveal sound
-                        minecraft.player.playSound(SoundEvents.EXPERIENCE_ORB_PICKUP, 0.4f, 0.8f + currentStatRevealing * 0.1f);
+                        minecraft.getSoundManager().play(uiSound(SoundEvents.EXPERIENCE_ORB_PICKUP, 0.4f, 0.8f + currentStatRevealing * 0.1f));
                     } else {
                         // Skill reveal sound (distinct)
-                        minecraft.player.playSound(SoundEvents.ENCHANTMENT_TABLE_USE, 0.5f, 0.9f + (currentStatRevealing - 6) * 0.15f);
+                        minecraft.getSoundManager().play(uiSound(SoundEvents.ENCHANTMENT_TABLE_USE, 0.5f, 0.9f + (currentStatRevealing - 6) * 0.15f));
                     }
                 }
             }
@@ -493,5 +495,31 @@ public class PetRevealScreen extends Screen {
     @Override
     public boolean isPauseScreen() {
         return false;
+    }
+
+    // ── Sound helpers ─────────────────────────────────────────────────────────
+
+    /** Plays a rarity-appropriate landing sound via MASTER source (respects GUI mute). */
+    static void playLandingSound(Minecraft mc, PetRarity rarity) {
+        switch (rarity) {
+            case LEGENDARY -> {
+                mc.getSoundManager().play(uiSound(SoundEvents.TOTEM_USE, 0.6f, 0.9f));
+            }
+            case MYTHIC -> {
+                mc.getSoundManager().play(uiSound(SoundEvents.TOTEM_USE, 0.8f, 0.7f));
+                mc.getSoundManager().play(uiSound(SoundEvents.EXPERIENCE_ORB_PICKUP, 0.4f, 1.8f));
+            }
+            case EPIC -> {
+                mc.getSoundManager().play(uiSound(SoundEvents.ANVIL_LAND, 0.5f, 1.4f));
+                mc.getSoundManager().play(uiSound(SoundEvents.ENCHANTMENT_TABLE_USE, 0.3f, 1.5f));
+            }
+            default -> mc.getSoundManager().play(uiSound(SoundEvents.ANVIL_LAND, 0.5f, 1.2f));
+        }
+    }
+
+    static SimpleSoundInstance uiSound(net.minecraft.sounds.SoundEvent se, float volume, float pitch) {
+        return new SimpleSoundInstance(se.value(), SoundSource.MASTER, volume, pitch,
+                net.minecraft.util.RandomSource.create(), false, 0,
+                net.minecraft.client.sounds.SoundInstance.Attenuation.NONE, 0, 0, 0, true);
     }
 }

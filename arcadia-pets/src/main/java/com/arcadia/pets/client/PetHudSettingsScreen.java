@@ -4,6 +4,7 @@ package com.arcadia.pets.client;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -68,7 +69,7 @@ public final class PetHudSettingsScreen extends Screen {
         int cx0  = this.width / 2;
         int rdW  = 160;
         renderBtn(g, mouseX, mouseY, cx0 - rdW / 2, this.height - 56, rdW, 14,
-                (reducedMotion ? "\u2714 " : "\u2716 ") + "Reduced Motion (Bag)",
+                (reducedMotion ? "\u2714 " : "\u2716 ") + "Epilepsy-safe mode (bag spin)",
                 reducedMotion ? 0xFF664422 : 0xFF222222);
 
         // Row 1 (toggles): Portrait + HP Bar + Aftershock — total 110+4+100+4+108 = 326, start at cx-163
@@ -153,8 +154,7 @@ public final class PetHudSettingsScreen extends Screen {
     }
 
     private static void playClick() {
-        var p = Minecraft.getInstance().player;
-        if (p != null) p.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 1.0f, 1.0f);
+        Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f));
     }
 
     @Override

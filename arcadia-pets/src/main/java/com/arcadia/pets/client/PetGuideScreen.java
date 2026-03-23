@@ -4,6 +4,7 @@ package com.arcadia.pets.client;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -98,8 +99,7 @@ public class PetGuideScreen extends Screen {
     }
 
     private static void playClick() {
-        var p = Minecraft.getInstance().player;
-        if (p != null) p.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 1.0f, 1.0f);
+        Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f));
     }
 
     @Override

@@ -12,6 +12,7 @@ import com.arcadia.pets.skill.PetSkill;
 import com.arcadia.pets.skill.SkillInstance;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -663,8 +664,7 @@ public class PetScreen extends Screen {
     }
 
     private static void playClick() {
-        var p = Minecraft.getInstance().player;
-        if (p != null) p.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 1.0f, 1.0f);
+        Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f));
     }
 
     @Override

@@ -126,7 +126,7 @@ public final class PetManager {
     public static void summon(ServerPlayer player, PetData data) {
         despawn(player);
 
-        PetMovementMode requestedMove = petMovement.getOrDefault(player.getUUID(), PetMovementMode.FOLLOW);
+        PetMovementMode requestedMove = petMovement.getOrDefault(player.getUUID(), PetMovementMode.POCKET);
 
         // Mobs whose renderer ignores SCALE must always use pocket mode (no Follow, no Sit).
         if (POCKET_ONLY.contains(data.mobType())) {
@@ -598,7 +598,7 @@ public final class PetManager {
         UUID playerUuid = player.getUUID();
         int cooldown = getCooldownTicks(data.petId());
         boolean active = isActivePet(playerUuid, data.petId());
-        int movOrd  = petMovement.getOrDefault(playerUuid, PetMovementMode.FOLLOW).ordinal();
+        int movOrd  = petMovement.getOrDefault(playerUuid, PetMovementMode.POCKET).ordinal();
         int behOrd  = petBehaviour.getOrDefault(playerUuid, PetBehaviourMode.IDLE).ordinal();
         // Determine current / max HP for panel display
         int vitality = data.stats().getOrDefault(PetStat.ENDURANCE, 1);
@@ -713,7 +713,7 @@ public final class PetManager {
             PetMovementMode[] modes = PetMovementMode.values();
             if (modeIndex >= 0 && modeIndex < modes.length) {
                 UUID playerUuid = player.getUUID();
-                PetMovementMode oldMode = petMovement.getOrDefault(playerUuid, PetMovementMode.FOLLOW);
+                PetMovementMode oldMode = petMovement.getOrDefault(playerUuid, PetMovementMode.POCKET);
                 PetMovementMode newMode = modes[modeIndex];
 
                 // Block blacklisted mobs from switching to Follow mode (UI grays the button,
@@ -810,7 +810,7 @@ public final class PetManager {
      * DEFEND/ATTACK behaviour handled by PetEventHandler  - no goals needed.
      */
     private static void applyModes(ServerPlayer player, Mob mob) {
-        PetMovementMode move = petMovement.getOrDefault(player.getUUID(), PetMovementMode.FOLLOW);
+        PetMovementMode move = petMovement.getOrDefault(player.getUUID(), PetMovementMode.POCKET);
 
         mob.goalSelector.removeAllGoals(g -> true);
         mob.targetSelector.removeAllGoals(g -> true);
@@ -826,7 +826,7 @@ public final class PetManager {
             }
             case FOLLOW -> {
                 mob.setNoAi(false);
-                mob.setSilent(false);
+                mob.setSilent(true);
                 mob.setNoGravity(false);
                 mob.goalSelector.addGoal(1, new PetFollowGoal(mob, player.getUUID(), 1.2, 3.0, 8.0));
             }
@@ -1373,7 +1373,7 @@ public final class PetManager {
 
     /** Returns the current movement mode for the given player (defaults to FOLLOW). */
     public static PetMovementMode getMovementMode(UUID playerUuid) {
-        return petMovement.getOrDefault(playerUuid, PetMovementMode.FOLLOW);
+        return petMovement.getOrDefault(playerUuid, PetMovementMode.POCKET);
     }
 
     /**
@@ -1384,7 +1384,7 @@ public final class PetManager {
      */
     public static PetMovementMode autoPocket(ServerPlayer player) {
         UUID playerUuid = player.getUUID();
-        PetMovementMode current = petMovement.getOrDefault(playerUuid, PetMovementMode.FOLLOW);
+        PetMovementMode current = petMovement.getOrDefault(playerUuid, PetMovementMode.POCKET);
         if (current == PetMovementMode.POCKET) return null;
         Entity petEntity = activePets.get(playerUuid);
         if (!(petEntity instanceof Mob mob)) return null;
@@ -1403,7 +1403,7 @@ public final class PetManager {
      */
     public static void revertFromAutoPocket(ServerPlayer player, PetMovementMode prevMode) {
         UUID playerUuid = player.getUUID();
-        if (petMovement.getOrDefault(playerUuid, PetMovementMode.FOLLOW) != PetMovementMode.POCKET) return;
+        if (petMovement.getOrDefault(playerUuid, PetMovementMode.POCKET) != PetMovementMode.POCKET) return;
         petMovement.put(playerUuid, prevMode);
         PetData data = pocketPets.remove(playerUuid);
         if (data != null) {
