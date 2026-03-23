@@ -3,6 +3,7 @@ package com.arcadia.prestige;
 import com.arcadia.lib.config.DatabaseConfig;
 import com.arcadia.lib.data.DatabaseManager;
 import com.arcadia.lib.DebugMode;
+import com.arcadia.prestige.config.PrestigeConfig;
 import com.arcadia.prestige.network.PacketHandler;
 import com.arcadia.prestige.server.DashboardMenu;
 import com.arcadia.prestige.server.LuckPermsHook;
@@ -36,6 +37,7 @@ public class ArcadiaDashboard {
         NeoForge.EVENT_BUS.addListener(this::onServerStopping);
 
         container.registerConfig(ModConfig.Type.SERVER, DatabaseConfig.SPEC, "arcadia-database.toml");
+        container.registerConfig(ModConfig.Type.SERVER, PrestigeConfig.SPEC, "arcadia-prestige.toml");
     }
 
     private void onCommonSetup(FMLCommonSetupEvent event) {
@@ -84,6 +86,11 @@ public class ArcadiaDashboard {
             LOGGER.info("[ArcadiaPrestige] Database config loaded (host: {}, db: {}).",
                     com.arcadia.lib.config.DatabaseConfig.DB_HOST,
                     com.arcadia.lib.config.DatabaseConfig.DB_NAME);
+        }
+        if (event.getConfig().getSpec() == PrestigeConfig.SPEC) {
+            PrestigeConfig.apply();
+            LOGGER.info("[ArcadiaPrestige] Prestige config loaded (server_id: {}, perm_vip: {}).",
+                    PrestigeConfig.CACHED_SERVER_ID, PrestigeConfig.GRADE_PERM_VIP);
         }
     }
 }

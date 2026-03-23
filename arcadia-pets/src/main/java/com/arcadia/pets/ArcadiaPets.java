@@ -7,6 +7,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
+import net.neoforged.fml.event.config.ModConfigEvent;
 import org.slf4j.Logger;
 
 @Mod("arcadia_pets")
@@ -20,7 +21,16 @@ public final class ArcadiaPets {
         PetsModMenus.MENUS.register(modBus);
 
         modBus.addListener(PetPacketHandler::onRegisterPayloadHandlers);
+        modBus.addListener(this::onConfigLoad);
 
         container.registerConfig(ModConfig.Type.SERVER, PetPoolConfig.SPEC, "arcadia-pets.toml");
+    }
+
+    private void onConfigLoad(ModConfigEvent event) {
+        if (event instanceof ModConfigEvent.Unloading) return;
+        if (event.getConfig().getSpec() == PetPoolConfig.SPEC) {
+            PetPoolConfig.applyToRarities();
+            LOGGER.info("[ArcadiaPets] Pet pool config loaded.");
+        }
     }
 }

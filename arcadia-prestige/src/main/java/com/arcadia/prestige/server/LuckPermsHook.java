@@ -1,5 +1,6 @@
 package com.arcadia.prestige.server;
 
+import com.arcadia.prestige.config.PrestigeConfig;
 import com.mojang.logging.LogUtils;
 import net.luckperms.api.LuckPerms;
 import net.luckperms.api.LuckPermsProvider;
@@ -77,9 +78,9 @@ public final class LuckPermsHook {
         User user = api.getUserManager().getUser(player.getUUID());
         if (user == null) return "default";
 
-        if (hasPermission(user, "arcadia.grade.mvp"))     return "mvp";
-        if (hasPermission(user, "arcadia.grade.vipplus")) return "vip+";
-        if (hasPermission(user, "arcadia.grade.vip"))     return "vip";
+        if (hasPermission(user, PrestigeConfig.GRADE_PERM_MVP))      return "mvp";
+        if (hasPermission(user, PrestigeConfig.GRADE_PERM_VIP_PLUS)) return "vip+";
+        if (hasPermission(user, PrestigeConfig.GRADE_PERM_VIP))      return "vip";
         return "default";
     }
 
@@ -94,7 +95,7 @@ public final class LuckPermsHook {
         if (api == null) return false;
         User user = api.getUserManager().getUser(player.getUUID());
         if (user == null) return false;
-        return hasPermission(user, "arcadia.grade.founder");
+        return hasPermission(user, PrestigeConfig.GRADE_PERM_FOUNDER);
     }
 
     /**

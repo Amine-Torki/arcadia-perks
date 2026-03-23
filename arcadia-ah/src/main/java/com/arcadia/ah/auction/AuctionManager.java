@@ -1,6 +1,7 @@
 package com.arcadia.ah.auction;
 
 
+import com.arcadia.ah.config.AhConfig;
 import com.arcadia.pets.item.PetItem;
 import com.mojang.logging.LogUtils;
 import net.minecraft.ChatFormatting;
@@ -22,11 +23,10 @@ public final class AuctionManager {
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    /** How long listings stay active (48 hours). */
-    public static final long LISTING_DURATION_MS = 48L * 60 * 60 * 1000;
-
-    /** Max items a player may have listed simultaneously. */
-    public static final int MAX_LISTINGS_PER_PLAYER = 30;
+    /** How long listings stay active — read from AhConfig (default 48 hours). */
+    public static long listingDurationMs()     { return AhConfig.LISTING_DURATION_MS; }
+    /** Max items a player may have listed simultaneously — read from AhConfig (default 30). */
+    public static int  maxListingsPerPlayer()  { return AhConfig.MAX_LISTINGS_PER_PLAYER_V; }
 
     /** In-memory cache — refreshed from DB periodically. */
     private static volatile List<AuctionListing> cache = new CopyOnWriteArrayList<>();
@@ -105,9 +105,9 @@ public final class AuctionManager {
         }
 
         List<AuctionListing> myListings = getByPlayer(seller.getUUID());
-        if (myListings.size() >= MAX_LISTINGS_PER_PLAYER) {
+        if (myListings.size() >= maxListingsPerPlayer()) {
             seller.sendSystemMessage(Component.literal(
-                    "§cYou already have " + MAX_LISTINGS_PER_PLAYER + " active listings."));
+                    "§cYou already have " + maxListingsPerPlayer() + " active listings."));
             return false;
         }
 
@@ -120,7 +120,7 @@ public final class AuctionManager {
 
         AuctionListing listing = new AuctionListing(
                 UUID.randomUUID(),
-                System.getProperty("arcadia.server_id", "server1"),
+                com.arcadia.lib.ServerContext.SERVER_ID,
                 seller.getUUID(),
                 seller.getGameProfile().getName(),
                 nbt,
@@ -129,7 +129,7 @@ public final class AuctionManager {
                 category,
                 price,
                 now,
-                now + LISTING_DURATION_MS
+                now + listingDurationMs()
         );
 
         com.arcadia.lib.data.DatabaseManager.executeAsync(() -> {
