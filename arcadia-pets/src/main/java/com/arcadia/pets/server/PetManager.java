@@ -482,7 +482,7 @@ public final class PetManager {
                 float vitality = updated.stats().getOrDefault(PetStat.ENDURANCE, 0);
                 float sizeNorm = getMobSizeScale(updated.mobType());
                 float scale = (0.25f + vitality * 0.10f) * sizeNorm;
-                String newName = finalName != null ? finalName : "";
+                String newName = (finalName != null) ? finalName : formatMobType(updated.mobType());
                 S2CPocketPet refresh = new S2CPocketPet(playerUuid, updated.mobType(), scale, newName);
                 broadcastToNearby(player, refresh);
                 PacketDistributor.sendToPlayer(player, refresh);
@@ -896,7 +896,9 @@ public final class PetManager {
             }
         }
 
-        String name = data.customName() != null ? data.customName() : "";
+        String name = (data.customName() != null && !data.customName().isEmpty())
+                ? data.customName()
+                : formatMobType(data.mobType());
         S2CPocketPet pkt = new S2CPocketPet(playerUuid, data.mobType(), scale, name);
         broadcastToNearby(player, pkt);
         PacketDistributor.sendToPlayer(player, pkt);

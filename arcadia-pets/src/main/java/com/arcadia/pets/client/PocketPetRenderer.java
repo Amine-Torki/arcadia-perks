@@ -49,6 +49,9 @@ public final class PocketPetRenderer {
     /** ownerUuid → fake locally-created entity (not in any world). */
     private static final Map<UUID, LivingEntity> fakePets = new ConcurrentHashMap<>();
 
+    /** ownerUuid → actual rendering scale used for that fake pet (used for name-tag Y). */
+    private static final Map<UUID, Float> fakeScales = new ConcurrentHashMap<>();
+
     private PocketPetRenderer() {}
 
     // ── Packet handler ────────────────────────────────────────────────────────
@@ -61,7 +64,10 @@ public final class PocketPetRenderer {
         if (old != null) old.setRemoved(net.minecraft.world.entity.Entity.RemovalReason.DISCARDED);
 
         // Empty mobType = recall signal → just clear
-        if (pkt.mobType().isEmpty()) return;
+        if (pkt.mobType().isEmpty()) {
+            fakeScales.remove(ownerUuid);
+            return;
+        }
 
         Minecraft mc = Minecraft.getInstance();
         ClientLevel level = mc.level;
@@ -88,6 +94,11 @@ public final class PocketPetRenderer {
         if (living instanceof net.minecraft.world.entity.Mob mob) mob.setNoAi(true);
 
         fakePets.put(ownerUuid, living);
+        // Store the actual rendering scale so the name-tag Y can use it directly,
+        // avoiding reliance on getBbHeight() / Attributes.SCALE read-back which can
+        // misbehave on fake (off-level) entities.
+        float renderScale = (type == EntityType.ENDER_DRAGON) ? 0.06f : pkt.scale();
+        fakeScales.put(ownerUuid, renderScale);
     }
 
     // ── Render via RenderLevelStageEvent ──────────────────────────────────────
@@ -184,9 +195,11 @@ public final class PocketPetRenderer {
             // that can silently fail for off-level fake entities.
             Component customName = fake.getCustomName();
             if (customName != null) {
-                AttributeInstance scaleAttr = fake.getAttribute(Attributes.SCALE);
-                float entityScale = scaleAttr != null ? (float) scaleAttr.getValue() : 1.0f;
-                double nameY = ry + fake.getBbHeight() * entityScale + 0.25;
+                // Use natural (unscaled) entity type height × the stored rendering scale
+                // so the tag is always just above the visual model, regardless of whether
+                // getBbHeight() or Attributes.SCALE are reliable on a fake entity.
+                float renderScale = fakeScales.getOrDefault(ownerUuid, 1.0f);
+                double nameY = ry + fake.getType().getDimensions().height() * renderScale + 0.25;
 
                 poseStack.pushPose();
                 poseStack.translate(rx, nameY, rz);
@@ -212,5 +225,6 @@ public final class PocketPetRenderer {
         fakePets.values().forEach(e ->
                 e.setRemoved(net.minecraft.world.entity.Entity.RemovalReason.DISCARDED));
         fakePets.clear();
+        fakeScales.clear();
     }
 }
