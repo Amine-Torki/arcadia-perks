@@ -1,18 +1,38 @@
 // Root build script — only defines the collectJars task.
 // Subproject configuration lives in each module's own build.gradle.
 
-tasks.register('collectJars', Copy) {
-    description = 'Copies all subproject jars (excluding sources) into mod-jars/.'
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+
+tasks.register('collectJars') {
+    description = 'Copies all subproject jars (excluding sources) into mod-jars/ and mod-jars-new/ (wiped first).'
     group = 'build'
 
     dependsOn subprojects.collect { it.tasks.named('jar') }
 
-    from subprojects.collect { sub ->
-        sub.tasks.named('jar').map { it.outputs.files }
+    // Capture everything at configuration time (required for config cache)
+    def modJarsDir    = layout.projectDirectory.dir('mod-jars').asFile
+    def modJarsNewDir = layout.projectDirectory.dir('mod-jars-new').asFile
+    def jarFiles      = subprojects.collect { sub ->
+        sub.tasks.named('jar').map { it.outputs.files.files.toList() }
     }
 
-    // Drop -sources jars if any slip through
-    exclude '**/*-sources.jar'
+    doLast {
+        modJarsDir.mkdirs()
+        modJarsNewDir.mkdirs()
 
-    into layout.projectDirectory.dir('mod-jars')
+        // Wipe mod-jars-new before copying
+        modJarsNewDir.listFiles()?.each { it.delete() }
+
+        jarFiles.each { provider ->
+            provider.get().each { file ->
+                if (file.name.endsWith('.jar') && !file.name.contains('-sources')) {
+                    [modJarsDir, modJarsNewDir].each { dir ->
+                        Files.copy(file.toPath(), new File(dir, file.name).toPath(),
+                                StandardCopyOption.REPLACE_EXISTING)
+                    }
+                }
+            }
+        }
+    }
 }
