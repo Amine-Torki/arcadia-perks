@@ -32,4 +32,10 @@ public class AhLeaderboardScreen extends AbstractContainerScreen<AhLeaderboardMe
         graphics.drawString(this.font, label,
                 (this.imageWidth - this.font.width(label)) / 2, 6, 0xFFD700, false);
     }
+
+    @Override
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        super.render(graphics, mouseX, mouseY, partialTick);
+        this.renderTooltip(graphics, mouseX, mouseY);
+    }
 }

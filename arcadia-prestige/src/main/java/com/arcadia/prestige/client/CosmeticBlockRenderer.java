@@ -9,6 +9,7 @@ import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.block.Blocks;
@@ -58,10 +59,11 @@ public final class CosmeticBlockRenderer {
         Map<UUID, String> allEffects = PlayerEffectCache.getAll();
         if (allEffects.isEmpty()) return;
 
-        ClientLevel level      = mc.level;
-        Vec3        cam        = mc.gameRenderer.getMainCamera().getPosition();
-        PoseStack   poseStack  = event.getPoseStack();
+        ClientLevel level       = mc.level;
+        Vec3        cam         = mc.gameRenderer.getMainCamera().getPosition();
+        PoseStack   poseStack   = event.getPoseStack();
         MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
+        float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(true);
         boolean firstPerson = mc.options.getCameraType() == CameraType.FIRST_PERSON;
         boolean hideOwn     = PlayerEffectCache.isHideOwnEffectsFirstPerson();
         UUID    localUuid   = mc.player.getUUID();
@@ -77,56 +79,68 @@ public final class CosmeticBlockRenderer {
             if (target == null) continue;
             if (target.distanceToSqr(mc.player) > 900.0) continue;
 
-            // Block position — matches the particle head formula in ParticleRenderer.
-            // Use ParticleRenderer.tickCount so the angle is in sync with the emitted particles.
+            // Interpolate player position for smooth movement (no jitter on jump/walk)
+            double px = Mth.lerp(partialTick, target.xOld, target.getX());
+            double py = Mth.lerp(partialTick, target.yOld, target.getY());
+            double pz = Mth.lerp(partialTick, target.zOld, target.getZ());
+
             String effectId = entry.getValue().toLowerCase();
-            double wx, wy, wz;
+            // Smooth spin using partialTick
+            float spin = (float) ((ParticleRenderer.tickCount + partialTick) * SPIN_SPEED % 360.0);
 
             if ("meteor".equals(effectId)) {
-                // Meteor: straight-line pass, same formula as renderMeteor (m=0)
-                int tick       = ParticleRenderer.tickCount;
-                int playerOff  = (target.getId() * 37) % 90;
-                int phase      = (tick + playerOff) % 90;
-                if (phase >= 18) continue; // meteor not currently active
-                float t = phase / 17.0f;
-                wx = target.getX() + 4.5 - t * 9.0;
-                wy = target.getY() + 5.0 - t * 3.5;
-                wz = target.getZ() + 3.5 - t * 7.0;
+                // Three blocks — one per meteor streak (m=0,1,2), matching renderMeteor offsets
+                int tick      = ParticleRenderer.tickCount;
+                int playerOff = (target.getId() * 37) % 90;
+
+                for (int m = 0; m < 3; m++) {
+                    int phase = (tick + playerOff + m * 30) % 90;
+                    if (phase >= 18) continue; // this streak not active
+
+                    float t = (phase + partialTick) / 17.0f;
+                    double wx = px + 4.5 - t * 9.0  + m * 1.2;
+                    double wy = py + 5.0 - t * 3.5  - m * 0.5;
+                    double wz = pz + 3.5 - t * 7.0  + m * 0.8;
+
+                    renderBlock(poseStack, bufferSource, mc, level, cam, bs, wx, wy, wz, spin);
+                }
             } else {
-                // Comet (and any other orbit companion): elliptical orbit around player
-                double angle = ParticleRenderer.tickCount * 0.09;
+                // Comet: smooth elliptical orbit using partialTick-interpolated angle
+                double angle = (ParticleRenderer.tickCount + partialTick) * 0.09;
                 double orx = 1.45, orz = 0.85;
-                wx = target.getX() + Math.cos(angle) * orx;
-                wy = target.getY() + 0.9 + Math.sin(angle * 0.7) * 0.30;
-                wz = target.getZ() + Math.sin(angle) * orz;
+                double wx = px + Math.cos(angle) * orx;
+                double wy = py + 0.9 + Math.sin(angle * 0.7) * 0.30;
+                double wz = pz + Math.sin(angle) * orz;
+
+                renderBlock(poseStack, bufferSource, mc, level, cam, bs, wx, wy, wz, spin);
             }
-
-            // Camera-relative coords
-            double crx = wx - cam.x;
-            double cry = wy - cam.y;
-            double crz = wz - cam.z;
-
-            // Sample light at the block's world position
-            BlockPos lightPos    = BlockPos.containing(wx, wy, wz);
-            int      packedLight = LightTexture.pack(
-                    level.getBrightness(LightLayer.BLOCK, lightPos),
-                    level.getBrightness(LightLayer.SKY,   lightPos));
-
-            float spin = (float) (ParticleRenderer.tickCount * SPIN_SPEED % 360.0);
-
-            poseStack.pushPose();
-            poseStack.translate(crx, cry, crz);
-            poseStack.scale(BLOCK_SCALE, BLOCK_SCALE, BLOCK_SCALE);
-            poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(spin));
-            poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(25f)); // slight tilt
-            poseStack.translate(-0.5, -0.5, -0.5);                           // centre block origin
-
-            mc.getBlockRenderer().renderSingleBlock(
-                    bs, poseStack, bufferSource, packedLight, OverlayTexture.NO_OVERLAY);
-
-            poseStack.popPose();
         }
 
         bufferSource.endBatch();
+    }
+
+    private static void renderBlock(PoseStack poseStack, MultiBufferSource.BufferSource bufferSource,
+                                    Minecraft mc, ClientLevel level, Vec3 cam,
+                                    BlockState bs, double wx, double wy, double wz, float spin) {
+        double crx = wx - cam.x;
+        double cry = wy - cam.y;
+        double crz = wz - cam.z;
+
+        BlockPos lightPos    = BlockPos.containing(wx, wy, wz);
+        int      packedLight = LightTexture.pack(
+                level.getBrightness(LightLayer.BLOCK, lightPos),
+                level.getBrightness(LightLayer.SKY,   lightPos));
+
+        poseStack.pushPose();
+        poseStack.translate(crx, cry, crz);
+        poseStack.scale(BLOCK_SCALE, BLOCK_SCALE, BLOCK_SCALE);
+        poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(spin));
+        poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(25f));
+        poseStack.translate(-0.5, -0.5, -0.5);
+
+        mc.getBlockRenderer().renderSingleBlock(
+                bs, poseStack, bufferSource, packedLight, OverlayTexture.NO_OVERLAY);
+
+        poseStack.popPose();
     }
 }
