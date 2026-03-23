@@ -49,10 +49,16 @@ public class PrestigeHubScreen extends Screen {
         for (int i = 0; i < PrestigeCard.ALL.size(); i++) {
             PrestigeCard card = PrestigeCard.ALL.get(i);
             int cx = startX + i * (CARD_W + CARD_GAP);
-            boolean hovered = mouseX >= cx && mouseX < cx + CARD_W
+            boolean hovered = card.available() && mouseX >= cx && mouseX < cx + CARD_W
                     && mouseY >= startY && mouseY < startY + CARD_H;
             if (hovered) hoveredCard = i;
-            drawCard(g, card, cx, startY, CARD_W, CARD_H, hovered, 1.0f);
+            drawCard(g, card, cx, startY, CARD_W, CARD_H, hovered, card.available() ? 1.0f : 0.35f);
+            if (!card.available()) {
+                // "Not installed" overlay text
+                g.drawCenteredString(this.font,
+                        Component.translatable("arcadia_prestige.hub.not_installed"),
+                        cx + CARD_W / 2, startY + CARD_H - 14, 0xFF554444);
+            }
         }
 
         // Hint at bottom
@@ -155,7 +161,7 @@ public class PrestigeHubScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button == 0 && hoveredCard >= 0) {
+        if (button == 0 && hoveredCard >= 0 && PrestigeCard.ALL.get(hoveredCard).available()) {
             int tab = PrestigeCard.ALL.get(hoveredCard).tab();
             PacketDistributor.sendToServer(new C2SDashboardAction(C2SDashboardAction.OPEN_TAB, String.valueOf(tab)));
             this.onClose();

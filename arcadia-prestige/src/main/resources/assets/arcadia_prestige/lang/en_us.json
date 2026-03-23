@@ -321,6 +321,7 @@
   "arcadia_prestige.hub.pets.sub":        "Collection & skills",
   "arcadia_prestige.hub.daily.label":     "Daily Reward",
   "arcadia_prestige.hub.daily.sub":       "Claim your streak bonus",
+  "arcadia_prestige.hub.not_installed":   "Not installed",
   "arcadia_prestige.hub.auction.label":   "Auction House",
   "arcadia_prestige.hub.auction.sub":     "Buy & sell cross-server"
 }
