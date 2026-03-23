@@ -13,7 +13,16 @@ import com.arcadia.pets.item.PetRarity;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
-public record S2CPetReveal(CompoundTag petTag, byte minimumRarityOrdinal) implements CustomPacketPayload {
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Server → client: deliver one or more rolled pet results to display the reveal screen.
+ * Size 1  → single-spin {@link com.arcadia.pets.client.PetRevealScreen}.
+ * Size 2–4 → multi-spin {@link com.arcadia.pets.client.PetMultiRevealScreen}.
+ */
+public record S2CPetReveal(List<CompoundTag> petTags, byte minimumRarityOrdinal)
+        implements CustomPacketPayload {
 
     public static final Type<S2CPetReveal> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath("arcadia_pets", "pet_reveal"));
@@ -22,14 +31,17 @@ public record S2CPetReveal(CompoundTag petTag, byte minimumRarityOrdinal) implem
             StreamCodec.of(S2CPetReveal::encode, S2CPetReveal::decode);
 
     private static void encode(FriendlyByteBuf buf, S2CPetReveal pkt) {
-        buf.writeNbt(pkt.petTag);
+        buf.writeByte(pkt.petTags.size());
+        for (CompoundTag tag : pkt.petTags) buf.writeNbt(tag);
         buf.writeByte(pkt.minimumRarityOrdinal);
     }
 
     private static S2CPetReveal decode(FriendlyByteBuf buf) {
-        CompoundTag tag = buf.readNbt();
+        int count = buf.readByte() & 0xFF;
+        List<CompoundTag> tags = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) tags.add(buf.readNbt());
         byte ordinal = buf.readByte();
-        return new S2CPetReveal(tag, ordinal);
+        return new S2CPetReveal(tags, ordinal);
     }
 
     @Override
@@ -40,11 +52,20 @@ public record S2CPetReveal(CompoundTag petTag, byte minimumRarityOrdinal) implem
     @OnlyIn(Dist.CLIENT)
     public void handle(IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
-            PetData data = PetData.fromTag(petTag);
             PetRarity[] rarities = PetRarity.values();
             PetRarity minRarity = (minimumRarityOrdinal >= 0 && minimumRarityOrdinal < rarities.length)
                     ? rarities[minimumRarityOrdinal] : PetRarity.COMMON;
-            Minecraft.getInstance().setScreen(new com.arcadia.pets.client.PetRevealScreen(data, minRarity));
+
+            if (petTags.size() == 1) {
+                PetData data = PetData.fromTag(petTags.get(0));
+                Minecraft.getInstance().setScreen(
+                        new com.arcadia.pets.client.PetRevealScreen(data, minRarity));
+            } else {
+                List<PetData> pets = new ArrayList<>(petTags.size());
+                for (CompoundTag tag : petTags) pets.add(PetData.fromTag(tag));
+                Minecraft.getInstance().setScreen(
+                        new com.arcadia.pets.client.PetMultiRevealScreen(pets, minRarity));
+            }
         });
     }
 }

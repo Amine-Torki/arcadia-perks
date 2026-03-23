@@ -69,6 +69,7 @@
 
   "arcadia_prestige.gui.pet_bag.min_rarity":  "Minimum Rarity: ",
   "arcadia_prestige.gui.pet_bag.click_to_open": "Right-click to open!",
+  "arcadia_prestige.gui.pet_bag.shift_to_open_all": "\u21e7 Shift + Right-click to open all at once",
   "arcadia_prestige.gui.pet_bag.loot_chances":  "Loot Chances:",
   "arcadia_prestige.gui.pet_bag.chance_format": "  \u2022 %s: \u00a7f%s%%",
   "arcadia_prestige.gui.pet_bag.sent_to_collection":    "\u2605 Pet sent to your collection! Use /prestige \u2192 Pets to manage it.",
@@ -230,6 +231,12 @@
   "arcadia_prestige.gui.hud_settings.as_preview":         "\u26A1 Aftershock",
   "arcadia_prestige.gui.hud_settings.portrait":           "Pet Portrait",
   "arcadia_prestige.gui.hud_settings.portrait_preview":   "\uD83D\uDC3E Portrait",
+
+  "arcadia_prestige.gui.multi_reveal.title":   "Pet Crate Opening",
+  "arcadia_prestige.gui.multi_reveal.rolling": "Opening %s Crates...",
+  "arcadia_prestige.gui.multi_reveal.hint":    "Hover a card to inspect",
+  "arcadia_prestige.gui.multi_reveal.inspect": "Inspect \u25b2",
+  "arcadia_prestige.gui.multi_reveal.close":   "Click anywhere to close",
 
   "arcadia_prestige.gui.reveal.title":       "Pet Reveal",
   "arcadia_prestige.gui.reveal.rolling":     "Rolling Pet...",

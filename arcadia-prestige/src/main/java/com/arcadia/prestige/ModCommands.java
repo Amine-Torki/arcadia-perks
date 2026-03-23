@@ -3,6 +3,7 @@ package com.arcadia.prestige;
 import com.arcadia.ah.auction.AuctionManager;
 import com.arcadia.lib.data.PlayerDataHandler;
 import com.arcadia.lib.DebugMode;
+import com.arcadia.pets.PetsGlobalFlags;
 import com.arcadia.pets.PetsModItems;
 import com.arcadia.pets.item.*;
 import com.arcadia.pets.item.PetRoller;
@@ -64,6 +65,7 @@ public final class ModCommands {
         event.getDispatcher().register(
             Commands.literal("prestige")
                 .executes(ctx -> {
+                    if (!checkEnabled(ctx.getSource())) return 0;
                     if (ctx.getSource().getEntity() instanceof ServerPlayer player) {
                         PacketHandler.sendToPlayer(player, new S2COpenHub());
                     }
@@ -75,11 +77,32 @@ public final class ModCommands {
         event.getDispatcher().register(
             Commands.literal("pets")
                 .executes(ctx -> {
+                    if (!checkEnabled(ctx.getSource())) return 0;
                     if (ctx.getSource().getEntity() instanceof ServerPlayer player) {
                         DashboardMenu.openFor(player, 1);
                     }
                     return Command.SINGLE_SUCCESS;
                 })
+                // /pets enable — op: hot-enable pets for all players
+                .then(Commands.literal("enable")
+                    .requires(src -> src.hasPermission(2))
+                    .executes(ctx -> {
+                        PetsGlobalFlags.PETS_ENABLED = true;
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                                "§a[Arcadia] Pets enabled for all players."), true);
+                        return Command.SINGLE_SUCCESS;
+                    })
+                )
+                // /pets disable — op: hot-disable pets for non-operators
+                .then(Commands.literal("disable")
+                    .requires(src -> src.hasPermission(2))
+                    .executes(ctx -> {
+                        PetsGlobalFlags.PETS_ENABLED = false;
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                                "§c[Arcadia] Pets disabled. Operators are unaffected."), true);
+                        return Command.SINGLE_SUCCESS;
+                    })
+                )
                 // /pets bag <tier> — debug: give a pet bag
                 .then(Commands.literal("bag")
                     .requires(src -> DebugMode.ENABLED || src.hasPermission(2))
@@ -229,6 +252,7 @@ public final class ModCommands {
         event.getDispatcher().register(
             Commands.literal("cosmetics")
                 .executes(ctx -> {
+                    if (!checkEnabled(ctx.getSource())) return 0;
                     if (ctx.getSource().getEntity() instanceof ServerPlayer player) {
                         DashboardMenu.openFor(player, 0);
                     }
@@ -240,6 +264,7 @@ public final class ModCommands {
         event.getDispatcher().register(
             Commands.literal("daily")
                 .executes(ctx -> {
+                    if (!checkEnabled(ctx.getSource())) return 0;
                     if (ctx.getSource().getEntity() instanceof ServerPlayer player) {
                         DashboardMenu.openFor(player, 2);
                     }
@@ -279,6 +304,7 @@ public final class ModCommands {
         event.getDispatcher().register(
             Commands.literal("fuse")
                 .executes(ctx -> {
+                    if (!checkEnabled(ctx.getSource())) return 0;
                     if (ctx.getSource().getEntity() instanceof ServerPlayer player) {
                         com.arcadia.pets.server.FusionMenu.openFor(player);
                     }
@@ -404,6 +430,21 @@ public final class ModCommands {
         com.arcadia.pets.server.PetManager.forceUpdateActivePetData(player.getUUID(), newData);
         source.sendSuccess(() -> Component.literal("Added skill " + skillId + " (Lvl " + level + ") to your active pet."), true);
         return 1;
+    }
+
+    /**
+     * Returns true if pets are enabled OR the source is an operator.
+     * Sends a failure message and returns false for non-op players when disabled.
+     */
+    private static boolean checkEnabled(CommandSourceStack src) {
+        if (!PetsGlobalFlags.PETS_ENABLED
+                && src.getEntity() instanceof ServerPlayer p
+                && !p.hasPermissions(2)) {
+            src.sendFailure(Component.literal(
+                    "§c[Arcadia] This feature is currently disabled on this server."));
+            return false;
+        }
+        return true;
     }
 
     /** Shared handler for /ah sell <price> [quantity]. quantity=-1 means default to 1. */
