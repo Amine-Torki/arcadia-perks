@@ -5,6 +5,7 @@ license="All Rights Reserved"
 modId="arcadia_pets"
 version="${file.jarVersion}"
 displayName="Arcadia Pets"
+mixinConfigs="arcadia_pets.mixins.json"
 description="Collectible pet system with skills, fusion, HUD and collection."
 [[dependencies.arcadia_pets]]
     modId="neoforge"
