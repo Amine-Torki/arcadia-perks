@@ -62,8 +62,6 @@ public final class CosmeticBlockRenderer {
         Vec3        cam        = mc.gameRenderer.getMainCamera().getPosition();
         PoseStack   poseStack  = event.getPoseStack();
         MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
-        float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(true);
-
         boolean firstPerson = mc.options.getCameraType() == CameraType.FIRST_PERSON;
         boolean hideOwn     = PlayerEffectCache.isHideOwnEffectsFirstPerson();
         UUID    localUuid   = mc.player.getUUID();
@@ -79,15 +77,29 @@ public final class CosmeticBlockRenderer {
             if (target == null) continue;
             if (target.distanceToSqr(mc.player) > 900.0) continue;
 
-            // Orbit position — same formula as ParticleRenderer.renderComet / renderMeteor
-            // so the block rides exactly at the particle head position.
-            double gameTime = level.getGameTime() + partialTick;
-            double angle    = gameTime * 0.09;   // matches tick * 0.09 in ParticleRenderer
-            double rx = 1.45, rz = 0.85;
+            // Block position — matches the particle head formula in ParticleRenderer.
+            // Use ParticleRenderer.tickCount so the angle is in sync with the emitted particles.
+            String effectId = entry.getValue().toLowerCase();
+            double wx, wy, wz;
 
-            double wx = target.getX() + Math.cos(angle) * rx;
-            double wy = target.getY() + 0.9 + Math.sin(angle * 0.7) * 0.30;
-            double wz = target.getZ() + Math.sin(angle) * rz;
+            if ("meteor".equals(effectId)) {
+                // Meteor: straight-line pass, same formula as renderMeteor (m=0)
+                int tick       = ParticleRenderer.tickCount;
+                int playerOff  = (target.getId() * 37) % 90;
+                int phase      = (tick + playerOff) % 90;
+                if (phase >= 18) continue; // meteor not currently active
+                float t = phase / 17.0f;
+                wx = target.getX() + 4.5 - t * 9.0;
+                wy = target.getY() + 5.0 - t * 3.5;
+                wz = target.getZ() + 3.5 - t * 7.0;
+            } else {
+                // Comet (and any other orbit companion): elliptical orbit around player
+                double angle = ParticleRenderer.tickCount * 0.09;
+                double orx = 1.45, orz = 0.85;
+                wx = target.getX() + Math.cos(angle) * orx;
+                wy = target.getY() + 0.9 + Math.sin(angle * 0.7) * 0.30;
+                wz = target.getZ() + Math.sin(angle) * orz;
+            }
 
             // Camera-relative coords
             double crx = wx - cam.x;
@@ -100,7 +112,7 @@ public final class CosmeticBlockRenderer {
                     level.getBrightness(LightLayer.BLOCK, lightPos),
                     level.getBrightness(LightLayer.SKY,   lightPos));
 
-            float spin = (float) (gameTime * SPIN_SPEED % 360.0);
+            float spin = (float) (ParticleRenderer.tickCount * SPIN_SPEED % 360.0);
 
             poseStack.pushPose();
             poseStack.translate(crx, cry, crz);

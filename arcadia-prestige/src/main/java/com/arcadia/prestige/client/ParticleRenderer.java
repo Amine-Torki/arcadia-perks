@@ -66,7 +66,7 @@ public final class ParticleRenderer {
         { 0.58, 0.54, -0.18, 3.0, 0.22 },
     };
 
-    private static int tickCount = 0;
+    static int tickCount = 0;
 
     private static final Map<UUID, List<Vec3>> trailPositions = new HashMap<>();
     private static final Map<UUID, Vec3>       lastPositions  = new HashMap<>();

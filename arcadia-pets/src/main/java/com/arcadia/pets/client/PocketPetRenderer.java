@@ -213,7 +213,7 @@ public final class PocketPetRenderer {
 
                 Font font = mc.font;
                 float textX = -font.width(customName) / 2.0f;
-                font.drawInBatch(customName, textX, 0f, 0xFFFFFF, false,
+                font.drawInBatch(customName, textX, 0f, -1, false,
                         poseStack.last().pose(), bufferSource,
                         Font.DisplayMode.SEE_THROUGH, 0x40000000, packedLight);
                 poseStack.popPose();

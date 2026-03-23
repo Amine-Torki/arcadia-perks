@@ -27,6 +27,7 @@ import java.util.List;
  */
 public class AhLeaderboardMenu extends AbstractContainerMenu {
 
+    private static final int BACK_SLOT = 49;
     private final SimpleContainer container = new SimpleContainer(54);
 
     public AhLeaderboardMenu(int syncId, Inventory playerInv) {
@@ -82,7 +83,7 @@ public class AhLeaderboardMenu extends AbstractContainerMenu {
         // Slots 9, 11, 13, 15, 17, 19, 21, 23, 25, 27 — row 1+2, odd cols with spacing
 
         // Actually simplest: 2 columns of 5, left at col1, right at col5
-        int[] slots = {10, 19, 28, 37, 46, 14, 23, 32, 41, 50};
+            int[] slots = {10, 19, 28, 37, 46, 14, 23, 32, 41, 50};
 
         for (int i = 0; i < entries.size(); i++) {
             AhLeaderboardEntry e = entries.get(i);
@@ -110,6 +111,19 @@ public class AhLeaderboardMenu extends AbstractContainerMenu {
             setName(empty, Component.literal("No sales recorded yet").withStyle(ChatFormatting.GRAY));
             container.setItem(22, empty);
         }
+
+        ItemStack back = new ItemStack(Items.ARROW);
+        setName(back, Component.literal("← Back to Auction House").withStyle(ChatFormatting.YELLOW));
+        container.setItem(BACK_SLOT, back);
+    }
+
+    @Override
+    public void clicked(int slotId, int button, net.minecraft.world.inventory.ClickType clickType, Player player) {
+        if (slotId == BACK_SLOT && player instanceof net.minecraft.server.level.ServerPlayer sp) {
+            AhDashboardBridge.openAhTab(sp);
+            return;
+        }
+        broadcastChanges();
     }
 
     private static ItemStack rankIcon(int rank) {

@@ -26,6 +26,7 @@ import net.minecraft.world.item.component.ItemLore;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * Server-side container menu for the Pet Fusion system.
@@ -48,6 +49,7 @@ public class FusionMenu extends AbstractContainerMenu {
     static final int[] PET_SLOT_INDICES = {11, 12, 13, 14, 15};
     static final int   FUSE_SLOT        = 22;
     static final int   OUTPUT_SLOT      = 31;
+    static final int   BACK_SLOT        = 49;
 
     private static final Set<Integer> PET_SLOT_SET = Set.of(11, 12, 13, 14, 15);
 
@@ -100,6 +102,18 @@ public class FusionMenu extends AbstractContainerMenu {
     public void clicked(int slotId, int button, ClickType clickType, Player player) {
         if (slotId < 0) {
             super.clicked(slotId, button, clickType, player);
+            return;
+        }
+
+        // Back button
+        if (slotId == BACK_SLOT) {
+            if (player instanceof ServerPlayer sp) {
+                UUID pid = PetManager.getDesignatedPetId(sp.getUUID());
+                if (pid != null) {
+                    ItemStack s = PetManager.findPetStackAnywhere(sp, pid);
+                    if (!s.isEmpty()) PetManager.openPanelFor(sp, s);
+                }
+            }
             return;
         }
 
@@ -274,12 +288,18 @@ public class FusionMenu extends AbstractContainerMenu {
 
     private void fillChrome() {
         for (int i = 0; i < 54; i++) {
-            if (PET_SLOT_SET.contains(i) || i == FUSE_SLOT || i == OUTPUT_SLOT) continue;
+            if (PET_SLOT_SET.contains(i) || i == FUSE_SLOT || i == OUTPUT_SLOT || i == BACK_SLOT) continue;
             fusionContainer.setItem(i, darkPane(" "));
         }
 
         // Title bar — row 0
         fusionContainer.setItem(4, titled());
+
+        // Back button — bottom row center
+        ItemStack back = new ItemStack(Items.ARROW);
+        setName(back, Component.literal("← Back to /pets").withStyle(ChatFormatting.YELLOW));
+        setLore(back, List.of(Component.literal("Return to your pet panel.").withStyle(ChatFormatting.GRAY)));
+        fusionContainer.setItem(BACK_SLOT, back);
     }
 
     private void buildFuseButton() {

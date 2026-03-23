@@ -120,6 +120,10 @@ public class DashboardMenu extends AbstractContainerMenu {
     // ── Tab management ────────────────────────────────────────────────────────
 
     public void switchTab(int tab, Player player) {
+        // Clear AH search when navigating away from the AH tab
+        if (this.currentTab == 3 && tab != 3 && player instanceof net.minecraft.server.level.ServerPlayer sp) {
+            com.arcadia.ah.auction.AuctionManager.clearSearch(sp.getUUID());
+        }
         this.currentTab = tab;
         this.tabSlot.set(tab);
         if (!player.level().isClientSide()) refreshTab();

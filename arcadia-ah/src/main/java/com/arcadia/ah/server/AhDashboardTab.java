@@ -166,7 +166,8 @@ public final class AhDashboardTab implements DashboardTabHandler {
 
     @Override
     public void onClose(ServerPlayer player) {
-        AuctionManager.clearSearch(player.getUUID());
+        // Search cleared on tab switch (DashboardMenu.switchTab), not here,
+        // so it survives the search-screen → dashboard reopen cycle.
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

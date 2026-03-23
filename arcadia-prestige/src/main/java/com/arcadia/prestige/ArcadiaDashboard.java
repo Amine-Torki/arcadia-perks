@@ -63,9 +63,10 @@ public class ArcadiaDashboard {
     private static final class AhModuleSetup {
         static void init() {
             com.arcadia.ah.server.AhDashboardBridge.register(p -> DashboardMenu.openFor(p, 3));
-            com.arcadia.ah.server.AhDashboardBridge.registerSearchRefresher(sp -> {
-                if (sp.containerMenu instanceof DashboardMenu dm) dm.refreshAhTab();
-            });
+            // Reopen the dashboard at tab 3 after search — the client closed the search screen
+            // and needs the dashboard screen to come back.
+            com.arcadia.ah.server.AhDashboardBridge.registerSearchRefresher(
+                sp -> DashboardMenu.openFor(sp, 3));
             DashboardMenu.registerAhHandler(com.arcadia.ah.server.AhDashboardTab::new);
         }
     }
