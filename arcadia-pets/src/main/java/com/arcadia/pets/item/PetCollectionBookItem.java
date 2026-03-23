@@ -28,16 +28,22 @@ public class PetCollectionBookItem extends Item {
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         if (!level.isClientSide && player instanceof ServerPlayer sp) {
-            java.util.UUID designated = PetManager.getDesignatedPetId(sp.getUUID());
-            if (designated != null) {
-                net.minecraft.world.item.ItemStack petStack = PetManager.findPetStackAnywhere(sp, designated);
-                if (!petStack.isEmpty()) {
-                    PetManager.openPanelFor(sp, petStack);
-                    return InteractionResultHolder.sidedSuccess(player.getItemInHand(hand), level.isClientSide);
+            if (player.isShiftKeyDown()) {
+                // Shift + right-click → open the pet panel for the active/designated pet
+                java.util.UUID designated = PetManager.getDesignatedPetId(sp.getUUID());
+                if (designated != null) {
+                    net.minecraft.world.item.ItemStack petStack = PetManager.findPetStackAnywhere(sp, designated);
+                    if (!petStack.isEmpty()) {
+                        PetManager.openPanelFor(sp, petStack);
+                        return InteractionResultHolder.sidedSuccess(player.getItemInHand(hand), level.isClientSide);
+                    }
                 }
+                sp.sendSystemMessage(Component.translatable("arcadia_prestige.msg.no_active_pet")
+                        .withStyle(ChatFormatting.RED));
+            } else {
+                // Right-click → open the dashboard Pets tab (/pets)
+                com.arcadia.pets.server.DashboardMenuBridge.openPetsTab(sp);
             }
-            sp.sendSystemMessage(Component.translatable("arcadia_prestige.msg.no_active_pet")
-                    .withStyle(ChatFormatting.RED));
         }
         return InteractionResultHolder.sidedSuccess(player.getItemInHand(hand), level.isClientSide);
     }
