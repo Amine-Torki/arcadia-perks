@@ -9,6 +9,8 @@ import net.luckperms.api.query.QueryOptions;
 import net.minecraft.world.entity.player.Player;
 import org.slf4j.Logger;
 
+import java.util.Map;
+
 
 /**
  * Integration with the LuckPerms permission API for grade-based access control.

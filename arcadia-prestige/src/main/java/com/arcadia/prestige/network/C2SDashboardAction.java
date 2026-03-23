@@ -72,7 +72,7 @@ public record C2SDashboardAction(int actionId, String payload) implements Custom
     }
 
     private static void handleSelectParticle(ServerPlayer player, String particleId) {
-        if (!LuckPermsHook.validateGrade(player, particleId)) {
+        if (!LuckPermsHook.canUseParticle(player, particleId)) {
             LOGGER.debug("Player {} does not have permission for particle {}", player.getName().getString(), particleId);
             return;
         }

@@ -1,6 +1,7 @@
 package com.arcadia.pets.server;
 
 import com.arcadia.pets.ArcadiaPets;
+import com.arcadia.pets.PetsGlobalFlags;
 import com.arcadia.pets.item.PetBehaviourMode;
 import com.arcadia.pets.item.PetData;
 import com.arcadia.pets.item.PetItem;
@@ -170,7 +171,6 @@ public final class PetEventHandler {
 
         // Packet is sent when the aftershock actually fires (in onLevelTick), not here,
         // so the HUD drain starts from the real hit moment, not 0.5 s before.
-        LivingEntity target = event.getEntity();
         pendingAftershocks.add(new PendingAftershock(target, aftershock, now + 500L, player.getUUID()));
     }
 

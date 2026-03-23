@@ -161,7 +161,7 @@ public class PetMultiRevealScreen extends Screen {
                         float speed = Math.min(1f, (scrollVel[i] - MIN_VEL)
                                 / (scrollTarget[i] * (1f - decay[i]) - MIN_VEL + 0.001f));
                         minecraft.getSoundManager().play(
-                                PetRevealScreen.uiSound(SoundEvents.UI_BUTTON_CLICK, 0.3f, 1.3f - speed * 0.8f));
+                                PetRevealScreen.uiSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.3f, 1.3f - speed * 0.8f));
                     }
                 }
 

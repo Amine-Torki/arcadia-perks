@@ -147,7 +147,7 @@ public class PetRevealScreen extends Screen {
                     float speedRatio = Math.min(1f, (scrollVelocity - MIN_VELOCITY)
                             / (scrollTarget * (1f - decay) - MIN_VELOCITY + 0.001f));
                     float pitch = 1.3f - speedRatio * 0.8f;
-                    minecraft.getSoundManager().play(uiSound(SoundEvents.UI_BUTTON_CLICK, 0.4f, pitch));
+                    minecraft.getSoundManager().play(uiSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.4f, pitch));
                 }
             }
 
@@ -518,8 +518,8 @@ public class PetRevealScreen extends Screen {
     }
 
     static SimpleSoundInstance uiSound(net.minecraft.sounds.SoundEvent se, float volume, float pitch) {
-        return new SimpleSoundInstance(se.value(), SoundSource.MASTER, volume, pitch,
+        return new SimpleSoundInstance(se.getLocation(), SoundSource.MASTER, volume, pitch,
                 net.minecraft.util.RandomSource.create(), false, 0,
-                net.minecraft.client.sounds.SoundInstance.Attenuation.NONE, 0, 0, 0, true);
+                net.minecraft.client.resources.sounds.SoundInstance.Attenuation.NONE, 0, 0, 0, true);
     }
 }
