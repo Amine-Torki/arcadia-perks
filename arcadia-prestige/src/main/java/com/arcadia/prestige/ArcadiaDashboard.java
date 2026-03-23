@@ -1,9 +1,12 @@
 package com.arcadia.prestige;
 
+import com.arcadia.ah.server.AhDashboardBridge;
 import com.arcadia.lib.config.DatabaseConfig;
 import com.arcadia.lib.data.DatabaseManager;
 import com.arcadia.lib.DebugMode;
+import com.arcadia.pets.server.DashboardMenuBridge;
 import com.arcadia.prestige.network.PacketHandler;
+import com.arcadia.prestige.server.DashboardMenu;
 import com.arcadia.prestige.server.LuckPermsHook;
 import com.mojang.logging.LogUtils;
 import net.neoforged.bus.api.IEventBus;
@@ -38,7 +41,8 @@ public class ArcadiaDashboard {
     }
 
     private void onCommonSetup(FMLCommonSetupEvent event) {
-        // DB and LuckPerms are initialized in onServerAboutToStart (after SERVER configs load)
+        DashboardMenuBridge.register(player -> DashboardMenu.openFor(player, 1));
+        AhDashboardBridge.register(player -> DashboardMenu.openFor(player, 3));
     }
 
     private void onServerAboutToStart(ServerAboutToStartEvent event) {
