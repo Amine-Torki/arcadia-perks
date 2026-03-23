@@ -52,6 +52,9 @@ public final class PocketPetRenderer {
     /** ownerUuid → actual rendering scale used for that fake pet (used for name-tag Y). */
     private static final Map<UUID, Float> fakeScales = new ConcurrentHashMap<>();
 
+    /** ownerUuid → display name from the packet (bypasses getCustomName() which is unreliable for boss mobs). */
+    private static final Map<UUID, Component> fakeNames = new ConcurrentHashMap<>();
+
     private PocketPetRenderer() {}
 
     // ── Packet handler ────────────────────────────────────────────────────────
@@ -66,6 +69,7 @@ public final class PocketPetRenderer {
         // Empty mobType = recall signal → just clear
         if (pkt.mobType().isEmpty()) {
             fakeScales.remove(ownerUuid);
+            fakeNames.remove(ownerUuid);
             return;
         }
 
@@ -85,9 +89,10 @@ public final class PocketPetRenderer {
         AttributeInstance scaleAttr = living.getAttribute(Attributes.SCALE);
         if (scaleAttr != null) scaleAttr.setBaseValue(pkt.scale());
 
+        // Store name independently — boss mobs (Wither, EnderDragon) use the boss bar
+        // system and getCustomName() is unreliable for them on a fake off-level entity.
         if (pkt.customName() != null && !pkt.customName().isEmpty()) {
-            living.setCustomName(Component.literal(pkt.customName()).withStyle(ChatFormatting.YELLOW));
-            living.setCustomNameVisible(true);
+            fakeNames.put(ownerUuid, Component.literal(pkt.customName()).withStyle(ChatFormatting.YELLOW));
         }
 
         // Suppress AI on the fake entity so head-tracking/movement don't animate
@@ -192,8 +197,8 @@ public final class PocketPetRenderer {
             poseStack.popPose();
 
             // Draw name tag manually — bypasses EntityRenderer.shouldShowName() checks
-            // that can silently fail for off-level fake entities.
-            Component customName = fake.getCustomName();
+            // and boss-mob name suppression (Wither, EnderDragon use boss bar instead).
+            Component customName = fakeNames.get(ownerUuid);
             if (customName != null) {
                 // Use natural (unscaled) entity type height × the stored rendering scale
                 // so the tag is always just above the visual model, regardless of whether
@@ -226,5 +231,6 @@ public final class PocketPetRenderer {
                 e.setRemoved(net.minecraft.world.entity.Entity.RemovalReason.DISCARDED));
         fakePets.clear();
         fakeScales.clear();
+        fakeNames.clear();
     }
 }
