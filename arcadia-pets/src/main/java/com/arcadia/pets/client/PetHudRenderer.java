@@ -31,8 +31,8 @@ public final class PetHudRenderer {
     private PetHudRenderer() {}
 
     @SubscribeEvent
-    public static void onRenderPlayerHealth(RenderGuiLayerEvent.Post event) {
-        if (!event.getName().equals(VanillaGuiLayers.PLAYER_HEALTH)) return;
+    public static void onRenderHotbar(RenderGuiLayerEvent.Post event) {
+        if (!event.getName().equals(VanillaGuiLayers.HOTBAR)) return;
         if (!ClientPetState.isActive()) return;
 
         Minecraft mc = Minecraft.getInstance();
