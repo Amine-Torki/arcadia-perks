@@ -3,7 +3,7 @@ loaderVersion="[1,)"
 license="All Rights Reserved"
 [[mods]]
 modId="arcadia_lib"
-version="1.0.0"
+version="${file.jarVersion}"
 displayName="Arcadia Lib"
 description="Shared library for Arcadia mods."
 [[dependencies.arcadia_lib]]

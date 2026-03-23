@@ -3,7 +3,7 @@ loaderVersion="[1,)"
 license="All Rights Reserved"
 [[mods]]
 modId="arcadia_pets"
-version="1.0.0"
+version="${file.jarVersion}"
 displayName="Arcadia Pets"
 description="Collectible pet system with skills, fusion, HUD and collection."
 [[dependencies.arcadia_pets]]

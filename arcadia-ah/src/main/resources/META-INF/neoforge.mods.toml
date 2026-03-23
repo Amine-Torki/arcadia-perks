@@ -3,7 +3,7 @@ loaderVersion="[1,)"
 license="All Rights Reserved"
 [[mods]]
 modId="arcadia_ah"
-version="1.0.0"
+version="${file.jarVersion}"
 displayName="Arcadia Auction House"
 description="Cross-server player auction house with mailbox and Numismatics support."
 [[dependencies.arcadia_ah]]

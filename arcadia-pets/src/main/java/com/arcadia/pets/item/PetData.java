@@ -6,8 +6,6 @@ import com.arcadia.pets.skill.SkillInstance;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.item.ItemStack;
@@ -34,77 +32,90 @@ public record PetData(
         this(petId, mobType, rarity, stats, modifierApplied, customName, hunger, happiness, new ArrayList<>());
     }
 
-    private static final String TAG_PET_ID = "PetId";
-    private static final String TAG_MOB_TYPE = "MobType";
-    private static final String TAG_RARITY = "Rarity";
-    private static final String TAG_STATS = "Stats";
+    private static final String TAG_PET_ID          = "PetId";
+    private static final String TAG_MOB_TYPE        = "MobType";
+    private static final String TAG_RARITY          = "Rarity";
     private static final String TAG_MODIFIER_APPLIED = "ModifierApplied";
-    private static final String TAG_CUSTOM_NAME = "CustomName";
+    private static final String TAG_CUSTOM_NAME     = "CustomName";
 
     /**
-     * Serializes this PetData into a CompoundTag.
+     * Serializes this PetData into a flat CompoundTag (no nested CompoundTag or ListTag).
+     * Stats are stored as individual bytes (S_POW, S_END, …) and skills as a single
+     * packed string ("id|level|eff|xp,…"), eliminating recursive copy() allocations.
      */
     public CompoundTag toTag() {
         CompoundTag tag = new CompoundTag();
         tag.putUUID(TAG_PET_ID, petId);
         tag.putString(TAG_MOB_TYPE, mobType);
-        tag.putInt(TAG_RARITY, rarity.ordinal());
+        tag.putByte(TAG_RARITY, (byte) rarity.ordinal());
         tag.putBoolean(TAG_MODIFIER_APPLIED, modifierApplied);
         tag.putString(TAG_CUSTOM_NAME, customName != null ? customName : "");
-        tag.putInt("Hunger", hunger);
-        tag.putInt("Happiness", happiness);
-
-        CompoundTag statsTag = new CompoundTag();
-        for (var entry : stats.entrySet()) {
-            statsTag.putInt(entry.getKey().name(), entry.getValue());
+        tag.putByte("Hunger", (byte) hunger);
+        tag.putByte("Happiness", (byte) happiness);
+        for (PetStat stat : PetStat.values()) {
+            tag.putByte("S_" + stat.name(), stats.getOrDefault(stat, 0).byteValue());
         }
-        tag.put(TAG_STATS, statsTag);
-
-        ListTag skillsTag = new ListTag();
-        for (SkillInstance skill : skills) {
-            skillsTag.add(skill.toTag());
-        }
-        tag.put("Skills", skillsTag);
-
+        if (!skills.isEmpty()) tag.putString("Sk", packSkills(skills));
         return tag;
     }
 
     /**
-     * Deserializes a PetData from a CompoundTag.
+     * Deserializes a PetData from the flat CompoundTag format written by {@link #toTag()}.
      */
     public static PetData fromTag(CompoundTag tag) {
-        UUID id = tag.getUUID(TAG_PET_ID);
-        String mob = tag.getString(TAG_MOB_TYPE);
-        PetRarity rarity = PetRarity.fromId(tag.getInt(TAG_RARITY));
-        boolean modifier = tag.getBoolean(TAG_MODIFIER_APPLIED);
-        String name = tag.getString(TAG_CUSTOM_NAME);
-        if (name.isEmpty()) {
-            name = null;
-        }
+        UUID id       = tag.getUUID(TAG_PET_ID);
+        String mob    = tag.getString(TAG_MOB_TYPE);
+        PetRarity rar = PetRarity.fromId(tag.getByte(TAG_RARITY) & 0xFF);
+        boolean mod   = tag.getBoolean(TAG_MODIFIER_APPLIED);
+        String name   = tag.getString(TAG_CUSTOM_NAME);
+        if (name.isEmpty()) name = null;
 
         EnumMap<PetStat, Integer> statsMap = new EnumMap<>(PetStat.class);
-        CompoundTag statsTag = tag.getCompound(TAG_STATS);
         for (PetStat stat : PetStat.values()) {
-            if (statsTag.contains(stat.name())) {
-                statsMap.put(stat, statsTag.getInt(stat.name()));
-            } else {
-                statsMap.put(stat, 0);
-            }
+            statsMap.put(stat, tag.getByte("S_" + stat.name()) & 0xFF);
         }
 
-        int hunger    = tag.contains("Hunger")    ? tag.getInt("Hunger")    : 100;
-        int happiness = tag.contains("Happiness") ? tag.getInt("Happiness") : 100;
+        int hunger    = tag.contains("Hunger")    ? (tag.getByte("Hunger")    & 0xFF) : 100;
+        int happiness = tag.contains("Happiness") ? (tag.getByte("Happiness") & 0xFF) : 100;
 
-        List<SkillInstance> skills = new ArrayList<>();
-        if (tag.contains("Skills")) {
-            ListTag skillsList = tag.getList("Skills", Tag.TAG_COMPOUND);
-            for (int i = 0; i < skillsList.size(); i++) {
-                SkillInstance instance = SkillInstance.fromTag(skillsList.getCompound(i));
-                if (instance != null) skills.add(instance);
-            }
+        List<SkillInstance> skills = tag.contains("Sk")
+                ? unpackSkills(tag.getString("Sk"))
+                : new ArrayList<>();
+
+        return new PetData(id, mob, rar, statsMap, mod, name, hunger, happiness, skills);
+    }
+
+    // ── Skill packing helpers ─────────────────────────────────────────────────
+
+    /** Packs skills into a single string: "id|level|eff|xp,id|level|eff|xp,…" */
+    private static String packSkills(List<SkillInstance> skills) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < skills.size(); i++) {
+            if (i > 0) sb.append(',');
+            SkillInstance s = skills.get(i);
+            sb.append(s.skill().getId()).append('|')
+              .append(s.level()).append('|')
+              .append(s.effectiveness()).append('|')
+              .append(s.xp());
         }
+        return sb.toString();
+    }
 
-        return new PetData(id, mob, rarity, statsMap, modifier, name, hunger, happiness, skills);
+    /** Unpacks skills from the string produced by {@link #packSkills}. */
+    private static List<SkillInstance> unpackSkills(String packed) {
+        List<SkillInstance> list = new ArrayList<>();
+        if (packed.isEmpty()) return list;
+        for (String entry : packed.split(",")) {
+            String[] f = entry.split("\\|");
+            if (f.length < 2) continue;
+            PetSkill skill = PetSkills.get(f[0]);
+            if (skill == null) continue;
+            int   level = Integer.parseInt(f[1]);
+            float eff   = f.length > 2 ? Float.parseFloat(f[2]) : 1.0f;
+            int   xp    = f.length > 3 ? Integer.parseInt(f[3]) : 0;
+            list.add(new SkillInstance(skill, level, eff, xp));
+        }
+        return list;
     }
 
     /**

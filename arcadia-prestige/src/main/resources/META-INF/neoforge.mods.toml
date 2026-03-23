@@ -3,7 +3,7 @@ loaderVersion="[1,)"
 license="All Rights Reserved"
 [[mods]]
 modId="arcadia_prestige"
-version="1.0.0"
+version="${file.jarVersion}"
 displayName="Arcadia Prestige"
 description="VIP cosmetics, daily rewards and hub — requires arcadia-pets and arcadia-ah."
 [[dependencies.arcadia_prestige]]
