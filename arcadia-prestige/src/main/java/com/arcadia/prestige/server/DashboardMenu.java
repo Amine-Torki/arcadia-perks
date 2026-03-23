@@ -302,42 +302,42 @@ public class DashboardMenu extends AbstractContainerMenu {
     }
 
     private void buildCosmeticsTab() {
-        record ParticleInfo(String id, String name, String grade, net.minecraft.world.item.Item icon) {}
+        record ParticleInfo(String id, String name, net.minecraft.world.item.Item icon) {}
 
         List<ParticleInfo> static1 = List.of(
-                new ParticleInfo("orbit",    "Orbit",    "vip",     Items.END_ROD),
-                new ParticleInfo("aura",     "Aura",     "vip+",    Items.SOUL_LANTERN),
-                new ParticleInfo("wings",    "Wings",    "vip+",    Items.DRAGON_HEAD),
-                new ParticleInfo("storm",    "Storm",    "founder", Items.LIGHTNING_ROD),
-                new ParticleInfo("platform", "Platform", "founder", Items.GOLD_BLOCK)
+                new ParticleInfo("orbit",    "Orbit",    Items.END_ROD),
+                new ParticleInfo("aura",     "Aura",     Items.SOUL_LANTERN),
+                new ParticleInfo("wings",    "Wings",    Items.DRAGON_HEAD),
+                new ParticleInfo("storm",    "Storm",    Items.LIGHTNING_ROD),
+                new ParticleInfo("platform", "Platform", Items.GOLD_BLOCK)
         );
         List<ParticleInfo> static2 = List.of(
-                new ParticleInfo("snow",   "Snow",   "vip",     Items.SNOWBALL),
-                new ParticleInfo("void",   "Void",   "vip+",    Items.ENDER_PEARL),
-                new ParticleInfo("dragon", "Dragon", "vip+",    Items.DRAGON_BREATH),
-                new ParticleInfo("helix",  "Helix",  "founder", Items.AMETHYST_SHARD),
-                new ParticleInfo("meteor", "Meteor", "founder", Items.FIRE_CHARGE)
+                new ParticleInfo("snow",   "Snow",   Items.SNOWBALL),
+                new ParticleInfo("void",   "Void",   Items.ENDER_PEARL),
+                new ParticleInfo("dragon", "Dragon", Items.DRAGON_BREATH),
+                new ParticleInfo("helix",  "Helix",  Items.AMETHYST_SHARD),
+                new ParticleInfo("meteor", "Meteor", Items.FIRE_CHARGE)
         );
         List<ParticleInfo> static3 = List.of(
-                new ParticleInfo("comet",  "Comet",  "vip",     Items.SNOWBALL),
-                new ParticleInfo("pulsar", "Pulsar", "vip+",    Items.NETHER_STAR),
-                new ParticleInfo("binary", "Binary", "vip+",    Items.BLAZE_ROD),
-                new ParticleInfo("nova",   "Nova",   "founder", Items.FIRE_CHARGE),
-                new ParticleInfo("galaxy", "Galaxy", "founder", Items.AMETHYST_SHARD)
+                new ParticleInfo("comet",  "Comet",  Items.SNOWBALL),
+                new ParticleInfo("pulsar", "Pulsar", Items.NETHER_STAR),
+                new ParticleInfo("binary", "Binary", Items.BLAZE_ROD),
+                new ParticleInfo("nova",   "Nova",   Items.FIRE_CHARGE),
+                new ParticleInfo("galaxy", "Galaxy", Items.AMETHYST_SHARD)
         );
         List<ParticleInfo> move1 = List.of(
-                new ParticleInfo("trail",   "Trail",   "vip",     Items.LIME_DYE),
-                new ParticleInfo("hearts",  "Hearts",  "vip",     Items.RED_DYE),
-                new ParticleInfo("enchant", "Enchant", "vip+",    Items.ENCHANTED_BOOK),
-                new ParticleInfo("flame",   "Flame",   "vip+",    Items.BLAZE_POWDER),
-                new ParticleInfo("stars",   "Stars",   "founder", Items.END_CRYSTAL)
+                new ParticleInfo("trail",   "Trail",   Items.LIME_DYE),
+                new ParticleInfo("hearts",  "Hearts",  Items.RED_DYE),
+                new ParticleInfo("enchant", "Enchant", Items.ENCHANTED_BOOK),
+                new ParticleInfo("flame",   "Flame",   Items.BLAZE_POWDER),
+                new ParticleInfo("stars",   "Stars",   Items.END_CRYSTAL)
         );
         List<ParticleInfo> move2 = List.of(
-                new ParticleInfo("bubble",    "Bubble",    "vip",     Items.WATER_BUCKET),
-                new ParticleInfo("ghost",     "Ghost",     "vip",     Items.SOUL_LANTERN),
-                new ParticleInfo("sakura",    "Sakura",    "vip+",    Items.PINK_DYE),
-                new ParticleInfo("shockwave", "Shockwave", "vip+",    Items.LIGHTNING_ROD),
-                new ParticleInfo("rainbow",   "Rainbow",   "founder", Items.PRISMARINE_CRYSTALS)
+                new ParticleInfo("bubble",    "Bubble",    Items.WATER_BUCKET),
+                new ParticleInfo("ghost",     "Ghost",     Items.SOUL_LANTERN),
+                new ParticleInfo("sakura",    "Sakura",    Items.PINK_DYE),
+                new ParticleInfo("shockwave", "Shockwave", Items.LIGHTNING_ROD),
+                new ParticleInfo("rainbow",   "Rainbow",   Items.PRISMARINE_CRYSTALS)
         );
 
         String currentParticle = PlayerDataHandler.getParticle(player.getUUID());
@@ -349,7 +349,7 @@ public class DashboardMenu extends AbstractContainerMenu {
             for (int i = 0; i < effects.size(); i++) {
                 ParticleInfo p = effects.get(i);
                 dashboardContainer.setItem(rowStart + 1 + i,
-                        buildParticleIcon(p.id(), p.name(), p.grade(), p.icon(), currentParticle));
+                        buildParticleIcon(p.id(), p.name(), p.icon(), currentParticle));
             }
         };
 
@@ -392,16 +392,21 @@ public class DashboardMenu extends AbstractContainerMenu {
         }
     }
 
-    private ItemStack buildParticleIcon(String id, String name, String grade, net.minecraft.world.item.Item icon, String currentParticle) {
-        boolean unlocked = LuckPermsHook.hasMinimumGrade(player, grade);
-        boolean selected = id.equals(currentParticle);
+    private ItemStack buildParticleIcon(String id, String name, net.minecraft.world.item.Item icon, String currentParticle) {
+        boolean unlocked = LuckPermsHook.canUseParticle(player, id);
+        boolean selected  = id.equals(currentParticle);
+        String  tierLabel = CosmeticPermissionScanner.getTierLabel(id); // null = individually sold
 
         ItemStack stack;
         if (unlocked) {
             stack = new ItemStack(icon);
             setName(stack, Component.literal(name).withStyle(selected ? ChatFormatting.GOLD : ChatFormatting.AQUA));
             List<Component> lore = new ArrayList<>();
-            lore.add(Component.translatable("arcadia_prestige.gui.cosmetics.grade_req", grade.toUpperCase()).withStyle(ChatFormatting.DARK_AQUA));
+            if (tierLabel != null) {
+                lore.add(Component.literal("Requires: " + tierLabel).withStyle(ChatFormatting.DARK_AQUA));
+            } else {
+                lore.add(Component.literal("\u2736 Special").withStyle(ChatFormatting.LIGHT_PURPLE));
+            }
             if (selected) lore.add(Component.translatable("arcadia_prestige.gui.cosmetics.active").withStyle(ChatFormatting.GREEN));
             else          lore.add(Component.translatable("arcadia_prestige.gui.cosmetics.activate_hint").withStyle(ChatFormatting.GRAY));
             setLore(stack, lore);
@@ -409,7 +414,8 @@ public class DashboardMenu extends AbstractContainerMenu {
         } else {
             stack = new ItemStack(Items.BARRIER);
             setName(stack, Component.literal("\u2717 " + name).withStyle(ChatFormatting.RED));
-            setLore(stack, List.of(Component.translatable("arcadia_prestige.gui.cosmetics.grade_req", grade.toUpperCase()).withStyle(ChatFormatting.DARK_RED)));
+            String reqLine = tierLabel != null ? "Requires: " + tierLabel : "No access";
+            setLore(stack, List.of(Component.literal(reqLine).withStyle(ChatFormatting.DARK_RED)));
         }
         return stack;
     }

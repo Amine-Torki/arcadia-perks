@@ -9,7 +9,6 @@ import net.luckperms.api.query.QueryOptions;
 import net.minecraft.world.entity.player.Player;
 import org.slf4j.Logger;
 
-import java.util.Map;
 
 /**
  * Integration with the LuckPerms permission API for grade-based access control.
@@ -32,20 +31,6 @@ public final class LuckPermsHook {
             "mvp",     3
     );
 
-    private static final Map<String, String> PARTICLE_GRADE_REQUIREMENTS = Map.ofEntries(
-            // Static effects
-            Map.entry("orbit",  "vip"),
-            Map.entry("aura",   "vip+"),
-            Map.entry("wings",  "vip+"),
-            Map.entry("storm",  "founder"),
-            Map.entry("crown",  "founder"),
-            // Movement effects
-            Map.entry("trail",  "vip"),
-            Map.entry("hearts", "vip"),
-            Map.entry("enchant","vip+"),
-            Map.entry("flame",  "vip+"),
-            Map.entry("stars",  "founder")
-    );
 
     private LuckPermsHook() {}
 
@@ -119,29 +104,15 @@ public final class LuckPermsHook {
     }
 
     /**
-     * Checks whether a player's grade allows use of a specific particle effect.
-     * Founder-gated particles use {@link #isFounder(Player)} instead of the gameplay rank.
+     * Checks whether a player has the LP permission node {@code arcadia.cosmetic.<id>}.
+     * Access is fully controlled by LuckPerms — grant the node to any group or player.
      */
     public static boolean canUseParticle(Player player, String particleId) {
-        String requiredGrade = PARTICLE_GRADE_REQUIREMENTS.get(particleId);
-        if (requiredGrade == null) return true;
-        if ("founder".equals(requiredGrade)) return isFounder(player);
-        return hasMinimumGrade(player, requiredGrade);
-    }
-
-    /**
-     * Validates that a player has the required grade for a particle effect.
-     * Used by C2SDashboardAction to gate particle selection.
-     */
-    public static boolean validateGrade(Player player, String particleId) {
-        return canUseParticle(player, particleId);
-    }
-
-    /**
-     * Returns the required grade string for a given particle ID, or "default" if none required.
-     */
-    public static String getRequiredGrade(String particleId) {
-        return PARTICLE_GRADE_REQUIREMENTS.getOrDefault(particleId, "default");
+        if (com.arcadia.lib.DebugMode.ENABLED) return true;
+        if (api == null) return true;
+        User user = api.getUserManager().getUser(player.getUUID());
+        if (user == null) return false;
+        return hasPermission(user, "arcadia.cosmetic." + particleId);
     }
 
     /**

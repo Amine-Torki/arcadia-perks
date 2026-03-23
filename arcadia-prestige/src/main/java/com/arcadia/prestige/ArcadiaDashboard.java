@@ -6,6 +6,7 @@ import com.arcadia.lib.DebugMode;
 import com.arcadia.prestige.config.PrestigeConfig;
 import com.arcadia.prestige.network.PacketHandler;
 import com.arcadia.prestige.server.DashboardMenu;
+import com.arcadia.prestige.server.CosmeticPermissionScanner;
 import com.arcadia.prestige.server.LuckPermsHook;
 import com.mojang.logging.LogUtils;
 import net.neoforged.bus.api.IEventBus;
@@ -72,6 +73,7 @@ public class ArcadiaDashboard {
     private void onServerAboutToStart(ServerAboutToStartEvent event) {
         DatabaseManager.initialize();
         LuckPermsHook.init();
+        CosmeticPermissionScanner.init();
         LOGGER.info("[ArcadiaPrestige] Server initialized. Debug mode: {}", DebugMode.ENABLED);
     }
 
