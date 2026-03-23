@@ -18,4 +18,12 @@ dependencies {
     compileOnly "net.luckperms:api:5.4"
 }
 
+jar {
+    manifest {
+        attributes(
+            'Implementation-Version': project.version,
+            'MixinConfigs': 'arcadia_pets.mixins.json'
+        )
+    }
+}
 tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
