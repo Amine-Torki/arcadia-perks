@@ -38,12 +38,15 @@ public final class NumismaticsCompat {
      * Returns the player's balance in spurs, or 0 if Numismatics is absent.
      */
     public static long getBalance(ServerPlayer player) {
-        if (!isPresent()) return Long.MAX_VALUE; // always "enough" when no currency mod
+        if (!isPresent()) return Long.MAX_VALUE;
         try {
-            // Numismatics API: SpurAccount.get(player).getSpurs()
-            Class<?> accountClass = Class.forName("dev.ithundxr.createnumismatics.content.bank.SpurAccount");
-            Object account = accountClass.getMethod("get", ServerPlayer.class).invoke(null, player);
-            return (long) accountClass.getMethod("getSpurs").invoke(account);
+            Class<?> bankManagerClass = Class.forName("dev.ithundxr.createnumismatics.Numismatics");
+            Object bank = bankManagerClass.getField("BANK").get(null);
+            Class<?> accountTypeClass = Class.forName("dev.ithundxr.createnumismatics.content.backend.BankAccount$Type");
+            Object playerType = accountTypeClass.getField("PLAYER").get(null);
+            Object account = bank.getClass().getMethod("getOrCreateAccount", java.util.UUID.class, accountTypeClass)
+                    .invoke(bank, player.getUUID(), playerType);
+            return ((Number) account.getClass().getMethod("getBalance").invoke(account)).longValue();
         } catch (Exception e) {
             LOGGER.warn("[ArcadiaPrestige] NumismaticsCompat.getBalance failed", e);
             return 0;
@@ -55,14 +58,17 @@ public final class NumismaticsCompat {
      * Returns true if successful, false if insufficient funds or mod absent.
      */
     public static boolean deductBalance(ServerPlayer player, long amount) {
-        if (!isPresent()) return true; // free in debug mode
+        if (!isPresent()) return true;
         try {
-            Class<?> accountClass = Class.forName("dev.ithundxr.createnumismatics.content.bank.SpurAccount");
-            Object account = accountClass.getMethod("get", ServerPlayer.class).invoke(null, player);
-            long balance = (long) accountClass.getMethod("getSpurs").invoke(account);
-            if (balance < amount) return false;
-            accountClass.getMethod("addSpurs", long.class).invoke(account, -amount);
-            return true;
+            Class<?> bankManagerClass = Class.forName("dev.ithundxr.createnumismatics.Numismatics");
+            Object bank = bankManagerClass.getField("BANK").get(null);
+            Class<?> accountTypeClass = Class.forName("dev.ithundxr.createnumismatics.content.backend.BankAccount$Type");
+            Object playerType = accountTypeClass.getField("PLAYER").get(null);
+            Object account = bank.getClass().getMethod("getOrCreateAccount", java.util.UUID.class, accountTypeClass)
+                    .invoke(bank, player.getUUID(), playerType);
+            boolean ok = (boolean) account.getClass().getMethod("deduct", int.class).invoke(account, (int) amount);
+            if (ok) account.getClass().getMethod("markDirty").invoke(account);
+            return ok;
         } catch (Exception e) {
             LOGGER.warn("[ArcadiaPrestige] NumismaticsCompat.deductBalance failed", e);
             return false;
@@ -75,9 +81,14 @@ public final class NumismaticsCompat {
     public static void addBalance(ServerPlayer player, long amount) {
         if (!isPresent()) return;
         try {
-            Class<?> accountClass = Class.forName("dev.ithundxr.createnumismatics.content.bank.SpurAccount");
-            Object account = accountClass.getMethod("get", ServerPlayer.class).invoke(null, player);
-            accountClass.getMethod("addSpurs", long.class).invoke(account, amount);
+            Class<?> bankManagerClass = Class.forName("dev.ithundxr.createnumismatics.Numismatics");
+            Object bank = bankManagerClass.getField("BANK").get(null);
+            Class<?> accountTypeClass = Class.forName("dev.ithundxr.createnumismatics.content.backend.BankAccount$Type");
+            Object playerType = accountTypeClass.getField("PLAYER").get(null);
+            Object account = bank.getClass().getMethod("getOrCreateAccount", java.util.UUID.class, accountTypeClass)
+                    .invoke(bank, player.getUUID(), playerType);
+            account.getClass().getMethod("deposit", int.class).invoke(account, (int) amount);
+            account.getClass().getMethod("markDirty").invoke(account);
         } catch (Exception e) {
             LOGGER.warn("[ArcadiaPrestige] NumismaticsCompat.addBalance failed", e);
         }
