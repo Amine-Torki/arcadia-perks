@@ -17,6 +17,7 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -661,6 +662,11 @@ public class PetScreen extends Screen {
         return (color & 0xFF000000) | (r << 16) | (g << 8) | b;
     }
 
+    private static void playClick() {
+        var p = Minecraft.getInstance().player;
+        if (p != null) p.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 1.0f, 1.0f);
+    }
+
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button != 0) return super.mouseClicked(mouseX, mouseY, button);
@@ -669,18 +675,21 @@ public class PetScreen extends Screen {
 
         // Gear button → open HUD settings
         if (inBounds(mouseX, mouseY, gearBtnX, gearBtnY, GEAR_BTN_SIZE, GEAR_BTN_SIZE)) {
+            playClick();
             Minecraft.getInstance().setScreen(new PetHudSettingsScreen());
             return true;
         }
 
         // Rename "Set" button
         if (inBounds(mouseX, mouseY, renameBtnX, renameBtnY, RENAME_BTN_W, 12)) {
+            playClick();
             sendRename();
             return true;
         }
 
         // Status cycling button
         if (cooldownTicks <= 0 && inBounds(mouseX, mouseY, statusBtnX, statusBtnY, CYCLE_BTN_W, BTN_H)) {
+            playClick();
             if (!petActive) {
                 // Summon in first valid movement mode
                 PetMovementMode first = (isFollowDisabled() || isPocketOnly()) ? PetMovementMode.POCKET : PetMovementMode.FOLLOW;
@@ -706,6 +715,7 @@ public class PetScreen extends Screen {
 
         // Behaviour cycling button
         if (inBounds(mouseX, mouseY, behavBtnX, behavBtnY, CYCLE_BTN_W, BTN_H)) {
+            playClick();
             PetBehaviourMode[] modes = PetBehaviourMode.values();
             PetBehaviourMode next = modes[(selectedBehaviour.ordinal() + 1) % modes.length];
             selectedBehaviour = next;
@@ -727,6 +737,7 @@ public class PetScreen extends Screen {
 
                 // Toggle button click (left portion of row)
                 if (inBounds(mouseX, mouseY, cardLeft + 8, rowY, toggleW, rowH)) {
+                    playClick();
                     String skillId = skillList.get(i).skill().getId();
                     Boolean current = skillToggles.getOrDefault(skillId, true);
                     skillToggles.put(skillId, !current);
@@ -737,6 +748,7 @@ public class PetScreen extends Screen {
 
                 // Rest of row: expand/collapse description
                 if (inBounds(mouseX, mouseY, cardLeft + 8 + toggleW, rowY, LEFT_PANEL_W - toggleW, rowH)) {
+                    playClick();
                     selectedSkillIdx = (selectedSkillIdx == i) ? -1 : i;
                     return true;
                 }

@@ -5,6 +5,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundEvents;
 import net.neoforged.neoforge.network.PacketDistributor;
 import com.arcadia.pets.network.C2SPetAction;
 
@@ -142,6 +143,11 @@ public final class PetHudSettingsScreen extends Screen {
         g.drawString(this.font, label, x + (w - this.font.width(label)) / 2, y + (h - 8) / 2, 0xFFFFFF, false);
     }
 
+    private static void playClick() {
+        var p = Minecraft.getInstance().player;
+        if (p != null) p.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 1.0f, 1.0f);
+    }
+
     @Override
     public boolean mouseClicked(double mx, double my, int btn) {
         if (btn != 0) return false;
@@ -151,15 +157,15 @@ public final class PetHudSettingsScreen extends Screen {
         int cx   = this.width / 2;
         int r1x  = cx - 163;
 
-        if (inBtn(x, y, r1x,       btnY, 110, 14)) { showPt = !showPt; return true; }
-        if (inBtn(x, y, r1x + 114, btnY, 100, 14)) { showHp = !showHp; return true; }
-        if (inBtn(x, y, r1x + 218, btnY, 108, 14)) { showAs = !showAs; return true; }
+        if (inBtn(x, y, r1x,       btnY, 110, 14)) { playClick(); showPt = !showPt; return true; }
+        if (inBtn(x, y, r1x + 114, btnY, 100, 14)) { playClick(); showHp = !showHp; return true; }
+        if (inBtn(x, y, r1x + 218, btnY, 108, 14)) { playClick(); showAs = !showAs; return true; }
 
         int btnY2 = btnY + 18;
         int r2x   = cx - 119;
-        if (inBtn(x, y, r2x,       btnY2, 70,  14)) { closeAndSave(); PacketDistributor.sendToServer(new C2SPetAction(C2SPetAction.OPEN_PANEL, new java.util.UUID(0, 0))); return true; }
-        if (inBtn(x, y, r2x + 74,  btnY2, 100, 14)) { resetPositions(); return true; }
-        if (inBtn(x, y, r2x + 178, btnY2, 60,  14)) { closeAndSave(); return true; }
+        if (inBtn(x, y, r2x,       btnY2, 70,  14)) { playClick(); closeAndSave(); PacketDistributor.sendToServer(new C2SPetAction(C2SPetAction.OPEN_PANEL, new java.util.UUID(0, 0))); return true; }
+        if (inBtn(x, y, r2x + 74,  btnY2, 100, 14)) { playClick(); resetPositions(); return true; }
+        if (inBtn(x, y, r2x + 178, btnY2, 60,  14)) { playClick(); closeAndSave(); return true; }
 
         if (isOverWidget(x, y)) {
             dragging = true;

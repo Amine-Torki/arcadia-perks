@@ -1,9 +1,11 @@
 package com.arcadia.pets.client;
 
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundEvents;
 import net.neoforged.neoforge.network.PacketDistributor;
 import com.arcadia.pets.network.C2SPetAction;
 
@@ -95,15 +97,22 @@ public class PetGuideScreen extends Screen {
         g.drawCenteredString(this.font, back, left + W / 2, btnY + 2, 0xFFFFFF);
     }
 
+    private static void playClick() {
+        var p = Minecraft.getInstance().player;
+        if (p != null) p.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 1.0f, 1.0f);
+    }
+
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
         if (button != 0) return super.mouseClicked(mx, my, button);
         int navY = top + H - 36;
         if (page > 0 && mx >= left + 8 && mx < left + 60 && my >= navY && my < navY + 10) {
+            playClick();
             page--;
             return true;
         }
         if (page < PAGE_COUNT - 1 && mx >= left + W - 60 && mx < left + W - 8 && my >= navY && my < navY + 10) {
+            playClick();
             page++;
             return true;
         }
@@ -112,6 +121,7 @@ public class PetGuideScreen extends Screen {
         int btnY = top + H - 18;
         int btnW = W - 16;
         if (mx >= btnX && mx <= btnX + btnW && my >= btnY && my <= btnY + 12) {
+            playClick();
             PacketDistributor.sendToServer(new C2SPetAction(C2SPetAction.OPEN_PANEL, new java.util.UUID(0, 0)));
             return true;
         }

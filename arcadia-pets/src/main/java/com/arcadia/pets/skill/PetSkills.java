@@ -134,9 +134,13 @@ public class PetSkills {
     // --- Skill Implementations ---
 
     private static class FeatherfallSkill extends PetSkill {
+        // 10-second cooldown between triggers (200 ticks)
+        private static final long COOLDOWN_TICKS = 200L;
+        private static final java.util.Map<java.util.UUID, Long> cooldowns = new java.util.HashMap<>();
+
         public FeatherfallSkill() { super("featherfall"); }
         @Override public SkillType getSkillType() { return SkillType.MOVEMENT; }
-        @Override public boolean isPerTick() { return true; } // fall detection needs per-tick
+        @Override public boolean isPerTick() { return true; }
         @Override public float getRawValue(int level) { return level == 10 ? 12 : level; }
         @Override public String getFormattedValue(int level, float effectiveness) {
             return (int)getValue(level, effectiveness) + "s";
@@ -144,10 +148,13 @@ public class PetSkills {
         @Override
         public void onTick(Player owner, PetData petData, int level, float effectiveness) {
             if (owner.fallDistance > 2.0f && owner.getDeltaMovement().y < -0.5) {
+                long now = owner.level().getGameTime();
+                if (now - cooldowns.getOrDefault(owner.getUUID(), 0L) < COOLDOWN_TICKS) return;
+                cooldowns.put(owner.getUUID(), now);
                 int duration = (int)getValue(level, effectiveness);
                 owner.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.SLOW_FALLING, duration * 20));
                 if (level >= 10 && effectiveness >= 1.0f) {
-                    owner.fallDistance = 0; // Immunity
+                    owner.fallDistance = 0;
                 }
                 notifyUsed(owner, petData, "Slow Falling for " + duration + "s");
             }

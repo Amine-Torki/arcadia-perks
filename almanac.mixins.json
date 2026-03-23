@@ -1,0 +1,17 @@
+{
+  "required": true,
+  "package": "com.frikinjay.almanac.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "minVersion": "0.8",
+  "client": [
+  ],
+  "mixins": [
+    "CommandsMixin",
+    "EntityMixin",
+    "ItemStackMixin",
+    "SlotMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -6,10 +6,12 @@ import com.arcadia.prestige.server.DashboardMenu;
 import com.arcadia.pets.client.PetGuideScreen;
 import com.arcadia.pets.client.PetHudSettingsScreen;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -115,6 +117,11 @@ public class DashboardScreen extends AbstractContainerScreen<DashboardMenu> {
     // Mouse clicks
     // -------------------------------------------------------------------------
 
+    private static void playClick() {
+        var p = Minecraft.getInstance().player;
+        if (p != null) p.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 1.0f, 1.0f);
+    }
+
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button == 0) {
@@ -128,6 +135,7 @@ public class DashboardScreen extends AbstractContainerScreen<DashboardMenu> {
             if (leftX >= 0
                     && mouseX >= leftX && mouseX < leftX + MINI_W
                     && mouseY >= cardY && mouseY < cardY + MINI_H) {
+                playClick();
                 int prevTab = (currentTab + 3) % 4;
                 PacketDistributor.sendToServer(new C2SDashboardAction(C2SDashboardAction.SWITCH_TAB, String.valueOf(prevTab)));
                 return true;
@@ -137,6 +145,7 @@ public class DashboardScreen extends AbstractContainerScreen<DashboardMenu> {
             if (rightX + MINI_W <= this.width
                     && mouseX >= rightX && mouseX < rightX + MINI_W
                     && mouseY >= cardY && mouseY < cardY + MINI_H) {
+                playClick();
                 int nextTab = (currentTab + 1) % 4;
                 PacketDistributor.sendToServer(new C2SDashboardAction(C2SDashboardAction.SWITCH_TAB, String.valueOf(nextTab)));
                 return true;
@@ -148,6 +157,7 @@ public class DashboardScreen extends AbstractContainerScreen<DashboardMenu> {
                 int by = this.topPos + this.imageHeight + 3;
                 int bw = this.imageWidth - 8;
                 if (mouseX >= bx && mouseX <= bx + bw && mouseY >= by && mouseY <= by + 10) {
+                    playClick();
                     PlayerEffectCache.toggleHideOwnEffectsFirstPerson();
                     return true;
                 }
@@ -159,6 +169,7 @@ public class DashboardScreen extends AbstractContainerScreen<DashboardMenu> {
                 int sx = this.leftPos + slot47.x;
                 int sy = this.topPos + slot47.y;
                 if (mouseX >= sx && mouseX < sx + 16 && mouseY >= sy && mouseY < sy + 16) {
+                    playClick();
                     net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
                     String effect = mc.player != null
                             ? PlayerEffectCache.getEffect(mc.player.getUUID())
@@ -174,6 +185,7 @@ public class DashboardScreen extends AbstractContainerScreen<DashboardMenu> {
                 int sx = this.leftPos + slot47.x;
                 int sy = this.topPos + slot47.y;
                 if (mouseX >= sx && mouseX < sx + 16 && mouseY >= sy && mouseY < sy + 16) {
+                    playClick();
                     net.minecraft.client.Minecraft.getInstance().setScreen(new PetGuideScreen());
                     return true;
                 }
@@ -185,6 +197,7 @@ public class DashboardScreen extends AbstractContainerScreen<DashboardMenu> {
                 int sx = this.leftPos + slot48.x;
                 int sy = this.topPos + slot48.y;
                 if (mouseX >= sx && mouseX < sx + 16 && mouseY >= sy && mouseY < sy + 16) {
+                    playClick();
                     net.minecraft.client.Minecraft.getInstance().setScreen(new PetHudSettingsScreen());
                     return true;
                 }
