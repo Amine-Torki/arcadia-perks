@@ -1,10 +1,8 @@
 package com.arcadia.prestige;
 
-import com.arcadia.ah.server.AhDashboardBridge;
 import com.arcadia.lib.config.DatabaseConfig;
 import com.arcadia.lib.data.DatabaseManager;
 import com.arcadia.lib.DebugMode;
-import com.arcadia.pets.server.DashboardMenuBridge;
 import com.arcadia.prestige.network.PacketHandler;
 import com.arcadia.prestige.server.DashboardMenu;
 import com.arcadia.prestige.server.LuckPermsHook;
@@ -41,8 +39,32 @@ public class ArcadiaDashboard {
     }
 
     private void onCommonSetup(FMLCommonSetupEvent event) {
-        DashboardMenuBridge.register(player -> DashboardMenu.openFor(player, 1));
-        AhDashboardBridge.register(player -> DashboardMenu.openFor(player, 3));
+        if (net.neoforged.fml.ModList.get().isLoaded("arcadia_pets")) PetsModuleSetup.init();
+        if (net.neoforged.fml.ModList.get().isLoaded("arcadia_ah"))   AhModuleSetup.init();
+    }
+
+    /**
+     * Inner class — only loaded/instantiated when arcadia-pets is confirmed present.
+     * Java does not load inner classes until they are first referenced at runtime.
+     */
+    private static final class PetsModuleSetup {
+        static void init() {
+            com.arcadia.pets.server.DashboardMenuBridge.register(p -> DashboardMenu.openFor(p, 1));
+            DashboardMenu.registerPetsHandler(com.arcadia.pets.server.PetsDashboardTab::new);
+        }
+    }
+
+    /**
+     * Inner class — only loaded/instantiated when arcadia-ah is confirmed present.
+     */
+    private static final class AhModuleSetup {
+        static void init() {
+            com.arcadia.ah.server.AhDashboardBridge.register(p -> DashboardMenu.openFor(p, 3));
+            com.arcadia.ah.server.AhDashboardBridge.registerSearchRefresher(sp -> {
+                if (sp.containerMenu instanceof DashboardMenu dm) dm.refreshAhTab();
+            });
+            DashboardMenu.registerAhHandler(com.arcadia.ah.server.AhDashboardTab::new);
+        }
     }
 
     private void onServerAboutToStart(ServerAboutToStartEvent event) {

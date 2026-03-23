@@ -1,12 +1,12 @@
 package com.arcadia.ah.network;
 
 import com.arcadia.ah.auction.AuctionManager;
+import com.arcadia.ah.server.AhDashboardBridge;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
@@ -31,8 +31,8 @@ public record C2SAhSearch(String query) implements CustomPacketPayload {
         ctx.enqueueWork(() -> {
             if (!(ctx.player() instanceof ServerPlayer sp)) return;
             AuctionManager.setSearch(sp.getUUID(), query);
-            // Send updated AH search results to client
-            PacketDistributor.sendToPlayer(sp, new S2COpenAhSearch(query));
+            // Refresh the dashboard AH tab so results update; do NOT reopen the search screen.
+            AhDashboardBridge.notifySearchUpdated(sp);
         });
     }
 }

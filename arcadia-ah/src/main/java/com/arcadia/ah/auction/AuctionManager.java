@@ -138,9 +138,18 @@ public final class AuctionManager {
         });
 
         cache.add(listing); // optimistic local add
-        seller.sendSystemMessage(Component.literal(
-                "§a[AH] Listed §f" + stack.getHoverName().getString()
-                + " §afor §f" + NumismaticsCompat.formatPrice(price) + "§a."));
+        int qty = stack.getCount();
+        String itemName = stack.getHoverName().getString();
+        if (qty > 1) {
+            seller.sendSystemMessage(Component.literal(
+                    "§a[AH] Listed §f" + qty + "×" + itemName
+                    + " §afor §f" + NumismaticsCompat.formatPrice(price) + " §7total §a(§f"
+                    + NumismaticsCompat.formatPrice(price / qty) + "§7/unit§a)."));
+        } else {
+            seller.sendSystemMessage(Component.literal(
+                    "§a[AH] Listed §f" + itemName
+                    + " §afor §f" + NumismaticsCompat.formatPrice(price) + "§a."));
+        }
         return true;
     }
 

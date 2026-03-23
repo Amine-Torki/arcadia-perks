@@ -11,6 +11,7 @@ import java.util.function.Consumer;
 public final class AhDashboardBridge {
 
     private static Consumer<ServerPlayer> ahTabOpener;
+    private static Consumer<ServerPlayer> searchRefresher;
 
     private AhDashboardBridge() {}
 
@@ -20,5 +21,14 @@ public final class AhDashboardBridge {
 
     public static void openAhTab(ServerPlayer player) {
         if (ahTabOpener != null) ahTabOpener.accept(player);
+    }
+
+    /** Called by C2SAhSearch after the player submits a new search query. */
+    public static void registerSearchRefresher(Consumer<ServerPlayer> refresher) {
+        searchRefresher = refresher;
+    }
+
+    public static void notifySearchUpdated(ServerPlayer player) {
+        if (searchRefresher != null) searchRefresher.accept(player);
     }
 }
