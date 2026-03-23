@@ -1,5 +1,6 @@
 package com.arcadia.pets.client;
 
+import com.arcadia.pets.ArcadiaPets;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
@@ -16,7 +17,7 @@ import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
  * All elements move together as a single draggable group.
  * Positioned and toggled via {@link HudSettings}. Only visible when a pet is active.
  */
-@EventBusSubscriber(modid = "arcadia_prestige", value = Dist.CLIENT)
+@EventBusSubscriber(modid = ArcadiaPets.MOD_ID, value = Dist.CLIENT)
 public final class PetHudRenderer {
 
     /** Portrait box size (25% smaller than original 48). */

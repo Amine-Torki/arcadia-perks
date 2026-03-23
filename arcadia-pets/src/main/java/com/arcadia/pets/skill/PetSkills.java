@@ -29,9 +29,9 @@ public class PetSkills {
     // ── Stable attribute modifier IDs ─────────────────────────────────────────
     // Declared here so SkillHandler can iterate them for cleanup without coupling
     // to individual inner skill classes.
-    public static final net.minecraft.resources.ResourceLocation ATTR_FOX_SPEED   = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("arcadia_prestige", "pet_fox_speed");
-    public static final net.minecraft.resources.ResourceLocation ATTR_FROG_JUMP   = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("arcadia_prestige", "pet_frog_jump");
-    public static final net.minecraft.resources.ResourceLocation ATTR_RABBIT_LUCK = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("arcadia_prestige", "pet_rabbit_luck");
+    public static final net.minecraft.resources.ResourceLocation ATTR_FOX_SPEED   = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("arcadia_pets", "pet_fox_speed");
+    public static final net.minecraft.resources.ResourceLocation ATTR_FROG_JUMP   = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("arcadia_pets", "pet_frog_jump");
+    public static final net.minecraft.resources.ResourceLocation ATTR_RABBIT_LUCK = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("arcadia_pets", "pet_rabbit_luck");
 
     // --- Common Skills ---
     public static final PetSkill FEATHERFALL = register(new FeatherfallSkill());

@@ -9,5 +9,6 @@
   "item.arcadia_pets.star_essence":            "Star Essence",
   "item.arcadia_pets.pet_treat":               "Pet Treat",
   "item.arcadia_pets.pet_snack":               "Pet Snack",
-  "item.arcadia_pets.pet_collection_book":     "Pet Collection"
+  "item.arcadia_pets.pet_collection_book":     "Pet Collection",
+  "itemGroup.arcadia_pets.main":               "Arcadia Pets"
 }

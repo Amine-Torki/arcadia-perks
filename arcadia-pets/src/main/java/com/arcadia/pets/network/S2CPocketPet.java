@@ -29,7 +29,7 @@ public record S2CPocketPet(UUID ownerUuid, String mobType, float scale, String c
     }
 
     public static final Type<S2CPocketPet> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath("arcadia_prestige", "pocket_pet"));
+            new Type<>(ResourceLocation.fromNamespaceAndPath("arcadia_pets", "pocket_pet"));
 
     public static final StreamCodec<FriendlyByteBuf, S2CPocketPet> STREAM_CODEC =
             StreamCodec.of(S2CPocketPet::encode, S2CPocketPet::decode);

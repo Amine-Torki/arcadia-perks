@@ -21,7 +21,7 @@ public record S2CPetPanel(CompoundTag petTag, int cooldownTicks, boolean petActi
         implements CustomPacketPayload {
 
     public static final Type<S2CPetPanel> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath("arcadia_prestige", "pet_panel"));
+            new Type<>(ResourceLocation.fromNamespaceAndPath("arcadia_pets", "pet_panel"));
 
     public static final StreamCodec<FriendlyByteBuf, S2CPetPanel> STREAM_CODEC =
             StreamCodec.of(S2CPetPanel::encode, S2CPetPanel::decode);

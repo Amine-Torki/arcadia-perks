@@ -12,6 +12,7 @@ import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.client.renderer.LightTexture;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import org.joml.Quaternionf;
@@ -131,9 +132,10 @@ public class PetItemRenderer extends BlockEntityWithoutLevelRenderer {
             poseStack.mulPose(new Quaternionf().rotateY((float) Math.toRadians(180)));
         }
 
-        // Draw the cached entity
-        // Note: Render pure body, pass partialTick = 0, no shadows if possible.
-        dispatcher.render(entity, 0.0D, 0.0D, 0.0D, 0.0F, 0.0F, poseStack, buffer, packedLight);
+        // Use full bright in GUI so the front of the model is properly lit.
+        // For in-world contexts (hand, ground) keep the natural packed light.
+        int renderLight = (displayContext == ItemDisplayContext.GUI) ? LightTexture.FULL_BRIGHT : packedLight;
+        dispatcher.render(entity, 0.0D, 0.0D, 0.0D, 0.0F, 0.0F, poseStack, buffer, renderLight);
 
         poseStack.popPose();
     }

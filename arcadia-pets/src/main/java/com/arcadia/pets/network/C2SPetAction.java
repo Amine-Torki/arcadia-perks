@@ -24,7 +24,7 @@ public record C2SPetAction(int actionId, UUID petId) implements CustomPacketPayl
     public static final int TOGGLE_SKILL = 5;
 
     public static final Type<C2SPetAction> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath("arcadia_prestige", "pet_action"));
+            new Type<>(ResourceLocation.fromNamespaceAndPath("arcadia_pets", "pet_action"));
 
     public static final StreamCodec<FriendlyByteBuf, C2SPetAction> STREAM_CODEC =
             StreamCodec.of(C2SPetAction::encode, C2SPetAction::decode);

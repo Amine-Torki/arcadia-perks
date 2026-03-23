@@ -17,7 +17,7 @@ public record S2CPetHpSync(float currentHp, float maxHp, boolean active, String 
         implements CustomPacketPayload {
 
     public static final Type<S2CPetHpSync> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath("arcadia_prestige", "pet_hp_sync"));
+            new Type<>(ResourceLocation.fromNamespaceAndPath("arcadia_pets", "pet_hp_sync"));
 
     public static final StreamCodec<FriendlyByteBuf, S2CPetHpSync> STREAM_CODEC =
             StreamCodec.of(S2CPetHpSync::encode, S2CPetHpSync::decode);

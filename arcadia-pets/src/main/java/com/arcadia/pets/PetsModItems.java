@@ -74,7 +74,7 @@ public class PetsModItems {
 
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> ARCADIA_TAB =
             CREATIVE_TABS.register("arcadia_tab", () -> CreativeModeTab.builder()
-                    .title(Component.translatable("itemGroup.arcadia_prestige.main"))
+                    .title(Component.translatable("itemGroup.arcadia_pets.main"))
                     .icon(() -> PET_ITEM.get().getDefaultInstance())
                     .displayItems((parameters, output) -> {
                         output.accept(PET_ITEM.get());

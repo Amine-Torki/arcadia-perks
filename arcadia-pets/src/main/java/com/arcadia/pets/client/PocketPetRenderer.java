@@ -1,5 +1,6 @@
 package com.arcadia.pets.client;
 
+import com.arcadia.pets.ArcadiaPets;
 import com.arcadia.pets.network.S2CPocketPet;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -42,7 +43,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>When the owner leaves range or the pet is recalled, the server sends a
  * recall signal ({@code mobType == ""}) and the fake entity is discarded.</p>
  */
-@EventBusSubscriber(modid = "arcadia_prestige", value = Dist.CLIENT)
+@EventBusSubscriber(modid = ArcadiaPets.MOD_ID, value = Dist.CLIENT)
 public final class PocketPetRenderer {
 
     /** ownerUuid → fake locally-created entity (not in any world). */

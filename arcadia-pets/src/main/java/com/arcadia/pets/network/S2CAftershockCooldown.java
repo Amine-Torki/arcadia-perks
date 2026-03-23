@@ -13,7 +13,7 @@ public record S2CAftershockCooldown(int cooldownMs)
         implements CustomPacketPayload {
 
     public static final Type<S2CAftershockCooldown> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath("arcadia_prestige", "aftershock_cd"));
+            new Type<>(ResourceLocation.fromNamespaceAndPath("arcadia_pets", "aftershock_cd"));
 
     public static final StreamCodec<FriendlyByteBuf, S2CAftershockCooldown> STREAM_CODEC =
             StreamCodec.of(S2CAftershockCooldown::encode, S2CAftershockCooldown::decode);

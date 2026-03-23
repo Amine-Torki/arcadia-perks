@@ -15,7 +15,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 public record S2COpenAhSearch(String currentQuery) implements CustomPacketPayload {
 
     public static final Type<S2COpenAhSearch> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath("arcadia_prestige", "open_ah_search"));
+            new Type<>(ResourceLocation.fromNamespaceAndPath("arcadia_ah", "open_ah_search"));
 
     public static final StreamCodec<FriendlyByteBuf, S2COpenAhSearch> STREAM_CODEC =
             StreamCodec.of(

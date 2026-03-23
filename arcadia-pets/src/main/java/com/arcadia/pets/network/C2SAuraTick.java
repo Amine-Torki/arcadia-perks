@@ -16,7 +16,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 public record C2SAuraTick() implements CustomPacketPayload {
 
     public static final Type<C2SAuraTick> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath("arcadia_prestige", "aura_tick"));
+            new Type<>(ResourceLocation.fromNamespaceAndPath("arcadia_pets", "aura_tick"));
 
     public static final StreamCodec<FriendlyByteBuf, C2SAuraTick> STREAM_CODEC =
             StreamCodec.of((buf, pkt) -> {}, buf -> new C2SAuraTick());

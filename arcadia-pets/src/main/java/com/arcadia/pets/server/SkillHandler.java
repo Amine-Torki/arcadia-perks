@@ -1,5 +1,6 @@
 package com.arcadia.pets.server;
 
+import com.arcadia.pets.ArcadiaPets;
 import com.arcadia.pets.item.PetData;
 import com.arcadia.pets.item.PetStat;
 import com.arcadia.pets.skill.PetSkill;
@@ -21,7 +22,7 @@ import java.util.UUID;
 /**
  * Handles the periodic execution and event triggers for pet skills.
  */
-@EventBusSubscriber(modid = "arcadia_prestige")
+@EventBusSubscriber(modid = ArcadiaPets.MOD_ID)
 public class SkillHandler {
 
     @SubscribeEvent

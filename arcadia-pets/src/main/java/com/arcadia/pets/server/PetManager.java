@@ -54,11 +54,11 @@ public final class PetManager {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     // ── Passive player-stat bonus modifier IDs ────────────────────────────────
-    private static final ResourceLocation MOD_POW = ResourceLocation.fromNamespaceAndPath("arcadia_prestige", "pet_pow");
-    private static final ResourceLocation MOD_END = ResourceLocation.fromNamespaceAndPath("arcadia_prestige", "pet_end");
-    private static final ResourceLocation MOD_AGI = ResourceLocation.fromNamespaceAndPath("arcadia_prestige", "pet_agi");
-    private static final ResourceLocation MOD_WIT = ResourceLocation.fromNamespaceAndPath("arcadia_prestige", "pet_wit");
-    private static final ResourceLocation MOD_LCK = ResourceLocation.fromNamespaceAndPath("arcadia_prestige", "pet_lck");
+    private static final ResourceLocation MOD_POW = ResourceLocation.fromNamespaceAndPath("arcadia_pets", "pet_pow");
+    private static final ResourceLocation MOD_END = ResourceLocation.fromNamespaceAndPath("arcadia_pets", "pet_end");
+    private static final ResourceLocation MOD_AGI = ResourceLocation.fromNamespaceAndPath("arcadia_pets", "pet_agi");
+    private static final ResourceLocation MOD_WIT = ResourceLocation.fromNamespaceAndPath("arcadia_pets", "pet_wit");
+    private static final ResourceLocation MOD_LCK = ResourceLocation.fromNamespaceAndPath("arcadia_pets", "pet_lck");
 
     /**
      * Mob types that cannot be used in Follow mode (Brain-based entities that cause server load).

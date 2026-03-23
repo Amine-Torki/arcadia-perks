@@ -17,7 +17,7 @@ import java.util.UUID;
 public record C2SRenamePet(UUID petId, String name) implements CustomPacketPayload {
 
     public static final Type<C2SRenamePet> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath("arcadia_prestige", "rename_pet"));
+            new Type<>(ResourceLocation.fromNamespaceAndPath("arcadia_pets", "rename_pet"));
 
     public static final StreamCodec<FriendlyByteBuf, C2SRenamePet> STREAM_CODEC =
             StreamCodec.of(C2SRenamePet::encode, C2SRenamePet::decode);

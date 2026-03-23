@@ -16,7 +16,7 @@ import net.neoforged.api.distmarker.OnlyIn;
 public record S2CPetReveal(CompoundTag petTag, byte minimumRarityOrdinal) implements CustomPacketPayload {
 
     public static final Type<S2CPetReveal> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath("arcadia_prestige", "pet_reveal"));
+            new Type<>(ResourceLocation.fromNamespaceAndPath("arcadia_pets", "pet_reveal"));
 
     public static final StreamCodec<FriendlyByteBuf, S2CPetReveal> STREAM_CODEC =
             StreamCodec.of(S2CPetReveal::encode, S2CPetReveal::decode);
