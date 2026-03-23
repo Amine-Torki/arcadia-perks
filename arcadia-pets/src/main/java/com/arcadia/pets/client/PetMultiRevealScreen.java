@@ -231,10 +231,14 @@ public class PetMultiRevealScreen extends Screen {
 
     private void renderStrips(GuiGraphics g, float partialTick) {
         // Keep total height constant regardless of strip count: cap at 3-strip height
-        int slotH  = count <= 3 ? CARD_H + 10 : (MAX_STRIPS_H - (count - 1) * STRIP_GAP) / count;
-        int totalH = count * slotH + (count - 1) * STRIP_GAP;
-        int areaTop = height / 2 - totalH / 2;
-        int cx      = width / 2;
+        int slotH    = count <= 3 ? CARD_H + 10 : (MAX_STRIPS_H - (count - 1) * STRIP_GAP) / count;
+        int totalH   = count * slotH + (count - 1) * STRIP_GAP;
+        int areaTop  = height / 2 - totalH / 2;
+        int cx       = width / 2;
+
+        // For 4 strips, narrow the cards and shrink card text to 0.8× so they all fit comfortably.
+        int   effCardW  = count <= 3 ? CARD_W : (int) (CARD_W * 0.8f); // 60 → 48
+        float fontScale = count <= 3 ? 1.0f : 0.8f;
 
         g.drawCenteredString(font,
                 Component.translatable("arcadia_prestige.gui.multi_reveal.rolling", count)
@@ -248,19 +252,19 @@ public class PetMultiRevealScreen extends Screen {
 
             g.fill(0, stripTop, width, stripTop + slotH, 0xCC000000);
 
-            int effCardH = slotH - 10; // actual card height = slot minus top+bottom padding
+            int effCardH = slotH - 10;
             List<PetData> strip = strips.get(i);
             for (int j = 0; j < strip.size(); j++) {
-                int cardCX = (int) (j * (CARD_W + CARD_GAP) + CARD_W / 2.0f - scroll);
+                int cardCX = (int) (j * (effCardW + CARD_GAP) + effCardW / 2.0f - scroll);
                 int sx = cx + cardCX;
-                if (sx < -CARD_W || sx > width + CARD_W) continue;
-                drawRouletteCard(g, sx - CARD_W / 2, cardTopY, strip.get(j),
-                        j == resultIdx[i] && landed[i], effCardH);
+                if (sx < -effCardW || sx > width + effCardW) continue;
+                drawRouletteCard(g, sx - effCardW / 2, cardTopY, strip.get(j),
+                        j == resultIdx[i] && landed[i], effCardH, effCardW, fontScale);
             }
 
             // Golden selector frame
-            int sl = cx - CARD_W / 2 - 2, st = stripTop - 1;
-            int sr = cx + CARD_W / 2 + 2, sb = stripTop + slotH + 1;
+            int sl = cx - effCardW / 2 - 2, st = stripTop - 1;
+            int sr = cx + effCardW / 2 + 2, sb = stripTop + slotH + 1;
             g.fill(sl, st, sr, st + 2, 0xFFFFD700);
             g.fill(sl, sb - 2, sr, sb, 0xFFFFD700);
             g.fill(sl, st, sl + 2, sb, 0xFFFFD700);
@@ -268,22 +272,39 @@ public class PetMultiRevealScreen extends Screen {
         }
     }
 
-    private void drawRouletteCard(GuiGraphics g, int x, int y, PetData data, boolean selected, int cardH) {
+    private void drawRouletteCard(GuiGraphics g, int x, int y, PetData data, boolean selected,
+                                  int cardH, int cardW, float fontScale) {
         int rc = rarityColor(data.rarity());
-        g.fill(x, y, x + CARD_W, y + cardH, 0xCC000000 | (rc & 0x00FFFFFF));
-        g.fill(x + 2, y + 2, x + CARD_W - 2, y + cardH - 2, 0xCC101020);
+        g.fill(x, y, x + cardW, y + cardH, 0xCC000000 | (rc & 0x00FFFFFF));
+        g.fill(x + 2, y + 2, x + cardW - 2, y + cardH - 2, 0xCC101020);
         if (selected) {
-            g.fill(x, y, x + CARD_W, y + 2, 0xFFFFD700);
-            g.fill(x, y + cardH - 2, x + CARD_W, y + cardH, 0xFFFFD700);
+            g.fill(x, y, x + cardW, y + 2, 0xFFFFD700);
+            g.fill(x, y + cardH - 2, x + cardW, y + cardH, 0xFFFFD700);
             g.fill(x, y, x + 2, y + cardH, 0xFFFFD700);
-            g.fill(x + CARD_W - 2, y, x + CARD_W, y + cardH, 0xFFFFD700);
+            g.fill(x + cardW - 2, y, x + cardW, y + cardH, 0xFFFFD700);
         }
-        g.drawCenteredString(font, data.rarity().getDisplayName(),
-                x + CARD_W / 2, y + 8, chatColor(data.rarity()));
-        g.drawCenteredString(font, mobName(data.mobType(), 8),
-                x + CARD_W / 2, y + 26, 0xFFFFFF);
-        g.drawCenteredString(font, data.totalStars() + "\u2605",
-                x + CARD_W / 2, y + cardH - 18, 0xFFD700);
+
+        // Scale text for narrow cards (4-strip mode)
+        if (fontScale != 1.0f) {
+            float icx = x + cardW / 2f;
+            drawScaledCentered(g, data.rarity().getDisplayName(), icx, y + 8,  chatColor(data.rarity()), fontScale);
+            drawScaledCentered(g, mobName(data.mobType(), 8),     icx, y + 26, 0xFFFFFF,                 fontScale);
+            drawScaledCentered(g, data.totalStars() + "\u2605",   icx, y + cardH - 18, 0xFFD700,         fontScale);
+        } else {
+            int icx = x + cardW / 2;
+            g.drawCenteredString(font, data.rarity().getDisplayName(), icx, y + 8,  chatColor(data.rarity()));
+            g.drawCenteredString(font, mobName(data.mobType(), 8),     icx, y + 26, 0xFFFFFF);
+            g.drawCenteredString(font, data.totalStars() + "\u2605",   icx, y + cardH - 18, 0xFFD700);
+        }
+    }
+
+    /** Draws a centered string at {@code (cx, y)} scaled by {@code scale} around that point. */
+    private void drawScaledCentered(GuiGraphics g, String text, float cx, int y, int color, float scale) {
+        g.pose().pushPose();
+        g.pose().translate(cx, y, 0);
+        g.pose().scale(scale, scale, 1f);
+        g.drawCenteredString(font, text, 0, 0, color);
+        g.pose().popPose();
     }
 
     // Phase 1 minicards ───────────────────────────────────────────────────────
