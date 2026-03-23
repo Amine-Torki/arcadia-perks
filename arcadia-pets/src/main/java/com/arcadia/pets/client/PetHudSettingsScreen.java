@@ -31,6 +31,7 @@ public final class PetHudSettingsScreen extends Screen {
     private boolean showHp;
     private boolean showAs;
     private boolean showPt;
+    private boolean reducedMotion;
 
     public PetHudSettingsScreen() {
         super(Component.translatable("arcadia_prestige.gui.hud_settings.title"));
@@ -41,9 +42,10 @@ public final class PetHudSettingsScreen extends Screen {
         HudSettings.ensureLoaded();
         ptX    = HudSettings.resolvePortraitX(this.width);
         ptY    = HudSettings.resolvePortraitY(this.height);
-        showHp = HudSettings.showHpBar;
-        showAs = HudSettings.showAftershock;
-        showPt = HudSettings.showPetPortrait;
+        showHp        = HudSettings.showHpBar;
+        showAs        = HudSettings.showAftershock;
+        showPt        = HudSettings.showPetPortrait;
+        reducedMotion = HudSettings.reducedMotion;
     }
 
     @Override
@@ -61,6 +63,13 @@ public final class PetHudSettingsScreen extends Screen {
         g.drawString(this.font, subtitle, (this.width - this.font.width(subtitle)) / 2, 22, 0xAAAAAA, false);
 
         renderWidgetPreview(g, mouseX, mouseY);
+
+        // Row 0 (accessibility): Reduced Motion toggle — centered
+        int cx0  = this.width / 2;
+        int rdW  = 160;
+        renderBtn(g, mouseX, mouseY, cx0 - rdW / 2, this.height - 56, rdW, 14,
+                (reducedMotion ? "\u2714 " : "\u2716 ") + "Reduced Motion (Bag)",
+                reducedMotion ? 0xFF664422 : 0xFF222222);
 
         // Row 1 (toggles): Portrait + HP Bar + Aftershock — total 110+4+100+4+108 = 326, start at cx-163
         int btnY = this.height - 38;
@@ -157,6 +166,10 @@ public final class PetHudSettingsScreen extends Screen {
         int cx   = this.width / 2;
         int r1x  = cx - 163;
 
+        // Row 0: reduced motion
+        int rdW = 160;
+        if (inBtn(x, y, this.width / 2 - rdW / 2, this.height - 56, rdW, 14)) { playClick(); reducedMotion = !reducedMotion; return true; }
+
         if (inBtn(x, y, r1x,       btnY, 110, 14)) { playClick(); showPt = !showPt; return true; }
         if (inBtn(x, y, r1x + 114, btnY, 100, 14)) { playClick(); showHp = !showHp; return true; }
         if (inBtn(x, y, r1x + 218, btnY, 108, 14)) { playClick(); showAs = !showAs; return true; }
@@ -210,6 +223,7 @@ public final class PetHudSettingsScreen extends Screen {
         HudSettings.showHpBar        = showHp;
         HudSettings.showAftershock   = showAs;
         HudSettings.showPetPortrait  = showPt;
+        HudSettings.reducedMotion    = reducedMotion;
         HudSettings.save();
         Minecraft.getInstance().setScreen(null);
     }

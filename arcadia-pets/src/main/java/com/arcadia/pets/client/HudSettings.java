@@ -20,6 +20,8 @@ public final class HudSettings {
     public static boolean showAftershock = true;
     /** Master toggle — if false, entire widget is hidden. */
     public static boolean showPetPortrait  = true;
+    /** If true, the pet bag roulette skips the spinning animation (accessibility / photosensitivity). */
+    public static boolean reducedMotion    = false;
 
     /** Widget X position as fraction of screen width. NaN = use default (top-left). */
     public static float   petPortraitXFrac = Float.NaN;
@@ -44,6 +46,7 @@ public final class HudSettings {
             showHpBar        = bool (o, "showHpBar",        true);
             showAftershock   = bool (o, "showAftershock",   true);
             showPetPortrait  = bool (o, "showPetPortrait",  true);
+            reducedMotion    = bool (o, "reducedMotion",    false);
             petPortraitXFrac = frac (o, "petPortraitXFrac", Float.NaN);
             petPortraitYFrac = frac (o, "petPortraitYFrac", Float.NaN);
         } catch (Exception ignored) {}
@@ -54,6 +57,7 @@ public final class HudSettings {
         o.addProperty("showHpBar",       showHpBar);
         o.addProperty("showAftershock",  showAftershock);
         o.addProperty("showPetPortrait", showPetPortrait);
+        o.addProperty("reducedMotion",   reducedMotion);
         addFrac(o, "petPortraitXFrac", petPortraitXFrac);
         addFrac(o, "petPortraitYFrac", petPortraitYFrac);
         try {

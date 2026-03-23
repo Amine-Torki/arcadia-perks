@@ -1,5 +1,6 @@
 package com.arcadia.pets.client;
 
+import com.arcadia.pets.client.HudSettings;
 import com.arcadia.pets.config.PetPoolConfig;
 import com.arcadia.pets.item.PetData;
 import com.arcadia.pets.item.PetRarity;
@@ -112,6 +113,16 @@ public class PetRevealScreen extends Screen {
     protected void init() {
         super.init();
         stripYCenter = this.height / 2 - 20;
+        // Accessibility: skip the spinning strip entirely and jump to card reveal
+        HudSettings.ensureLoaded();
+        if (HudSettings.reducedMotion) {
+            scrollPosition = scrollTarget;
+            prevScrollPosition = scrollTarget;
+            scrollVelocity = 0;
+            phase = 1;
+            ticksInPhase = 0;
+            currentStatRevealing = 0;
+        }
     }
 
     @Override
