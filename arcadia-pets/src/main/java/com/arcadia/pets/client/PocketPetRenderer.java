@@ -214,13 +214,8 @@ public final class PocketPetRenderer {
                 var matrix4f = poseStack.last().pose();
                 Font font = mc.font;
                 float textX = -font.width(customName) / 2.0f;
-                float bgOpacity = mc.options.getBackgroundOpacity(0.25f);
-                int bgColor = (int) (bgOpacity * 255.0f) << 24;
 
-                // Pass 1: tinted background (semi-transparent white, 0x20FFFFFF = 553648127)
-                font.drawInBatch(customName, textX, 0f, 0x20FFFFFF, false,
-                        matrix4f, bufferSource, Font.DisplayMode.NORMAL, bgColor, packedLight);
-                // Pass 2: opaque foreground — this is what actually makes text visible
+                // Single opaque draw — no dark background rectangle, clean floating label
                 font.drawInBatch(customName, textX, 0f, -1, false,
                         matrix4f, bufferSource, Font.DisplayMode.NORMAL, 0, packedLight);
 
