@@ -3,7 +3,6 @@ package com.arcadia.ah;
 import com.arcadia.ah.auction.AuctionManager;
 import com.arcadia.ah.server.AhLeaderboardMenu;
 import com.arcadia.ah.server.AhDashboardBridge;
-import com.arcadia.pets.PetsGlobalFlags;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.LongArgumentType;
@@ -41,6 +40,24 @@ public final class AhCommands {
                         return Command.SINGLE_SUCCESS;
                     })
                 )
+                .then(Commands.literal("enable")
+                    .requires(src -> src.hasPermission(2))
+                    .executes(ctx -> {
+                        AhGlobalFlags.AH_ENABLED = true;
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                                "§a[Arcadia] Auction House enabled for all players."), true);
+                        return Command.SINGLE_SUCCESS;
+                    })
+                )
+                .then(Commands.literal("disable")
+                    .requires(src -> src.hasPermission(2))
+                    .executes(ctx -> {
+                        AhGlobalFlags.AH_ENABLED = false;
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                                "§c[Arcadia] Auction House disabled. Operators are unaffected."), true);
+                        return Command.SINGLE_SUCCESS;
+                    })
+                )
                 .then(Commands.literal("sell")
                     .then(Commands.argument("price", LongArgumentType.longArg(1))
                         .executes(ctx -> executeSell(ctx, -1))
@@ -54,10 +71,10 @@ public final class AhCommands {
     }
 
     private static boolean checkEnabled(net.minecraft.commands.CommandSourceStack src) {
-        if (!PetsGlobalFlags.PETS_ENABLED
+        if (!AhGlobalFlags.AH_ENABLED
                 && src.getEntity() instanceof ServerPlayer p
                 && !p.hasPermissions(2)) {
-            src.sendFailure(Component.literal("§c[Arcadia] This feature is currently disabled on this server."));
+            src.sendFailure(Component.literal("§c[Arcadia] The Auction House is currently disabled on this server."));
             return false;
         }
         return true;

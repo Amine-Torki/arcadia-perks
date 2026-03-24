@@ -1,7 +1,6 @@
 package com.arcadia.prestige;
 
 import com.arcadia.lib.data.PlayerDataHandler;
-import com.arcadia.pets.PetsGlobalFlags;
 import com.arcadia.prestige.network.PacketHandler;
 import com.arcadia.prestige.network.S2COpenHub;
 import com.arcadia.prestige.server.DashboardMenu;
@@ -37,6 +36,24 @@ public final class ModCommands {
                     }
                     return Command.SINGLE_SUCCESS;
                 })
+                .then(Commands.literal("enable")
+                    .requires(src -> src.hasPermission(2))
+                    .executes(ctx -> {
+                        PrestigeGlobalFlags.PRESTIGE_ENABLED = true;
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                                "§a[Arcadia] Prestige features enabled for all players."), true);
+                        return Command.SINGLE_SUCCESS;
+                    })
+                )
+                .then(Commands.literal("disable")
+                    .requires(src -> src.hasPermission(2))
+                    .executes(ctx -> {
+                        PrestigeGlobalFlags.PRESTIGE_ENABLED = false;
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                                "§c[Arcadia] Prestige features disabled. Operators are unaffected."), true);
+                        return Command.SINGLE_SUCCESS;
+                    })
+                )
         );
 
         event.getDispatcher().register(
@@ -82,11 +99,11 @@ public final class ModCommands {
     }
 
     static boolean checkEnabled(CommandSourceStack src) {
-        if (!PetsGlobalFlags.PETS_ENABLED
+        if (!PrestigeGlobalFlags.PRESTIGE_ENABLED
                 && src.getEntity() instanceof ServerPlayer p
                 && !p.hasPermissions(2)) {
             src.sendFailure(Component.literal(
-                    "§c[Arcadia] This feature is currently disabled on this server."));
+                    "§c[Arcadia] Prestige features are currently disabled on this server."));
             return false;
         }
         return true;
