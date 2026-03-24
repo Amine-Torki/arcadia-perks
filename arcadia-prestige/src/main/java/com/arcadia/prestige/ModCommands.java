@@ -1,5 +1,6 @@
 package com.arcadia.prestige;
 
+import com.arcadia.lib.data.PlayerDataHandler;
 import com.arcadia.pets.PetsGlobalFlags;
 import com.arcadia.prestige.network.PacketHandler;
 import com.arcadia.prestige.network.S2COpenHub;
@@ -7,6 +8,7 @@ import com.arcadia.prestige.server.DashboardMenu;
 import com.mojang.brigadier.Command;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -57,6 +59,25 @@ public final class ModCommands {
                     }
                     return Command.SINGLE_SUCCESS;
                 })
+                .then(Commands.literal("simday")
+                    .requires(src -> src.hasPermission(2))
+                    .executes(ctx -> {
+                        if (!(ctx.getSource().getEntity() instanceof ServerPlayer self)) return 0;
+                        PlayerDataHandler.advanceDay(self.getUUID());
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                                "[Debug] +24h applied to your daily timer."), false);
+                        return Command.SINGLE_SUCCESS;
+                    })
+                    .then(Commands.argument("target", EntityArgument.player())
+                        .executes(ctx -> {
+                            ServerPlayer target = EntityArgument.getPlayer(ctx, "target");
+                            PlayerDataHandler.advanceDay(target.getUUID());
+                            ctx.getSource().sendSuccess(() -> Component.literal(
+                                    "[Debug] +24h applied to " + target.getName().getString() + "'s daily timer."), false);
+                            return Command.SINGLE_SUCCESS;
+                        })
+                    )
+                )
         );
     }
 

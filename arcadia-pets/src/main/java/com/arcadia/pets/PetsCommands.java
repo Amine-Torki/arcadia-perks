@@ -1,7 +1,6 @@
 package com.arcadia.pets;
 
 import com.arcadia.lib.DebugMode;
-import com.arcadia.lib.data.PlayerDataHandler;
 import com.arcadia.pets.item.PetData;
 import com.arcadia.pets.item.PetRarity;
 import com.arcadia.pets.item.PetRoller;
@@ -166,24 +165,6 @@ public final class PetsCommands {
                             }
                             DebugMode.setDebugGrade(player.getUUID(), grade);
                             player.sendSystemMessage(Component.literal("[Debug] Simulated rank set to: §e" + grade));
-                            return Command.SINGLE_SUCCESS;
-                        })
-                    )
-                )
-                .then(Commands.literal("simday")
-                    .requires(src -> src.hasPermission(2))
-                    .executes(ctx -> {
-                        if (!(ctx.getSource().getEntity() instanceof ServerPlayer self)) return 0;
-                        PlayerDataHandler.advanceDay(self.getUUID());
-                        ctx.getSource().sendSuccess(() -> Component.literal("[Debug] +24h applied to your daily timer."), false);
-                        return Command.SINGLE_SUCCESS;
-                    })
-                    .then(Commands.argument("target", EntityArgument.player())
-                        .executes(ctx -> {
-                            ServerPlayer target = EntityArgument.getPlayer(ctx, "target");
-                            PlayerDataHandler.advanceDay(target.getUUID());
-                            ctx.getSource().sendSuccess(() -> Component.literal(
-                                    "[Debug] +24h applied to " + target.getName().getString() + "'s daily timer."), false);
                             return Command.SINGLE_SUCCESS;
                         })
                     )
