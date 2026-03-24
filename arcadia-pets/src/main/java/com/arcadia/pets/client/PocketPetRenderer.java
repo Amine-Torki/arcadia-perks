@@ -196,26 +196,34 @@ public final class PocketPetRenderer {
             }
             poseStack.popPose();
 
-            // Draw name tag manually — bypasses EntityRenderer.shouldShowName() checks
-            // and boss-mob name suppression (Wither, EnderDragon use boss bar instead).
+            // Draw name tag — mirrors EntityRenderer.renderNameTag() exactly.
+            // We render it here rather than relying on erd.render() because boss mobs
+            // (Wither, EnderDragon) override shouldShowName() to return false.
             Component customName = fakeNames.get(ownerUuid);
             if (customName != null) {
-                // Use natural (unscaled) entity type height × the stored rendering scale
-                // so the tag is always just above the visual model, regardless of whether
-                // getBbHeight() or Attributes.SCALE are reliable on a fake entity.
                 float renderScale = fakeScales.getOrDefault(ownerUuid, 1.0f);
-                double nameY = ry + fake.getType().getDimensions().height() * renderScale + 0.25;
+                // Match getNameTagOffsetY(): entity visual height × scale + 0.5
+                double nameTagY = ry + fake.getType().getDimensions().height() * renderScale + 0.5;
 
                 poseStack.pushPose();
-                poseStack.translate(rx, nameY, rz);
-                poseStack.mulPose(mc.gameRenderer.getMainCamera().rotation());
-                poseStack.scale(-0.025f, -0.025f, 0.025f);
+                poseStack.translate(rx, nameTagY, rz);
+                // Use the same cameraOrientation quaternion EntityRenderer uses (billboard)
+                poseStack.mulPose(erd.cameraOrientation());
+                poseStack.scale(0.025f, -0.025f, 0.025f); // +X like vanilla (not -X)
 
+                var matrix4f = poseStack.last().pose();
                 Font font = mc.font;
                 float textX = -font.width(customName) / 2.0f;
+                float bgOpacity = mc.options.getBackgroundOpacity(0.25f);
+                int bgColor = (int) (bgOpacity * 255.0f) << 24;
+
+                // Pass 1: tinted background (semi-transparent white, 0x20FFFFFF = 553648127)
+                font.drawInBatch(customName, textX, 0f, 0x20FFFFFF, false,
+                        matrix4f, bufferSource, Font.DisplayMode.NORMAL, bgColor, packedLight);
+                // Pass 2: opaque foreground — this is what actually makes text visible
                 font.drawInBatch(customName, textX, 0f, -1, false,
-                        poseStack.last().pose(), bufferSource,
-                        Font.DisplayMode.NORMAL, 0x40000000, packedLight);
+                        matrix4f, bufferSource, Font.DisplayMode.NORMAL, 0, packedLight);
+
                 poseStack.popPose();
             }
         }

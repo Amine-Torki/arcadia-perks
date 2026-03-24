@@ -63,8 +63,14 @@ public final class PetsCommands {
                     .requires(src -> src.hasPermission(2))
                     .executes(ctx -> {
                         PetsGlobalFlags.PETS_ENABLED = false;
+                        // Recall all active pets for every online non-op player immediately
+                        if (ctx.getSource().getServer() != null) {
+                            for (ServerPlayer p : ctx.getSource().getServer().getPlayerList().getPlayers()) {
+                                if (!p.hasPermissions(2)) PetManager.despawn(p);
+                            }
+                        }
                         ctx.getSource().sendSuccess(() -> Component.literal(
-                                "§c[Arcadia] Pets disabled. Operators are unaffected."), true);
+                                "§c[Arcadia] Pets disabled. All active pets recalled. Operators are unaffected."), true);
                         return Command.SINGLE_SUCCESS;
                     })
                 )

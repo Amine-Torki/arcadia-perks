@@ -28,6 +28,11 @@ public class PetCollectionBookItem extends Item {
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         if (!level.isClientSide && player instanceof ServerPlayer sp) {
+            if (!com.arcadia.pets.PetsGlobalFlags.PETS_ENABLED && !sp.hasPermissions(2)) {
+                sp.sendSystemMessage(Component.literal("§c[Arcadia] Pets are currently disabled on this server.")
+                        .withStyle(ChatFormatting.RED));
+                return InteractionResultHolder.fail(player.getItemInHand(hand));
+            }
             if (player.isShiftKeyDown()) {
                 // Shift + right-click → open the pet panel for the active/designated pet
                 java.util.UUID designated = PetManager.getDesignatedPetId(sp.getUUID());

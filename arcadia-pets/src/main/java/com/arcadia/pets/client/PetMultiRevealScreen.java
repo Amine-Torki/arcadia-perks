@@ -48,6 +48,9 @@ public class PetMultiRevealScreen extends Screen {
     private final PetRarity minimumRarity;
     private final int count;
 
+    /** Effective card width — shrunk to 80% of CARD_W when count == 4 so all strips fit. */
+    private final int effCardW;
+
     // Per-strip physics
     private final float[]            scrollTarget;
     private final float[]            scrollPos;
@@ -69,6 +72,10 @@ public class PetMultiRevealScreen extends Screen {
     // Stars pop animation (phase 1)
     private final int[]     starsRevealed;   // how many stars shown so far per card
     private final boolean[] specialTriggered; // whether we've fired the 25+ special event per card
+    private final int[]     melodyStartTick; // ticksPhase1 when 25+ melody started (-1 = not started)
+
+    /** Zelda-chest-style noteblock pitches played 4 ticks apart on 25+ stars. */
+    private static final float[] MELODY_PITCHES = { 0.89f, 1.0f, 1.26f, 1.587f };
 
     // ── Constructor ───────────────────────────────────────────────────────────
 
@@ -77,6 +84,7 @@ public class PetMultiRevealScreen extends Screen {
         this.results = results;
         this.minimumRarity = minimumRarity;
         this.count = results.size();
+        this.effCardW = count <= 3 ? CARD_W : (int) (CARD_W * 0.8f);
 
         scrollTarget     = new float[count];
         scrollPos        = new float[count];
@@ -89,7 +97,9 @@ public class PetMultiRevealScreen extends Screen {
         lastCardUnder    = new int[count];
         starsRevealed    = new int[count];
         specialTriggered = new boolean[count];
+        melodyStartTick  = new int[count];
         Arrays.fill(lastCardUnder, -1);
+        Arrays.fill(melodyStartTick, -1);
 
         ThreadLocalRandom rand = ThreadLocalRandom.current();
 
@@ -104,7 +114,7 @@ public class PetMultiRevealScreen extends Screen {
             for (int j = 0; j < 8 + rand.nextInt(5); j++) strip.add(makeFiller(minimumRarity, rand));
             strips.add(strip);
 
-            float target = ri * (CARD_W + CARD_GAP) + CARD_W / 2.0f;
+            float target = ri * (effCardW + CARD_GAP) + effCardW / 2.0f;
             float d = 0.965f + rand.nextFloat() * 0.013f;
             scrollTarget[i] = target;
             decay[i] = d;
@@ -153,7 +163,7 @@ public class PetMultiRevealScreen extends Screen {
                 scrollVel[i] = Math.max(MIN_VEL, scrollVel[i] * decay[i]);
 
                 // Roulette tick sound — one sound per tick across all strips (MASTER source)
-                int cardUnder = (int) ((scrollPos[i] - CARD_W / 2.0f) / (CARD_W + CARD_GAP));
+                int cardUnder = (int) ((scrollPos[i] - effCardW / 2.0f) / (effCardW + CARD_GAP));
                 if (cardUnder != lastCardUnder[i] && cardUnder >= 0) {
                     lastCardUnder[i] = cardUnder;
                     if (!clickedThisTick && minecraft != null) {
@@ -195,13 +205,27 @@ public class PetMultiRevealScreen extends Screen {
                         minecraft.getSoundManager().play(
                                 PetRevealScreen.uiSound(SoundEvents.EXPERIENCE_ORB_PICKUP, 0.25f, 0.9f + starsRevealed[i] * 0.04f));
                     }
-                    // 25+ stars special event when fully revealed
+                    // 25+ stars special event when fully revealed — start zelda melody
                     if (starsRevealed[i] >= total && total >= 25 && !specialTriggered[i]) {
                         specialTriggered[i] = true;
-                        minecraft.getSoundManager().play(
-                                PetRevealScreen.uiSound(SoundEvents.TOTEM_USE, 0.7f, 1.1f));
+                        melodyStartTick[i] = ticksPhase1;
                     }
                 }
+            }
+            // Zelda-chest melody: 4 notes, 4 ticks apart
+            for (int i = 0; i < count; i++) {
+                if (melodyStartTick[i] < 0) continue;
+                int elapsed = ticksPhase1 - melodyStartTick[i];
+                int noteIdx = elapsed / 4;
+                if (elapsed % 4 == 0 && noteIdx < MELODY_PITCHES.length) {
+                    // First 3 notes: harp; last note: pling for the "ding" finish
+                    net.minecraft.sounds.SoundEvent se = noteIdx < MELODY_PITCHES.length - 1
+                            ? SoundEvents.NOTE_BLOCK_HARP.value()
+                            : SoundEvents.NOTE_BLOCK_PLING.value();
+                    minecraft.getSoundManager().play(
+                            PetRevealScreen.uiSound(se, 0.8f, MELODY_PITCHES[noteIdx]));
+                }
+                if (noteIdx >= MELODY_PITCHES.length) melodyStartTick[i] = -1; // done
             }
         }
     }
@@ -237,7 +261,6 @@ public class PetMultiRevealScreen extends Screen {
         int cx       = width / 2;
 
         // For 4 strips, narrow the cards and shrink card text to 0.8× so they all fit comfortably.
-        int   effCardW  = count <= 3 ? CARD_W : (int) (CARD_W * 0.8f); // 60 → 48
         float fontScale = count <= 3 ? 1.0f : 0.8f;
 
         g.drawCenteredString(font,
@@ -288,8 +311,8 @@ public class PetMultiRevealScreen extends Screen {
         if (fontScale != 1.0f) {
             float icx = x + cardW / 2f;
             drawScaledCentered(g, data.rarity().getDisplayName(), icx, y + 8,  chatColor(data.rarity()), fontScale);
-            drawScaledCentered(g, mobName(data.mobType(), 8),     icx, y + 26, 0xFFFFFF,                 fontScale);
-            drawScaledCentered(g, data.totalStars() + "\u2605",   icx, y + cardH - 18, 0xFFD700,         fontScale);
+            drawScaledCentered(g, mobName(data.mobType(), 8),     icx, y + 20, 0xFFFFFF,                 fontScale);
+            drawScaledCentered(g, data.totalStars() + "\u2605",   icx, y + cardH - 10, 0xFFD700,         fontScale);
         } else {
             int icx = x + cardW / 2;
             g.drawCenteredString(font, data.rarity().getDisplayName(), icx, y + 8,  chatColor(data.rarity()));
