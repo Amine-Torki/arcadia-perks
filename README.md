@@ -21,10 +21,3 @@ A comprehensive cross-player marketplace module.
 ### 4. ✨ Arcadia Prestige
 The ultimate VIP hub and rewards module.
 * **Functionality:** Serves as the main dashboard GUI for server perks. It introduces cosmetic particle effects and a daily reward calendar to keep players engaged. *(Requires Arcadia Pets and Arcadia AH)*
-
-## ⚙️ Requirements & Dependencies
-* **Minecraft Version:** 1.21.1
-* **Mod Loader:** NeoForge
-* **Dependency Tree:** Ensure **Arcadia Lib** is installed for any of the other 3 mods to work. **Arcadia Prestige** requires all other mods in the suite to function properly.
-
-*** *You can find the full CurseForge pages for these projects on the [aminoquiz CurseForge Profile](https://www.curseforge.com/members/aminoquiz/projects).*
