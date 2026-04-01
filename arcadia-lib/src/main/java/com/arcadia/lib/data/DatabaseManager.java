@@ -114,6 +114,23 @@ public final class DatabaseManager {
                     )
                     """);
 
+            stmt.executeUpdate("""
+                    CREATE TABLE IF NOT EXISTS arcadia_prestige_daily_quests (
+                        uuid           VARCHAR(36)  NOT NULL,
+                        date_key       VARCHAR(10)  NOT NULL,
+                        quest_index    TINYINT      NOT NULL,
+                        quest_type     VARCHAR(32)  NOT NULL,
+                        difficulty     VARCHAR(8)   NOT NULL,
+                        context        VARCHAR(64)  NOT NULL DEFAULT '',
+                        target_amount  INT          NOT NULL,
+                        reward_coins   INT          NOT NULL,
+                        reward_essence TINYINT      NOT NULL,
+                        progress       INT          NOT NULL DEFAULT 0,
+                        claimed        TINYINT      NOT NULL DEFAULT 0,
+                        PRIMARY KEY (uuid, date_key, quest_index)
+                    )
+                    """);
+
             LOGGER.info("ArcadiaDashboard database tables verified.");
         } catch (SQLException e) {
             LOGGER.error("Failed to create database tables", e);

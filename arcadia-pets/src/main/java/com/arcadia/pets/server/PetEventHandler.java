@@ -2,6 +2,8 @@ package com.arcadia.pets.server;
 
 import com.arcadia.pets.ArcadiaPets;
 import com.arcadia.pets.PetsGlobalFlags;
+import com.arcadia.pets.duel.DuelManager;
+import com.arcadia.pets.duel.DuelSession;
 import com.arcadia.pets.item.PetBehaviourMode;
 import com.arcadia.pets.item.PetData;
 import com.arcadia.pets.item.PetItem;
@@ -172,6 +174,23 @@ public final class PetEventHandler {
         // Packet is sent when the aftershock actually fires (in onLevelTick), not here,
         // so the HUD drain starts from the real hit moment, not 0.5 s before.
         pendingAftershocks.add(new PendingAftershock(target, aftershock, now + 500L, player.getUUID()));
+    }
+
+    @SubscribeEvent
+    public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        // Capture session before onPlayerLogout() removes it from the maps
+        DuelSession session = DuelManager.getSessionFor(player.getUUID());
+        DuelManager.onPlayerLogout(player.getUUID());
+        if (session != null) {
+            com.arcadia.pets.network.S2CDuelState finalState =
+                    com.arcadia.pets.network.S2CDuelState.from(session);
+            UUID opponentId = player.getUUID().equals(session.p1) ? session.p2 : session.p1;
+            ServerPlayer opponent = player.getServer() == null ? null
+                    : player.getServer().getPlayerList().getPlayer(opponentId);
+            if (opponent != null)
+                net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(opponent, finalState);
+        }
     }
 
     @SubscribeEvent

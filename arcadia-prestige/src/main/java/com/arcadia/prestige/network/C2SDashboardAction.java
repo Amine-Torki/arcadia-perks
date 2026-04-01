@@ -11,7 +11,9 @@ import org.slf4j.Logger;
 
 import com.arcadia.lib.data.DatabaseManager;
 import com.arcadia.lib.data.PlayerDataHandler;
+import com.arcadia.prestige.quest.QuestManager;
 import com.arcadia.prestige.server.DailyRewardHandler;
+import com.arcadia.prestige.server.DashboardMenu;
 import com.arcadia.prestige.server.LuckPermsHook;
 import com.arcadia.pets.server.PetManager;
 
@@ -28,6 +30,8 @@ public record C2SDashboardAction(int actionId, String payload) implements Custom
     public static final int APPLY_STAR_ESSENCE = 6;
     /** Open the dashboard at a specific tab (payload = tab index as string). */
     public static final int OPEN_TAB = 7;
+    /** Claim a completed daily quest (payload = quest index "0"/"1"/"2"). */
+    public static final int CLAIM_QUEST = 8;
 
     public static final Type<C2SDashboardAction> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath("arcadia_prestige", "dashboard_action"));
@@ -62,7 +66,12 @@ public record C2SDashboardAction(int actionId, String payload) implements Custom
                 case SUMMON_PET -> handleSummonPet(serverPlayer, payload);
                 case UNSUMMON_PET -> PetManager.despawn(serverPlayer);
                 case FEED_PET -> { /* Reserved for collectible system */ }
-                case CLAIM_DAILY -> DailyRewardHandler.tryClaim(serverPlayer);
+                case CLAIM_DAILY -> {
+                    DailyRewardHandler.tryClaim(serverPlayer);
+                    // Track DAILY_CLAIM quest progress
+                    QuestManager.trackProgress(serverPlayer.getUUID(), "DAILY_CLAIM", "", 1);
+                }
+                case CLAIM_QUEST -> handleClaimQuest(serverPlayer, payload);
                 case SWITCH_TAB -> handleSwitchTab(serverPlayer, payload);
                 case APPLY_STAR_ESSENCE -> handleApplyStarEssence(serverPlayer, payload);
                 case OPEN_TAB -> handleOpenTab(serverPlayer, payload);
@@ -112,6 +121,19 @@ public record C2SDashboardAction(int actionId, String payload) implements Custom
             com.arcadia.prestige.server.DashboardMenu.openFor(player, tab);
         } catch (NumberFormatException e) {
             com.arcadia.prestige.server.DashboardMenu.openFor(player);
+        }
+    }
+
+    private static void handleClaimQuest(ServerPlayer player, String questIndexStr) {
+        try {
+            int idx = Integer.parseInt(questIndexStr);
+            QuestManager.claimQuest(player, QuestManager.todayKey(), idx);
+            // Refresh the quest tab if the dashboard is open
+            if (player.containerMenu instanceof DashboardMenu menu) {
+                menu.switchTab(4, player);
+            }
+        } catch (NumberFormatException e) {
+            LOGGER.warn("Invalid quest index from {}: {}", player.getName().getString(), questIndexStr);
         }
     }
 

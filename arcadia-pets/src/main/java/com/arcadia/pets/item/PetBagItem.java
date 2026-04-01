@@ -102,6 +102,11 @@ public class PetBagItem extends Item {
             PacketDistributor.sendToPlayer(serverPlayer,
                     new S2CPetReveal(petTags, (byte) minimumRarity.ordinal()));
 
+            // Quest progress: OPEN_PET_BAG
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(
+                    new com.arcadia.lib.event.QuestProgressEvent(
+                            serverPlayer.getUUID(), "OPEN_PET_BAG", "", count));
+
             // Consume after sending so the hand slot is not overwritten.
             stack.shrink(count);
         }

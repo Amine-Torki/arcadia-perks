@@ -3,6 +3,8 @@ package com.arcadia.prestige.server;
 import com.arcadia.lib.dashboard.DashboardTabHandler;
 import com.arcadia.lib.data.PlayerDataHandler;
 import com.arcadia.prestige.ModMenus;
+import com.arcadia.prestige.quest.QuestInstance;
+import com.arcadia.prestige.quest.QuestManager;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
@@ -93,8 +95,8 @@ public class DashboardMenu extends AbstractContainerMenu {
 
         if (slotId < 54) {
             if (slotId < 9) {
-                if (slotId == 0) switchTab((currentTab + 3) % 4, player);
-                else if (slotId == 8) switchTab((currentTab + 1) % 4, player);
+                if (slotId == 0) switchTab((currentTab + 4) % 5, player);
+                else if (slotId == 8) switchTab((currentTab + 1) % 5, player);
                 else if (slotId == 4 && player instanceof ServerPlayer sp) {
                     DashboardTabHandler h = handlerForTab(currentTab);
                     if (h != null) h.handleNavBarClick(sp, this::refreshTab);
@@ -160,6 +162,7 @@ public class DashboardMenu extends AbstractContainerMenu {
         }
 
         if (currentTab == 0) { handleCosmeticsClick(slotId, sp); return; }
+        if (currentTab == 4) { handleQuestClick(slotId, sp); return; }
 
         DashboardTabHandler h = handlerForTab(currentTab);
         if (h != null) h.handleClick(slotId, button, sp, this::refreshTab);
@@ -211,6 +214,7 @@ public class DashboardMenu extends AbstractContainerMenu {
             case 1 -> { if (petsTab != null) petsTab.buildTab(dashboardContainer, (ServerPlayer) player); }
             case 2 -> buildDailyTab();
             case 3 -> { if (ahTab   != null) ahTab.buildTab(dashboardContainer, (ServerPlayer) player); }
+            case 4 -> buildQuestTab();
         }
         broadcastChanges();
     }
@@ -520,6 +524,98 @@ public class DashboardMenu extends AbstractContainerMenu {
                 Component.literal("Page " + (page + 1) + "  \u2014  Day " + pagePos + "/" + pathLen + " done").withStyle(ChatFormatting.YELLOW),
                 Component.literal("Don't miss a day!").withStyle(ChatFormatting.GRAY)));
         dashboardContainer.setItem(49, streakItem);
+    }
+
+    // ── Quest tab ─────────────────────────────────────────────────────────────
+
+    /** Slot indices for the three quest cards (left column of a 3-row layout). */
+    private static final int[] QUEST_SLOTS   = {19, 28, 37};
+    /** "Claim" button offset from each quest card slot. */
+    private static final int[] CLAIM_OFFSETS = {3,  3,  3};
+
+    private void handleQuestClick(int slotId, ServerPlayer sp) {
+        String dateKey = QuestManager.todayKey();
+        for (int i = 0; i < 3; i++) {
+            if (slotId == QUEST_SLOTS[i] + CLAIM_OFFSETS[i]) {
+                if (QuestManager.claimQuest(sp, dateKey, i)) refreshTab();
+                return;
+            }
+        }
+    }
+
+    private void buildQuestTab() {
+        if (!(player instanceof ServerPlayer sp)) return;
+
+        // Background
+        ItemStack bg = new ItemStack(Items.BLACK_STAINED_GLASS_PANE);
+        setName(bg, Component.literal(" "));
+        for (int s = 9; s < 54; s++) dashboardContainer.setItem(s, bg.copy());
+
+        String dateKey = QuestManager.todayKey();
+        QuestInstance[] quests = QuestManager.getOrGenerate(sp.getUUID(), dateKey);
+
+        // Header
+        ItemStack header = new ItemStack(Items.BOOK);
+        setName(header, Component.literal("§6Daily Quests").withStyle(net.minecraft.ChatFormatting.GOLD));
+        setLore(header, List.of(
+                Component.literal("§7Complete quests to earn rewards.").withStyle(net.minecraft.ChatFormatting.GRAY),
+                Component.literal("§7Resets at midnight.").withStyle(net.minecraft.ChatFormatting.DARK_GRAY)));
+        dashboardContainer.setItem(13, header);
+
+        for (int i = 0; i < 3; i++) {
+            QuestInstance q = quests[i];
+            int baseSlot  = QUEST_SLOTS[i];
+            int claimSlot = baseSlot + CLAIM_OFFSETS[i];
+
+            // Quest info card
+            boolean done    = q.isCompleted();
+            boolean claimed = q.claimed();
+            net.minecraft.world.item.Item icon = switch (q.def().difficulty()) {
+                case EASY   -> Items.IRON_SWORD;
+                case MEDIUM -> Items.GOLD_SWORD;
+                case HARD   -> Items.DIAMOND_SWORD;
+            };
+
+            ItemStack card = new ItemStack(claimed ? Items.LIME_DYE : (done ? icon : Items.GRAY_DYE));
+            String titleColor = claimed ? "§a" : (done ? "§e" : "§f");
+            setName(card, Component.literal(titleColor + q.def().title()));
+
+            List<Component> lore = new ArrayList<>();
+            lore.add(Component.literal("§7" + q.def().description()).withStyle(net.minecraft.ChatFormatting.GRAY));
+            lore.add(Component.literal("§8Difficulty: " + q.def().difficulty().displayName()));
+            lore.add(Component.literal("§7Progress: §f" + q.progress() + "§7/§f" + q.def().targetAmount())
+                    .withStyle(net.minecraft.ChatFormatting.GRAY));
+            lore.add(Component.literal("§6Reward: §f+" + q.def().rewardCoins() + " coins"
+                    + (q.def().rewardEssence() > 0 ? ", +" + q.def().rewardEssence() + " ✦" : "")));
+            if (claimed)      lore.add(Component.literal("§a✓ Claimed").withStyle(net.minecraft.ChatFormatting.GREEN));
+            else if (done)    lore.add(Component.literal("§e★ Completed – claim your reward!").withStyle(net.minecraft.ChatFormatting.YELLOW));
+            setLore(card, lore);
+            if (done && !claimed) card.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
+            dashboardContainer.setItem(baseSlot, card);
+
+            // Spacer slots
+            for (int off = 1; off < 3; off++) {
+                ItemStack bar = new ItemStack(Items.LIGHT_GRAY_STAINED_GLASS_PANE);
+                setName(bar, Component.literal(" "));
+                dashboardContainer.setItem(baseSlot + off, bar);
+            }
+
+            // Claim button
+            ItemStack claimBtn;
+            if (claimed) {
+                claimBtn = new ItemStack(Items.GRAY_STAINED_GLASS_PANE);
+                setName(claimBtn, Component.literal("§7Already claimed").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+            } else if (done) {
+                claimBtn = new ItemStack(Items.NETHER_STAR);
+                setName(claimBtn, Component.literal("§aClaim Reward").withStyle(net.minecraft.ChatFormatting.GREEN));
+                setLore(claimBtn, List.of(Component.literal("§7Click to collect!").withStyle(net.minecraft.ChatFormatting.GRAY)));
+                claimBtn.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
+            } else {
+                claimBtn = new ItemStack(Items.BARRIER);
+                setName(claimBtn, Component.literal("§cNot completed yet").withStyle(net.minecraft.ChatFormatting.RED));
+            }
+            dashboardContainer.setItem(claimSlot, claimBtn);
+        }
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────

@@ -228,6 +228,11 @@ public final class PetManager {
         designatedPetId.put(player.getUUID(), data.petId());
         SkillHandler.triggerSummon(player);
         applyPetStatBonuses(player, data);
+
+        // Quest progress: PET_SUMMON
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(
+                new com.arcadia.lib.event.QuestProgressEvent(
+                        player.getUUID(), "PET_SUMMON", "", 1));
     }
 
     // ── Passive player-stat bonuses ───────────────────────────────────────────
@@ -1062,6 +1067,12 @@ public final class PetManager {
                 pd.happiness(),
                 pd.skills()));
         if (hpGain > 0) applyHpHeal(player, petId, hpGain);
+
+        // Quest progress: PET_FEED
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(
+                new com.arcadia.lib.event.QuestProgressEvent(
+                        playerUuid, "PET_FEED", "", 1));
+
         Mob mob = getActivePetMob(playerUuid);
         if (mob != null) {
             sendHpSync(player, mob.getHealth(), mob.getMaxHealth(), true);
