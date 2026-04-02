@@ -178,7 +178,7 @@ public record C2SDuelAction(int actionType, String skillId,
         // Duel participation XP: 2 XP per roster pet (= 1/5 of a treat) for both players
         ServerPlayer loserPlayer = (ServerPlayer) server.getPlayerList().getPlayer(loser);
         grantDuelParticipationXp(winner,      session.rosterFor(session.winner), 2);
-        grantDuelParticipationXp(loserPlayer, session.rosterFor(loser),          2);
+        grantDuelParticipationXp(loserPlayer, session.rosterFor(loser),          1);
 
         // ELO update — resolved by arcadia-prestige's EloEventHandler
         // Also carries pet IDs so the handler can grant Pass bonus XP (+1 per winner pet)
