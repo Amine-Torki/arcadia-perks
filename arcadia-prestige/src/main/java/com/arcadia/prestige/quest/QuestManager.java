@@ -167,11 +167,22 @@ public final class QuestManager {
     // ── Reward dispatch (inner classes avoid hard cross-module dependencies) ──
 
     private static void grantRewards(ServerPlayer player, QuestDefinition def) {
-        if (def.rewardEssence() > 0 && ModList.get().isLoaded("arcadia_pets")) {
-            EssenceReward.give(player, def.rewardEssence());
+        // Arcadia Pass holders receive a 50% bonus on all quest rewards
+        boolean hasPass = com.arcadia.prestige.server.LuckPermsHook.hasPass(player);
+        int essence = def.rewardEssence();
+        int coins   = def.rewardCoins();
+        if (hasPass) {
+            essence = (int) Math.ceil(essence * 1.5);
+            coins   = (int) Math.ceil(coins   * 1.5);
         }
-        if (def.rewardCoins() > 0 && ModList.get().isLoaded("numismatics")) {
-            NumismaticsReward.give(player, def.rewardCoins());
+
+        if (essence > 0 && ModList.get().isLoaded("arcadia_pets")) {
+            final int e = essence;
+            EssenceReward.give(player, e);
+        }
+        if (coins > 0 && ModList.get().isLoaded("numismatics")) {
+            final int c = coins;
+            NumismaticsReward.give(player, c);
         }
     }
 

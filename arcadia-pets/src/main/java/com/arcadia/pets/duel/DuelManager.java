@@ -164,7 +164,7 @@ public final class DuelManager {
         OK,
         NOT_IN_DUEL,
         NOT_YOUR_TURN,
-        INSUFFICIENT_AP,
+        INSUFFICIENT_SP,
         SKILL_ON_COOLDOWN,
         SKILL_NOT_FOUND,
         INVALID_TARGET,
@@ -208,20 +208,19 @@ public final class DuelManager {
     private static ActionResult handleAttack(DuelSession session,
                                               UUID actor, int actorPet,
                                               UUID opponent, int targetPet) {
-        if (session.currentAP < 1) return ActionResult.INSUFFICIENT_AP;
+        // Basic attack is FREE (costs no SP) but always ends the turn
         if (!session.isAlive(opponent, targetPet)) return ActionResult.INVALID_TARGET;
 
         int atk   = session.getAtk(actor, actorPet);
         int dealt = session.resolveDamage(actor, actorPet, opponent, targetPet, atk);
         session.addLog(session.petName(actor, actorPet) + " attacks "
                 + session.petName(opponent, targetPet) + "! " + dealt + " damage.");
-        session.currentAP -= 1;
 
         if (session.checkWinCondition()) {
             endDuel(session, session.winner);
             return ActionResult.OK;
         }
-        if (session.currentAP <= 0) session.endTurn();
+        session.endTurn(); // attack always ends the turn
         return ActionResult.OK;
     }
 
@@ -240,7 +239,7 @@ public final class DuelManager {
         }
         if (skillLevel <= 0) return ActionResult.SKILL_NOT_FOUND;
 
-        if (session.currentAP < def.apCost) return ActionResult.INSUFFICIENT_AP;
+        if (session.currentSP < def.spCost) return ActionResult.INSUFFICIENT_SP;
         if (session.getSkillCooldown(actor, actorPet, skillId) > 0) return ActionResult.SKILL_ON_COOLDOWN;
 
         // Resolve canonical target based on DuelTargetType
@@ -275,24 +274,25 @@ public final class DuelManager {
         String logLine = def.effectFn.apply(session, actor, actorPet,
                 targetOwner, resolvedTargetPet, skillLevel);
         session.addLog(logLine);
-        session.currentAP -= def.apCost;
+        session.currentSP -= def.spCost;
         session.setSkillCooldown(actor, actorPet, skillId, def.getCooldown(skillLevel));
 
         if (session.checkWinCondition()) {
             endDuel(session, session.winner);
             return ActionResult.OK;
         }
-        if (session.currentAP <= 0) session.endTurn();
+        if (session.currentSP <= 0) session.endTurn();
         return ActionResult.OK;
     }
 
     private static ActionResult handleDefend(DuelSession session, UUID actor, int actorPet) {
-        if (session.currentAP < 1) return ActionResult.INSUFFICIENT_AP;
-        // Defend: apply a small FORTIFY (10% reduction) for 1 turn and end the turn
+        // Defend is FREE (no SP cost) but always ends the turn
+        float fortify = 0.10f + (float)(session.getAtk(actor, actorPet)) * 0.005f;
+        fortify = Math.min(0.30f, fortify);
         session.applyEffect(actor, actorPet,
-                new ActiveEffect(DuelStatusType.FORTIFY, 1, 0.10f));
-        session.addLog(session.petName(actor, actorPet) + " braces for impact! +10% defence this turn.");
-        session.currentAP = 0;
+                new ActiveEffect(DuelStatusType.FORTIFY, 1, fortify));
+        session.addLog(session.petName(actor, actorPet) + " braces for impact! -"
+                + Math.round(fortify * 100) + "% incoming damage this turn.");
         session.endTurn();
         return ActionResult.OK;
     }
@@ -305,8 +305,8 @@ public final class DuelManager {
     }
 
     private static ActionResult handlePass(DuelSession session) {
-        session.addLog("Turn passed.");
-        session.currentAP = 0;
+        session.addLog("Turn passed. SP carried over.");
+        // SP is NOT zeroed — it naturally saves itself in endTurn() via petSP map
         session.endTurn();
         return ActionResult.OK;
     }

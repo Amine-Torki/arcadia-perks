@@ -174,6 +174,21 @@ public record C2SDuelAction(int actionType, String skillId,
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(
                 new com.arcadia.lib.event.QuestProgressEvent(
                         winner.getUUID(), "PET_DUEL_WIN", "", 1));
+
+        // ELO update — resolved by arcadia-prestige's EloEventHandler
+        String winnerMob = mobTypeOf(session.rosterFor(session.winner));
+        String loserMob  = mobTypeOf(session.rosterFor(loser));
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(
+                new com.arcadia.lib.event.DuelResultEvent(
+                        session.winner, loser, winnerMob, loserMob));
+    }
+
+    /** Returns the mob type of the first non-null pet in a roster. */
+    private static String mobTypeOf(com.arcadia.pets.item.PetData[] roster) {
+        for (com.arcadia.pets.item.PetData pd : roster) {
+            if (pd != null) return pd.mobType();
+        }
+        return "";
     }
 
     private static void tryGiveCoins(ServerPlayer player, int amount) {

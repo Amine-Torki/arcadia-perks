@@ -1,5 +1,6 @@
 package com.arcadia.pets.client;
 
+import com.arcadia.pets.duel.DuelSession;
 import com.arcadia.pets.item.PetData;
 import com.arcadia.pets.item.PetStat;
 import com.arcadia.pets.network.C2SDuelAction;
@@ -29,7 +30,7 @@ import java.util.*;
  * │  > Chicken used Levitate! +28% EVA for 2 turns.                        │
  * │  > Zombie Wolf attacks Pig! 3 damage.                                  │
  * ├─────────────────────────────────────────────────────────────────────────┤
- * │  ACTING: [Pet Name] ● ● ○  AP remaining                                │
+ * │  ACTING: [Pet Name] ● ● ○  SP remaining                                │
  * │  [⚔ Attack 1AP] [🛡 Defend 1AP] [Pass Turn]                            │
  * │  [Skill1 Lv7 1AP|CD:0] [Skill2 Lv3 2AP|CD:2] ...                     │
  * │  TARGET: [← Enemy Pet0] [Enemy Pet1 →] (when selecting target)         │
@@ -272,11 +273,11 @@ public class DuelScreen extends Screen {
                 ? actor.customName() : mobShortName(actor.mobType());
         g.drawString(font, "§eActing: §f" + actorName, 10, y, 0xFFFFDD, false);
 
-        // AP indicators
-        int ap = state.currentAP();
-        StringBuilder apBar = new StringBuilder("§7AP: ");
-        for (int i = 0; i < 3; i++) apBar.append(i < ap ? "§e●" : "§8○");
-        g.drawString(font, apBar.toString(), 10, y + 10, 0xFFFFFF, false);
+        // SP (Spirit Points) indicator — up to 5 pips
+        int sp = state.currentSP();
+        StringBuilder spBar = new StringBuilder("§bSP: ");
+        for (int i = 0; i < DuelSession.SP_MAX; i++) spBar.append(i < sp ? "§e⚡" : "§8◌");
+        g.drawString(font, spBar.toString(), 10, y + 10, 0xFFFFFF, false);
 
         int btnY = y + 22;
         int btnX = 10;
@@ -284,12 +285,12 @@ public class DuelScreen extends Screen {
         if (pendingSkillId == null) {
             // ── Normal action buttons ─────────────────────────────────────────
 
-            // Attack (1 AP)
-            btnX = renderActionButton(g, "⚔ Attack", "1AP", btnX, btnY, ap >= 1, mx, my);
+            // Attack (FREE — always available)
+            btnX = renderActionButton(g, "⚔ Attack", "FREE", btnX, btnY, true, mx, my);
             btnX += BTN_GAP;
 
-            // Defend (1 AP)
-            btnX = renderActionButton(g, "🛡 Defend", "1AP", btnX, btnY, ap >= 1, mx, my);
+            // Defend (FREE — always available)
+            btnX = renderActionButton(g, "🛡 Defend", "FREE", btnX, btnY, true, mx, my);
             btnX += BTN_GAP;
 
             // Pass turn
@@ -304,9 +305,9 @@ public class DuelScreen extends Screen {
                 com.arcadia.pets.duel.DuelSkillDef def =
                         com.arcadia.pets.duel.DuelSkillAdapter.get(si.skill().getId());
                 if (def == null) continue;
-                boolean ready = cd == 0 && ap >= def.apCost;
+                boolean ready = cd == 0 && sp >= def.spCost;
                 String label  = si.skill().getDisplayName().getString();
-                String badge  = def.apCost + "AP" + (cd > 0 ? "|CD:" + cd : "");
+                String badge  = def.spCost + "SP" + (cd > 0 ? "|CD:" + cd : "");
                 skillBtnX = renderActionButton(g, label, badge, skillBtnX, skillRowY, ready, mx, my);
                 skillBtnX += BTN_GAP;
                 if (skillBtnX > width - 80) { skillBtnX = 10; skillRowY += BTN_H + 3; }
@@ -390,11 +391,11 @@ public class DuelScreen extends Screen {
         int btnY   = computeActionAreaY();
         int btnX   = 10;
 
-        // Attack button
-        int attackW = font.width("⚔ Attack 1AP") + 10;
+        // Attack button — FREE, always available, ends turn
+        int attackW = font.width("⚔ Attack FREE") + 10;
         if (my >= btnY + 22 && my <= btnY + 22 + BTN_H && mx >= btnX && mx <= btnX + attackW) {
             int firstEnemy = firstAlive(oppSide);
-            if (firstEnemy >= 0 && state.currentAP() >= 1) {
+            if (firstEnemy >= 0) {
                 sendAttack(actorPet, firstEnemy);
                 return true;
             }
@@ -411,9 +412,9 @@ public class DuelScreen extends Screen {
                         com.arcadia.pets.duel.DuelSkillAdapter.get(si.skill().getId());
                 if (def == null) continue;
                 int cd = DuelClientState.skillCooldown(mySide, actorPet, si.skill().getId());
-                boolean ready = cd == 0 && state.currentAP() >= def.apCost;
+                boolean ready = cd == 0 && state.currentSP() >= def.spCost;
                 String label = si.skill().getDisplayName().getString();
-                String badge = def.apCost + "AP" + (cd > 0 ? "|CD:" + cd : "");
+                String badge = def.spCost + "SP" + (cd > 0 ? "|CD:" + cd : "");
                 int bw = font.width(label + " (" + badge + ")") + 10;
                 if (ready && my >= skillRowY && my <= skillRowY + BTN_H
                         && mx >= skillBtnX && mx <= skillBtnX + bw) {
@@ -425,11 +426,11 @@ public class DuelScreen extends Screen {
             }
         }
 
-        // Defend button
+        // Defend button — FREE, always available
         int defendX = 10 + attackW + BTN_GAP;
-        int defendW = font.width("🛡 Defend 1AP") + 10;
+        int defendW = font.width("🛡 Defend FREE") + 10;
         if (my >= btnY + 22 && my <= btnY + 22 + BTN_H
-                && mx >= defendX && mx <= defendX + defendW && state.currentAP() >= 1) {
+                && mx >= defendX && mx <= defendX + defendW) {
             PacketDistributor.sendToServer(new C2SDuelAction(C2SDuelAction.DEFEND, "", 0));
             return true;
         }

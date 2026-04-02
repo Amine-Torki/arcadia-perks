@@ -32,10 +32,10 @@ public record S2CDuelState(
         // Live HP & max-HP per pet (3 values each side)
         int[] p1Hp, int[] p1MaxHp,
         int[] p2Hp, int[] p2MaxHp,
-        // Current turn: who is acting and with how many AP
+        // Current turn: who is acting and with how many SP
         UUID   actorUuid,
         int    actorPetIdx,
-        int    currentAP,
+        int    currentSP,
         // Encoded turn order (UUID + petIdx pairs for UI display)
         List<long[]>  turnOrderEncoded,  // each entry: [uuidMsb, uuidLsb, petIdx]
         // Skill cooldowns for BOTH sides (key = "side_petIdx_skillId", value = turns remaining)
@@ -91,7 +91,7 @@ public record S2CDuelState(
                 p1Tags, p2Tags,
                 session.p1Hp.clone(), session.p1MaxHp.clone(),
                 session.p2Hp.clone(), session.p2MaxHp.clone(),
-                actorUuid, actorPetIdx, session.currentAP,
+                actorUuid, actorPetIdx, session.currentSP,
                 orderEnc,
                 new LinkedHashMap<>(session.getAllCooldowns()),
                 effectLabels,
@@ -127,7 +127,7 @@ public record S2CDuelState(
         buf.writeBoolean(pkt.actorUuid != null);
         if (pkt.actorUuid != null) buf.writeUUID(pkt.actorUuid);
         buf.writeVarInt(pkt.actorPetIdx);
-        buf.writeVarInt(pkt.currentAP);
+        buf.writeVarInt(pkt.currentSP);
 
         buf.writeVarInt(pkt.turnOrderEncoded.size());
         for (long[] e : pkt.turnOrderEncoded) {

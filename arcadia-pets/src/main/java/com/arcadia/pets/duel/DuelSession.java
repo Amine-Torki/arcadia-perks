@@ -25,15 +25,19 @@ import java.util.concurrent.ThreadLocalRandom;
  * Sorted by AGI (highest first) across all 6 living pets. Rebuilt at the start of
  * each new round. Dead pets are skipped; stunned pets lose their turn.
  *
- * <h3>Action Points</h3>
- * Each pet receives {@link #AP_PER_TURN} AP at the start of its turn.
- * Using an action costs AP; when AP reaches 0 (or the player passes) the turn advances.
+ * <h3>Spirit Points (SP)</h3>
+ * Each pet starts combat with 0 SP and gains {@link #SP_PER_TURN} SP when their turn opens,
+ * capped at {@link #SP_MAX}. Unused SP carries over to the next round. The basic attack is
+ * always free; skills cost 1–4 SP. Some skills can restore SP directly.
  */
 public final class DuelSession {
 
     // ── Constants ─────────────────────────────────────────────────────────────
 
-    public static final int AP_PER_TURN   = 3;
+    /** Maximum Spirit Points a pet can hold. */
+    public static final int SP_MAX        = 5;
+    /** SP gained at the start of each turn. */
+    public static final int SP_PER_TURN   = 1;
     public static final int TURN_TIMEOUT_MS = 30_000; // 30 seconds
     private static final int MAX_LOG       = 24;
 
@@ -71,7 +75,14 @@ public final class DuelSession {
 
     private final List<TurnSlot> turnOrder = new ArrayList<>();
     private int turnOrderIndex = 0;
-    public int currentAP = 0;
+
+    // ── Spirit Points ─────────────────────────────────────────────────────────
+    // Persisted per-pet across turns so unused SP carries over.
+
+    /** Per-pet stored SP between turns; key = petKey (e.g. "1_0"). */
+    private final Map<String, Integer> petSP = new HashMap<>();
+    /** SP currently available for the acting pet this turn. */
+    public int currentSP = 0;
 
     // ── Phase ─────────────────────────────────────────────────────────────────
 
@@ -209,8 +220,10 @@ public final class DuelSession {
                 continue;
             }
 
-            // Valid turn: assign AP and set deadline
-            currentAP    = AP_PER_TURN;
+            // Valid turn: restore SP (+SP_PER_TURN, carrying over unspent SP)
+            String spKey = petKey(slot.ownerUuid(), slot.petIndex());
+            int stored   = petSP.getOrDefault(spKey, 0);
+            currentSP    = Math.min(SP_MAX, stored + SP_PER_TURN);
             actionDeadline = System.currentTimeMillis() + TURN_TIMEOUT_MS;
             return;
         }
@@ -223,6 +236,8 @@ public final class DuelSession {
     public void endTurn() {
         TurnSlot slot = currentSlot();
         if (slot != null) {
+            // Persist remaining SP for this pet before moving on
+            petSP.put(petKey(slot.ownerUuid(), slot.petIndex()), currentSP);
             tickDotEffects(slot.ownerUuid(), slot.petIndex());
             tickDurationEffects(slot.ownerUuid(), slot.petIndex());
         }
@@ -453,6 +468,16 @@ public final class DuelSession {
                 addLog("★ " + petName(player, petIdx) + "'s Second Life activates! Revived at 2 HP!");
             }
         }
+    }
+
+    /**
+     * Adds {@code amount} to a pet's stored SP (carried over between turns), capped at SP_MAX.
+     * Use this for off-turn SP restoration (e.g. spirit_burst hitting allies).
+     */
+    public void addStoredSP(UUID player, int petIdx, int amount) {
+        String key = petKey(player, petIdx);
+        int current = petSP.getOrDefault(key, 0);
+        petSP.put(key, Math.min(SP_MAX, current + amount));
     }
 
     /** Heal a pet by {@code amount}, capped at its current max HP. */

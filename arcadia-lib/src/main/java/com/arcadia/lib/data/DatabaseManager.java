@@ -131,6 +131,17 @@ public final class DatabaseManager {
                     )
                     """);
 
+            stmt.executeUpdate("""
+                    CREATE TABLE IF NOT EXISTS arcadia_duel_elo (
+                        uuid              VARCHAR(36)  PRIMARY KEY,
+                        rating            INT          NOT NULL DEFAULT 1000,
+                        wins              INT          NOT NULL DEFAULT 0,
+                        losses            INT          NOT NULL DEFAULT 0,
+                        favorite_mob_type VARCHAR(64)  NOT NULL DEFAULT '',
+                        INDEX idx_rating (rating DESC)
+                    )
+                    """);
+
             LOGGER.info("ArcadiaDashboard database tables verified.");
         } catch (SQLException e) {
             LOGGER.error("Failed to create database tables", e);

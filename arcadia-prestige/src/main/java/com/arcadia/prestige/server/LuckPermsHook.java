@@ -106,6 +106,21 @@ public final class LuckPermsHook {
     }
 
     /**
+     * Returns true if the player holds the Arcadia Pass permission node
+     * {@code arcadia.pass}. The Pass grants bonus rewards and a visual badge.
+     */
+    public static boolean hasPass(Player player) {
+        if (com.arcadia.lib.DebugMode.ENABLED) {
+            // Debug: treat vip+ and above as pass holders
+            return GRADE_HIERARCHY.getOrDefault(getGrade(player), 0) >= 2;
+        }
+        if (api == null) return false;
+        User user = api.getUserManager().getUser(player.getUUID());
+        if (user == null) return false;
+        return hasPermission(user, "arcadia.pass");
+    }
+
+    /**
      * Checks whether a player has the LP permission node {@code arcadia.cosmetic.<id>}.
      * Access is fully controlled by LuckPerms — grant the node to any group or player.
      */

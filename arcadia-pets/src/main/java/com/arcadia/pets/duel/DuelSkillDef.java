@@ -10,8 +10,8 @@ import java.util.UUID;
  */
 public final class DuelSkillDef {
 
-    /** How many Action Points this skill costs to use. */
-    public final int apCost;
+    /** How many Spirit Points (SP) this skill costs to use. */
+    public final int spCost;
 
     /** Base cooldown in turns at level 1. */
     public final int baseCooldown;
@@ -25,9 +25,9 @@ public final class DuelSkillDef {
     /** Server-side effect logic. */
     public final DuelEffectFn effectFn;
 
-    public DuelSkillDef(int apCost, int baseCooldown, int minCooldown,
+    public DuelSkillDef(int spCost, int baseCooldown, int minCooldown,
                         DuelTargetType targetType, DuelEffectFn effectFn) {
-        this.apCost        = apCost;
+        this.spCost        = spCost;
         this.baseCooldown  = baseCooldown;
         this.minCooldown   = minCooldown;
         this.targetType    = targetType;
