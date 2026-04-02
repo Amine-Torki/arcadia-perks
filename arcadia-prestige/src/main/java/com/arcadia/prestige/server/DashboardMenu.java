@@ -697,8 +697,8 @@ public class DashboardMenu extends AbstractContainerMenu {
 
     private ItemStack buildLeaderboardEntry(int rank, PlayerEloData data,
                                              net.minecraft.world.item.Item fallbackIcon) {
-        // Try to get a spawn egg for the favorite pet
-        ItemStack icon = spawnEggFor(data.favoriteMobType());
+        // Try to get the actual 3D pet item from the player's collection
+        ItemStack icon = petItemFor(data.uuid(), data.favoriteMobType());
         if (icon.isEmpty()) icon = new ItemStack(fallbackIcon);
 
         String medal = switch (rank) {
@@ -722,18 +722,24 @@ public class DashboardMenu extends AbstractContainerMenu {
         return icon;
     }
 
-    /** Attempts to get a spawn egg ItemStack for a mob type (e.g. "minecraft:cat"). */
-    private static ItemStack spawnEggFor(String mobType) {
+    /**
+     * Finds the first pet item in the player's collection whose mob type matches
+     * {@code mobType}, and returns a copy of that ItemStack (the actual 3D pet item).
+     * Falls back to {@link ItemStack#EMPTY} if not found.
+     */
+    private ItemStack petItemFor(UUID playerUuid, String mobType) {
         if (mobType == null || mobType.isEmpty()) return ItemStack.EMPTY;
+        if (player.getServer() == null) return ItemStack.EMPTY;
         try {
-            net.minecraft.resources.ResourceLocation rl = net.minecraft.resources.ResourceLocation.parse(mobType);
-            net.minecraft.world.item.SpawnEggItem egg =
-                    net.minecraft.world.item.SpawnEggItem.byId(
-                            net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.get(rl));
-            return egg != null ? new ItemStack(egg) : ItemStack.EMPTY;
-        } catch (Exception e) {
-            return ItemStack.EMPTY;
-        }
+            var col = com.arcadia.pets.server.PetCollectionSavedData
+                    .getOrCreate(player.getServer())
+                    .getCollection(playerUuid);
+            for (ItemStack stack : col) {
+                com.arcadia.pets.item.PetData pd = com.arcadia.pets.item.PetData.fromStack(stack);
+                if (pd != null && mobType.equals(pd.mobType())) return stack.copy();
+            }
+        } catch (Exception ignored) {}
+        return ItemStack.EMPTY;
     }
 
     /** Returns the online player's name, or a shortened UUID fragment if offline. */

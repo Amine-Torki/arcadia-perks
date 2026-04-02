@@ -2,8 +2,6 @@ package com.arcadia.prestige.elo;
 
 import com.arcadia.lib.data.DatabaseManager;
 import com.mojang.logging.LogUtils;
-import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
 
 import java.util.*;
@@ -54,12 +52,6 @@ public final class EloManager {
         int newWinnerRating = EloCalculator.newRating(winnerData.rating(), loserData.rating(), true);
         int newLoserRating  = EloCalculator.newRating(loserData.rating(), winnerData.rating(), false);
 
-        // Arcadia Pass bonus: winner gains 5% extra ELO if they hold the pass
-        int gain = newWinnerRating - winnerData.rating();
-        if (gain > 0 && hasPass(winnerUuid)) {
-            newWinnerRating = winnerData.rating() + (int) Math.ceil(gain * 1.05);
-        }
-
         PlayerEloData updatedWinner = winnerData.withWin(newWinnerRating, winnerMobType);
         PlayerEloData updatedLoser  = loserData.withLoss(newLoserRating);
 
@@ -99,17 +91,5 @@ public final class EloManager {
     /** Clears the in-memory cache (e.g. on server stop). */
     public static void clearCache() {
         CACHE.clear();
-    }
-
-    /** Returns true if the player is online and holds the Arcadia Pass permission. */
-    private static boolean hasPass(UUID uuid) {
-        try {
-            var server = ServerLifecycleHooks.getCurrentServer();
-            if (server == null) return false;
-            ServerPlayer sp = (ServerPlayer) server.getPlayerList().getPlayer(uuid);
-            return sp != null && com.arcadia.prestige.server.LuckPermsHook.hasPass(sp);
-        } catch (Exception e) {
-            return false;
-        }
     }
 }

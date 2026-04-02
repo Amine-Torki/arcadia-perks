@@ -1168,6 +1168,37 @@ public final class PetManager {
         }
     }
 
+    /**
+     * Adds {@code xpAmount} skill XP to a specific pet identified by {@code petId},
+     * regardless of which pet is currently active. Used to reward duel participants.
+     * Silently no-ops if the pet is not found or all skills are maxed.
+     */
+    public static void addSkillXpToPet(ServerPlayer player, UUID petId, int xpAmount) {
+        updatePetItem(player, petId, pd -> {
+            java.util.List<com.arcadia.pets.skill.SkillInstance> skills = pd.skills();
+            int idx = -1;
+            for (int i = 0; i < skills.size(); i++) {
+                com.arcadia.pets.skill.SkillInstance s = skills.get(i);
+                if (s.level() >= 1 && s.level() < 10) { idx = i; break; }
+            }
+            if (idx == -1) return pd; // all maxed — no-op
+
+            int chmStars  = pd.stats().getOrDefault(PetStat.CHARISMA, 0);
+            int boostedXp = Math.round(xpAmount * (1.0f + chmStars * 0.04f));
+
+            com.arcadia.pets.skill.SkillInstance target = skills.get(idx);
+            int xp  = target.xp() + boostedXp;
+            int lvl = target.level();
+            while (lvl < 10) {
+                int cost = com.arcadia.pets.skill.SkillInstance.xpForNextLevel(lvl);
+                if (xp >= cost) { xp -= cost; lvl++; }
+                else break;
+            }
+            if (lvl >= 10) xp = 0;
+            return buildSkillUpdatedData(pd, idx, lvl, xp);
+        });
+    }
+
     private static PetData buildSkillUpdatedData(PetData pd, int skillIdx, int newLevel, int newXp) {
         java.util.List<com.arcadia.pets.skill.SkillInstance> updated = new java.util.ArrayList<>(pd.skills());
         com.arcadia.pets.skill.SkillInstance s = updated.get(skillIdx);

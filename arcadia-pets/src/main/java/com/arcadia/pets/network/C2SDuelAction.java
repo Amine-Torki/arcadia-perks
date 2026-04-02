@@ -175,12 +175,31 @@ public record C2SDuelAction(int actionType, String skillId,
                 new com.arcadia.lib.event.QuestProgressEvent(
                         winner.getUUID(), "PET_DUEL_WIN", "", 1));
 
+        // Duel participation XP: 2 XP per roster pet (= 1/5 of a treat) for both players
+        ServerPlayer loserPlayer = (ServerPlayer) server.getPlayerList().getPlayer(loser);
+        grantDuelParticipationXp(winner,      session.rosterFor(session.winner), 2);
+        grantDuelParticipationXp(loserPlayer, session.rosterFor(loser),          2);
+
         // ELO update — resolved by arcadia-prestige's EloEventHandler
+        // Also carries pet IDs so the handler can grant Pass bonus XP (+1 per winner pet)
         String winnerMob = mobTypeOf(session.rosterFor(session.winner));
         String loserMob  = mobTypeOf(session.rosterFor(loser));
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(
                 new com.arcadia.lib.event.DuelResultEvent(
-                        session.winner, loser, winnerMob, loserMob));
+                        session.winner, loser, winnerMob, loserMob,
+                        petIdsOf(session.rosterFor(session.winner)),
+                        petIdsOf(session.rosterFor(loser))));
+    }
+
+    /** Grants {@code xpPerPet} skill XP to every non-null pet in a roster. */
+    private static void grantDuelParticipationXp(ServerPlayer player,
+                                                  com.arcadia.pets.item.PetData[] roster,
+                                                  int xpPerPet) {
+        if (player == null) return;
+        for (com.arcadia.pets.item.PetData pd : roster) {
+            if (pd == null) continue;
+            com.arcadia.pets.server.PetManager.addSkillXpToPet(player, pd.petId(), xpPerPet);
+        }
     }
 
     /** Returns the mob type of the first non-null pet in a roster. */
@@ -189,6 +208,15 @@ public record C2SDuelAction(int actionType, String skillId,
             if (pd != null) return pd.mobType();
         }
         return "";
+    }
+
+    /** Collects non-null petIds from a roster. */
+    private static java.util.List<java.util.UUID> petIdsOf(com.arcadia.pets.item.PetData[] roster) {
+        java.util.List<java.util.UUID> ids = new java.util.ArrayList<>();
+        for (com.arcadia.pets.item.PetData pd : roster) {
+            if (pd != null) ids.add(pd.petId());
+        }
+        return ids;
     }
 
     private static void tryGiveCoins(ServerPlayer player, int amount) {
