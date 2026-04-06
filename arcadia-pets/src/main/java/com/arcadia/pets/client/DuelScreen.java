@@ -71,8 +71,9 @@ public class DuelScreen extends Screen {
 
     @Override
     public boolean shouldCloseOnEsc() {
-        // Allow ESC only to forfeit (via a confirmation, TODO)
-        return false;
+        // Allow ESC to dismiss the end-of-duel screen; block it during active combat
+        S2CDuelState s = DuelClientState.get();
+        return s != null && s.phaseOrdinal() == com.arcadia.pets.duel.DuelPhase.FINISHED.ordinal();
     }
 
     // =========================================================================
@@ -129,6 +130,13 @@ public class DuelScreen extends Screen {
             renderActionArea(g, state, mySide, rosters[mySide], cx, actionY, mouseX, mouseY);
         } else {
             renderWaitingArea(g, state, cx, actionY);
+        }
+
+        // ── End-of-duel overlay ───────────────────────────────────────────────
+        if (state.phaseOrdinal() == com.arcadia.pets.duel.DuelPhase.FINISHED.ordinal()) {
+            renderDuelEndOverlay(g, state, localUuid, cx);
+            super.render(g, mouseX, mouseY, partial);
+            return;
         }
 
         // Forfeit hint
@@ -279,6 +287,16 @@ public class DuelScreen extends Screen {
         for (int i = 0; i < DuelSession.SP_MAX; i++) spBar.append(i < sp ? "§e⚡" : "§8◌");
         g.drawString(font, spBar.toString(), 10, y + 10, 0xFFFFFF, false);
 
+        // Countdown timer — shown in the top-right when ≤ 15 s remain
+        if (state.actionDeadline() > 0) {
+            long remaining = (state.actionDeadline() - System.currentTimeMillis()) / 1000;
+            if (remaining <= 15 && remaining >= 0) {
+                String timerColor = remaining <= 5 ? "§c" : remaining <= 10 ? "§e" : "§7";
+                String timerText  = timerColor + "⏰ " + remaining + "s";
+                g.drawString(font, timerText, width - font.width("⏰ 00s") - 6, y + 10, 0xFFFFFF, false);
+            }
+        }
+
         int btnY = y + 22;
         int btnX = 10;
 
@@ -339,6 +357,39 @@ public class DuelScreen extends Screen {
         long remaining = (state.actionDeadline() - System.currentTimeMillis()) / 1000;
         g.drawCenteredString(font, "§8Waiting for opponent... (" + Math.max(0, remaining) + "s)",
                 cx, y + 10, 0x666666);
+    }
+
+    // ── End-of-duel overlay ───────────────────────────────────────────────────
+
+    private void renderDuelEndOverlay(GuiGraphics g, S2CDuelState state,
+                                       UUID localUuid, int cx) {
+        boolean won = localUuid.equals(state.winner());
+        // Semi-transparent dimming layer
+        g.fill(0, 0, width, height, 0xBB000000);
+
+        // Banner box
+        int bw = 160, bh = 64;
+        int bx = cx - bw / 2, by = height / 2 - bh / 2 - 20;
+        g.fill(bx, by, bx + bw, by + bh, won ? 0xFF1a4a1a : 0xFF4a1a1a);
+        g.fill(bx - 1, by - 1, bx + bw + 1, by + bh + 1, won ? 0xFF44FF44 : 0xFFFF4444);
+        g.fill(bx, by, bx + bw, by + bh, won ? 0xFF1a4a1a : 0xFF4a1a1a);
+
+        // Result text
+        String title  = won ? "§a⭐ VICTORY!" : "§c✗ DEFEAT";
+        String sub    = won ? "§7Your pets triumphed!" : "§7Better luck next time.";
+        String hint   = "§8Press ESC to close";
+        g.drawCenteredString(font, title, cx, by + 10, 0xFFFFFF);
+        g.drawCenteredString(font, sub,   cx, by + 24, 0xAAAAAA);
+        g.drawCenteredString(font, hint,  cx, by + bh - 14, 0x555555);
+
+        // Show the last few combat log lines below the banner
+        int logStartY = by + bh + 8;
+        List<String> log = state.combatLog();
+        int show = Math.min(4, log.size());
+        for (int i = 0; i < show; i++) {
+            String line = log.get(log.size() - show + i);
+            g.drawCenteredString(font, "§8" + line, cx, logStartY + i * 9, 0x888888);
+        }
     }
 
     // =========================================================================

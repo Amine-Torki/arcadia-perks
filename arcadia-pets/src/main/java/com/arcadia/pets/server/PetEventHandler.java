@@ -38,6 +38,7 @@ import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 
 import java.util.ArrayList;
+import java.util.UUID;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Random;
@@ -179,18 +180,52 @@ public final class PetEventHandler {
     @SubscribeEvent
     public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
-        // Capture session before onPlayerLogout() removes it from the maps
+        // Capture session BEFORE onPlayerLogout() removes it from the maps
         DuelSession session = DuelManager.getSessionFor(player.getUUID());
-        DuelManager.onPlayerLogout(player.getUUID());
-        if (session != null) {
-            com.arcadia.pets.network.S2CDuelState finalState =
-                    com.arcadia.pets.network.S2CDuelState.from(session);
-            UUID opponentId = player.getUUID().equals(session.p1) ? session.p2 : session.p1;
-            ServerPlayer opponent = player.getServer() == null ? null
-                    : player.getServer().getPlayerList().getPlayer(opponentId);
-            if (opponent != null)
-                net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(opponent, finalState);
+        DuelManager.onPlayerLogout(player.getUUID()); // sets session.winner
+
+        if (session == null || session.winner == null) return;
+
+        MinecraftServer server = player.getServer();
+
+        // Notify the opponent with the final state
+        UUID opponentId = session.winner; // opponent won by default
+        if (server != null) {
+            ServerPlayer opponent = server.getPlayerList().getPlayer(opponentId);
+            if (opponent != null) {
+                net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(
+                        opponent, com.arcadia.pets.network.S2CDuelState.from(session));
+            }
+
+            // Grant winner their participation XP (loser is offline — skip)
+            ServerPlayer winner = server.getPlayerList().getPlayer(session.winner);
+            if (winner != null) {
+                for (PetData pd : session.rosterFor(session.winner)) {
+                    if (pd != null) PetManager.addSkillXpToPet(winner, pd.petId(), 2);
+                }
+            }
         }
+
+        // Fire DuelResultEvent so ELO is updated even on logout
+        UUID loser = player.getUUID();
+        String winnerMob = mobTypeOf(session.rosterFor(session.winner));
+        String loserMob  = mobTypeOf(session.rosterFor(loser));
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(
+                new com.arcadia.lib.event.DuelResultEvent(
+                        session.winner, loser, winnerMob, loserMob,
+                        petIdsOf(session.rosterFor(session.winner)),
+                        petIdsOf(session.rosterFor(loser))));
+    }
+
+    private static String mobTypeOf(PetData[] roster) {
+        for (PetData pd : roster) { if (pd != null) return pd.mobType(); }
+        return "";
+    }
+
+    private static java.util.List<UUID> petIdsOf(PetData[] roster) {
+        java.util.List<UUID> ids = new java.util.ArrayList<>();
+        for (PetData pd : roster) { if (pd != null) ids.add(pd.petId()); }
+        return ids;
     }
 
     @SubscribeEvent

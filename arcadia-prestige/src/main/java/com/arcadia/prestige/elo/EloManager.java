@@ -22,6 +22,16 @@ public final class EloManager {
 
     private EloManager() {}
 
+    /**
+     * Result of a duel ELO update.
+     *
+     * @param winnerDelta     rating change for the winner (positive)
+     * @param loserDelta      rating change for the loser (negative)
+     * @param newWinnerRating new rating for the winner
+     * @param newLoserRating  new rating for the loser
+     */
+    public record EloResult(int winnerDelta, int loserDelta, int newWinnerRating, int newLoserRating) {}
+
     // ── Public API ────────────────────────────────────────────────────────────
 
     /**
@@ -44,8 +54,8 @@ public final class EloManager {
      * @param winnerMobType mob type used as the winner's lead pet (for favorite tracking)
      * @param loserMobType  mob type used as the loser's lead pet
      */
-    public static void updateAfterDuel(UUID winnerUuid, UUID loserUuid,
-                                       String winnerMobType, String loserMobType) {
+    public static EloResult updateAfterDuel(UUID winnerUuid, UUID loserUuid,
+                                            String winnerMobType, String loserMobType) {
         PlayerEloData winnerData = getOrCreate(winnerUuid);
         PlayerEloData loserData  = getOrCreate(loserUuid);
 
@@ -70,6 +80,11 @@ public final class EloManager {
                 EloDatabase.save(fl);
             });
         }
+
+        return new EloResult(
+                newWinnerRating - winnerData.rating(),
+                newLoserRating  - loserData.rating(),
+                newWinnerRating, newLoserRating);
     }
 
     /**

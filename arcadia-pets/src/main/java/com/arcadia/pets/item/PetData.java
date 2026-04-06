@@ -106,14 +106,27 @@ public record PetData(
         List<SkillInstance> list = new ArrayList<>();
         if (packed.isEmpty()) return list;
         for (String entry : packed.split(",")) {
-            String[] f = entry.split("\\|");
-            if (f.length < 2) continue;
-            PetSkill skill = PetSkills.get(f[0]);
-            if (skill == null) continue;
-            int   level = Integer.parseInt(f[1]);
-            float eff   = f.length > 2 ? Float.parseFloat(f[2]) : 1.0f;
-            int   xp    = f.length > 3 ? Integer.parseInt(f[3]) : 0;
-            list.add(new SkillInstance(skill, level, eff, xp));
+            try {
+                String[] f = entry.split("\\|");
+                if (f.length < 2) {
+                    com.mojang.logging.LogUtils.getLogger()
+                            .warn("[PetData] Skipping malformed skill entry: '{}'", entry);
+                    continue;
+                }
+                PetSkill skill = PetSkills.get(f[0]);
+                if (skill == null) {
+                    com.mojang.logging.LogUtils.getLogger()
+                            .warn("[PetData] Unknown skill id '{}' — skipping", f[0]);
+                    continue;
+                }
+                int   level = Integer.parseInt(f[1]);
+                float eff   = f.length > 2 ? Float.parseFloat(f[2]) : 1.0f;
+                int   xp    = f.length > 3 ? Integer.parseInt(f[3]) : 0;
+                list.add(new SkillInstance(skill, level, eff, xp));
+            } catch (NumberFormatException e) {
+                com.mojang.logging.LogUtils.getLogger()
+                        .warn("[PetData] Failed to parse skill entry '{}': {}", entry, e.getMessage());
+            }
         }
         return list;
     }

@@ -2,6 +2,8 @@ package com.arcadia.prestige.elo;
 
 import com.arcadia.lib.event.DuelResultEvent;
 import com.arcadia.prestige.server.LuckPermsHook;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -27,17 +29,21 @@ public final class EloEventHandler {
 
     @SubscribeEvent
     public static void onDuelResult(DuelResultEvent event) {
-        // Update ELO for both players
-        EloManager.updateAfterDuel(
+        // Update ELO and capture deltas for feedback messages
+        EloManager.EloResult elo = EloManager.updateAfterDuel(
                 event.getWinnerUuid(),
                 event.getLoserUuid(),
                 event.getWinnerMobType(),
                 event.getLoserMobType());
 
-        // Arcadia Pass bonus: +1 XP per roster pet for any pass holder (winner or loser)
-        var server = ServerLifecycleHooks.getCurrentServer();
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return;
 
+        // Send ELO delta message to both players (if online)
+        sendEloMessage(server, event.getWinnerUuid(), elo.winnerDelta(), elo.newWinnerRating());
+        sendEloMessage(server, event.getLoserUuid(),  elo.loserDelta(),  elo.newLoserRating());
+
+        // Arcadia Pass bonus: +1 XP per roster pet for any pass holder
         ServerPlayer winner = (ServerPlayer) server.getPlayerList().getPlayer(event.getWinnerUuid());
         if (winner != null && LuckPermsHook.hasPass(winner)) {
             for (UUID petId : event.getWinnerPetIds()) {
@@ -51,5 +57,14 @@ public final class EloEventHandler {
                 com.arcadia.pets.server.PetManager.addSkillXpToPet(loser, petId, 1);
             }
         }
+    }
+
+    private static void sendEloMessage(MinecraftServer server, UUID uuid, int delta, int newRating) {
+        ServerPlayer sp = (ServerPlayer) server.getPlayerList().getPlayer(uuid);
+        if (sp == null) return;
+        String sign  = delta >= 0 ? "§a+" : "§c";
+        String arrow = delta >= 0 ? "▲" : "▼";
+        sp.sendSystemMessage(Component.literal(
+                "§b[ELO] " + sign + delta + " " + arrow + " §e" + newRating + " ELO"));
     }
 }

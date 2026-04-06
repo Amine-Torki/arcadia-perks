@@ -233,6 +233,7 @@ public final class DuelManager {
 
         // Verify the acting pet actually has this skill at level > 0
         PetData petData = session.rosterFor(actor)[actorPet];
+        if (petData == null) return ActionResult.SKILL_NOT_FOUND;
         int skillLevel  = 0;
         for (SkillInstance si : petData.skills()) {
             if (si.skill().getId().equals(skillId)) { skillLevel = si.level(); break; }
@@ -343,6 +344,11 @@ public final class DuelManager {
     // =========================================================================
     // Queries
     // =========================================================================
+
+    /** Returns an unmodifiable snapshot of all active duel sessions (for tick checks etc.). */
+    public static java.util.Collection<DuelSession> getActiveSessions() {
+        return java.util.Collections.unmodifiableCollection(ACTIVE_DUELS.values());
+    }
 
     public static boolean isInDuel(UUID playerUuid) {
         return PLAYER_TO_DUEL.containsKey(playerUuid);
