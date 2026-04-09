@@ -230,6 +230,11 @@ public class DuelScreen extends Screen {
 
     private void renderTurnOrderBar(GuiGraphics g, S2CDuelState state, int mySide,
                                      int cx, int y) {
+        // Round label (left of bar)
+        int round = state.roundNumber() + 1;
+        String roundLabel = "§7Round §e" + round;
+        g.drawString(font, roundLabel, 10, y + 1, 0xFFFFFF, false);
+
         List<long[]> order = state.turnOrderEncoded();
         if (order.isEmpty()) return;
         int slotW = 24, slotH = 10, gap = 3;
@@ -241,7 +246,6 @@ public class DuelScreen extends Screen {
             int petIdx   = (int) e[2];
             boolean mine = (owner.equals(state.p1()) && mySide == 0)
                     || (owner.equals(state.p2()) && mySide == 1);
-            boolean curr = i == state.turnOrderEncoded().indexOf(order.get(0)) && i == 0;
             int sx = startX + i * (slotW + gap);
             g.fill(sx, y, sx + slotW, y + slotH,
                     i == 0 ? 0xFFFFD700 : mine ? 0xFF1a3a1a : 0xFF3a1a1a);
@@ -342,7 +346,7 @@ public class DuelScreen extends Screen {
 
     private int renderActionButton(GuiGraphics g, String label, String badge,
                                     int x, int y, boolean enabled, int mx, int my) {
-        int textW  = font.width(label + (badge.isEmpty() ? "" : " " + badge));
+        int textW  = font.width(label + (badge.isEmpty() ? "" : " (" + badge + ")"));
         int btnW   = textW + 10;
         boolean hov = enabled && mx >= x && mx <= x + btnW && my >= y && my <= y + BTN_H;
         int bg = !enabled ? 0xAA2a2a2a : hov ? 0xFF4a4a6a : 0xFF333355;
@@ -376,7 +380,9 @@ public class DuelScreen extends Screen {
 
         // Result text
         String title  = won ? "§a⭐ VICTORY!" : "§c✗ DEFEAT";
-        String sub    = won ? "§7Your pets triumphed!" : "§7Better luck next time.";
+        int rounds = state.roundNumber();
+        String sub  = won ? "§7Your pets triumphed in §e" + rounds + "§7 round(s)!"
+                          : "§7Lasted §e" + rounds + "§7 round(s). Better luck next time.";
         String hint   = "§8Press ESC to close";
         g.drawCenteredString(font, title, cx, by + 10, 0xFFFFFF);
         g.drawCenteredString(font, sub,   cx, by + 24, 0xAAAAAA);
@@ -443,7 +449,7 @@ public class DuelScreen extends Screen {
         int btnX   = 10;
 
         // Attack button — FREE, always available, ends turn
-        int attackW = font.width("⚔ Attack FREE") + 10;
+        int attackW = font.width("⚔ Attack (FREE)") + 10;
         if (my >= btnY + 22 && my <= btnY + 22 + BTN_H && mx >= btnX && mx <= btnX + attackW) {
             int firstEnemy = firstAlive(oppSide);
             if (firstEnemy >= 0) {
@@ -479,7 +485,7 @@ public class DuelScreen extends Screen {
 
         // Defend button — FREE, always available
         int defendX = 10 + attackW + BTN_GAP;
-        int defendW = font.width("🛡 Defend FREE") + 10;
+        int defendW = font.width("🛡 Defend (FREE)") + 10;
         if (my >= btnY + 22 && my <= btnY + 22 + BTN_H
                 && mx >= defendX && mx <= defendX + defendW) {
             PacketDistributor.sendToServer(new C2SDuelAction(C2SDuelAction.DEFEND, "", 0));

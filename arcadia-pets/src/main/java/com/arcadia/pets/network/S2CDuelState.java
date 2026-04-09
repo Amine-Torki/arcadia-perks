@@ -48,7 +48,9 @@ public record S2CDuelState(
         int    phaseOrdinal,
         UUID   winner,          // null unless finished
         // Deadline (epoch ms) so client can show a countdown
-        long   actionDeadline
+        long   actionDeadline,
+        // Round counter (incremented each time all living pets have acted once)
+        int    roundNumber
 ) implements CustomPacketPayload {
 
     public static final Type<S2CDuelState> TYPE =
@@ -98,7 +100,8 @@ public record S2CDuelState(
                 session.getLog(),
                 session.phase.ordinal(),
                 session.winner,
-                session.actionDeadline);
+                session.actionDeadline,
+                session.roundNumber);
     }
 
     private static CompoundTag[] rosterTags(PetData[] roster) {
@@ -151,6 +154,7 @@ public record S2CDuelState(
         buf.writeBoolean(pkt.winner != null);
         if (pkt.winner != null) buf.writeUUID(pkt.winner);
         buf.writeLong(pkt.actionDeadline);
+        buf.writeVarInt(pkt.roundNumber);
     }
 
     private static S2CDuelState decode(FriendlyByteBuf buf) {
@@ -191,11 +195,12 @@ public record S2CDuelState(
         int phase = buf.readVarInt();
         UUID winner = buf.readBoolean() ? buf.readUUID() : null;
         long deadline = buf.readLong();
+        int roundNumber = buf.readVarInt();
 
         return new S2CDuelState(duelId, p1, p2, p1Tags, p2Tags,
                 p1Hp, p1MaxHp, p2Hp, p2MaxHp,
                 actor, actorPetIdx, ap, order, cds, fxLabels, log,
-                phase, winner, deadline);
+                phase, winner, deadline, roundNumber);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

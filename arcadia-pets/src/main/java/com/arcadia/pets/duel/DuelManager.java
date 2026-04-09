@@ -48,6 +48,14 @@ public final class DuelManager {
 
     private static final long CHALLENGE_TTL_MS = 60_000L; // 60 seconds to respond
 
+    // ── Reward scaling ─────────────────────────────────────────────────────────
+    /** Maps average rarity ordinal (0–5) to a 1–5 Star Essence reward. */
+    private static final float ESSENCE_AVG_SCALE = 0.8f;
+    /** Base Numismatics coin reward for winning a duel. */
+    private static final int   COIN_BASE         = 10;
+    /** Additional coins per average rarity level of the defeated team. */
+    private static final int   COIN_PER_RARITY   = 8;
+
     private DuelManager() {}
 
     // =========================================================================
@@ -134,6 +142,10 @@ public final class DuelManager {
         }
         if (filled == 0) return null;
         // Pad empty slots with copies of the first pet if fewer than 3 selected
+        if (filled < 3) {
+            LOGGER.debug("[DuelManager] {} confirmed {} pet(s); padding remaining {} slot(s) with first pet",
+                    player.getUUID(), filled, 3 - filled);
+        }
         for (int i = filled; i < 3; i++) roster[i] = roster[0];
 
         boolean isP1 = player.getUUID().equals(session.p1);
@@ -377,7 +389,7 @@ public final class DuelManager {
         }
         // Average ordinal → map to 1–5 essence
         float avg = total / 3.0f;
-        return Math.max(1, Math.min(5, 1 + (int)(avg * 0.8f)));
+        return Math.max(1, Math.min(5, 1 + (int)(avg * ESSENCE_AVG_SCALE)));
     }
 
     /**
@@ -391,6 +403,6 @@ public final class DuelManager {
             if (pd != null) total += pd.rarity().ordinal();
         }
         float avg = total / 3.0f;
-        return 10 + (int)(avg * 8);
+        return COIN_BASE + (int)(avg * COIN_PER_RARITY);
     }
 }

@@ -104,6 +104,9 @@ public final class DuelSession {
     /** Null until the duel finishes. */
     public UUID winner = null;
 
+    /** Incremented each time a full round (all living pets have acted once) completes. */
+    public int roundNumber = 0;
+
     // ── Constructor ──────────────────────────────────────────────────────────
 
     public DuelSession(UUID challenger, UUID challengee) {
@@ -154,6 +157,7 @@ public final class DuelSession {
             int[] hp = hpFor(player);
             int[] maxHp = maxHpFor(player);
             for (int i = 0; i < 3; i++) {
+                if (roster[i] == null) { maxHp[i] = 1; hp[i] = 0; continue; }
                 DerivedPetStats ds = new DerivedPetStats(roster[i]);
                 maxHp[i] = Math.max(ds.hp, 10);
                 hp[i]    = maxHp[i];
@@ -174,7 +178,7 @@ public final class DuelSession {
             UUID player = side == 0 ? p1 : p2;
             PetData[] roster = rosterFor(player);
             for (int i = 0; i < 3; i++) {
-                if (isAlive(player, i)) {
+                if (roster[i] != null && isAlive(player, i)) {
                     int agi = roster[i].stats().getOrDefault(PetStat.AGILITY, 1);
                     turnOrder.add(new TurnSlot(player, i, agi));
                 }
@@ -249,7 +253,8 @@ public final class DuelSession {
     private void advanceToNextSlot() {
         turnOrderIndex++;
         if (turnOrderIndex >= turnOrder.size()) {
-            rebuildTurnOrder(); // start new round
+            roundNumber++; // completed one full rotation of all living pets
+            rebuildTurnOrder();
         }
     }
 
