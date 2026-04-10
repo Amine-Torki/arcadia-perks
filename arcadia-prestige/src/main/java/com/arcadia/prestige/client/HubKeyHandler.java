@@ -1,5 +1,6 @@
 package com.arcadia.prestige.client;
 
+import com.arcadia.lib.client.ArcadiaHubScreen;
 import com.arcadia.prestige.ArcadiaDashboard;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -11,7 +12,7 @@ import org.lwjgl.glfw.GLFW;
 
 /**
  * Registers and handles the "Open Arcadia Hub" keybind (default: L).
- * Opens the PrestigeHubScreen directly on the client.
+ * Opens the ArcadiaHubScreen from the lib directly on the client.
  */
 @EventBusSubscriber(modid = ArcadiaDashboard.MOD_ID, value = Dist.CLIENT)
 public final class HubKeyHandler {
@@ -27,7 +28,7 @@ public final class HubKeyHandler {
     @SubscribeEvent
     public static void onPlayerTick(PlayerTickEvent.Post event) {
         if (!OPEN_HUB.consumeClick()) return;
-        if (Minecraft.getInstance().screen != null) return; // don't open if another screen is open
-        PrestigeHubScreen.open();
+        if (Minecraft.getInstance().screen != null) return;
+        ArcadiaHubScreen.open();
     }
 }

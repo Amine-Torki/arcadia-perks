@@ -1,4 +1,9 @@
 {
   "item.arcadia_lib.arcadia_token": "Jeton Arcadia",
-  "arcadia_lib.msg.hub_not_available": "§c[Arcadia] Le hub n'est pas disponible. Installe Arcadia Prestige."
+  "arcadia_lib.msg.hub_not_available": "§c[Arcadia] Le hub n'est pas disponible. Installe Arcadia Prestige.",
+  "arcadia_lib.hub.title": "⚙ Arcadia Hub ⚙",
+  "arcadia_lib.hub.subtitle": "Choisis un module",
+  "arcadia_lib.hub.close": "Appuie sur Échap pour fermer",
+  "arcadia_lib.hub.not_installed": "Non installé",
+  "arcadia_lib.hub.no_modules": "Aucun module enregistré."
 }

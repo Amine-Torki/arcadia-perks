@@ -1,11 +1,16 @@
 package com.arcadia.lib;
 
+import com.arcadia.lib.client.ArcadiaModCard;
 import com.arcadia.lib.dashboard.DashboardTabHandler;
 import net.minecraft.server.level.ServerPlayer;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 import java.util.function.Supplier;
 
 /**
@@ -28,6 +33,43 @@ public final class ArcadiaModRegistry {
     private static Consumer<ServerPlayer> searchRefresher;
 
     private ArcadiaModRegistry() {}
+
+    // ── Hub cards (displayed in ArcadiaHubScreen) ───────────────────────────
+
+    private static final Map<String, ArcadiaModCard> cards = new ConcurrentHashMap<>();
+
+    /**
+     * Client-side callback that opens a dashboard tab by index.
+     * Registered once by the dashboard mod (prestige) — sends the network packet.
+     * Other mods never need to know about prestige's packet system.
+     */
+    private static IntConsumer clientTabOpener;
+
+    /** Registers a module card to be displayed in the Arcadia Hub. */
+    public static void registerCard(ArcadiaModCard card) {
+        cards.put(card.id(), card);
+    }
+
+    /** Returns all registered cards sorted by display order. */
+    public static List<ArcadiaModCard> getCards() {
+        List<ArcadiaModCard> sorted = new ArrayList<>(cards.values());
+        sorted.sort(Comparator.comparingInt(ArcadiaModCard::sortOrder));
+        return sorted;
+    }
+
+    /**
+     * Registers the client-side tab opener callback. Called once by prestige's
+     * client init to wire up the packet sending. The hub screen calls this
+     * with the card's sortOrder (= tab index) when a card is clicked.
+     */
+    public static void registerClientTabOpener(IntConsumer opener) {
+        clientTabOpener = opener;
+    }
+
+    /** Opens a tab on the client side (sends packet via registered callback). */
+    public static void openTabClient(int tabIndex) {
+        if (clientTabOpener != null) clientTabOpener.accept(tabIndex);
+    }
 
     // ── Hub ──────────────────────────────────────────────────────────────────
 

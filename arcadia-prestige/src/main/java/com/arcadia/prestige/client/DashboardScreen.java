@@ -1,7 +1,9 @@
 package com.arcadia.prestige.client;
 
+import com.arcadia.lib.ArcadiaModRegistry;
+import com.arcadia.lib.client.ArcadiaHubScreen;
+import com.arcadia.lib.client.ArcadiaModCard;
 import com.arcadia.lib.client.ArcadiaTheme;
-import com.arcadia.prestige.PrestigeCard;
 import com.arcadia.prestige.network.C2SDashboardAction;
 import com.arcadia.prestige.server.DashboardMenu;
 import com.arcadia.pets.client.PetGuideScreen;
@@ -77,11 +79,20 @@ public class DashboardScreen extends AbstractContainerScreen<DashboardMenu> {
     // -------------------------------------------------------------------------
 
     private void renderTabCards(GuiGraphics g, int mouseX, int mouseY) {
-        int currentTab = menu.getCurrentTab();
-        int prevTab = (currentTab + 3) % 4;
-        int nextTab = (currentTab + 1) % 4;
+        java.util.List<ArcadiaModCard> allCards = ArcadiaModRegistry.getCards();
+        if (allCards.size() < 2) return; // no navigation needed with < 2 cards
 
-        // Center the card vertically at 30% of the total inventory height from the top
+        int currentTab = menu.getCurrentTab();
+        // Find current card index in the sorted list
+        int currentIdx = -1;
+        for (int i = 0; i < allCards.size(); i++) {
+            if (allCards.get(i).sortOrder() == currentTab) { currentIdx = i; break; }
+        }
+        if (currentIdx < 0) return;
+
+        int prevIdx = (currentIdx + allCards.size() - 1) % allCards.size();
+        int nextIdx = (currentIdx + 1) % allCards.size();
+
         int cardY = this.topPos + (int)(this.imageHeight * 0.30f) - MINI_H / 2;
         int leftX  = this.leftPos - MINI_GAP - MINI_W;
         int rightX = this.leftPos + this.imageWidth + MINI_GAP;
@@ -89,12 +100,12 @@ public class DashboardScreen extends AbstractContainerScreen<DashboardMenu> {
         if (leftX >= 0) {
             boolean hovered = mouseX >= leftX && mouseX < leftX + MINI_W
                     && mouseY >= cardY && mouseY < cardY + MINI_H;
-            PrestigeHubScreen.drawCard(g, PrestigeCard.ALL.get(prevTab), leftX, cardY, MINI_W, MINI_H, hovered, 0.8f);
+            ArcadiaHubScreen.drawCard(g, allCards.get(prevIdx), leftX, cardY, MINI_W, MINI_H, hovered, 0.8f);
         }
         if (rightX + MINI_W <= this.width) {
             boolean hovered = mouseX >= rightX && mouseX < rightX + MINI_W
                     && mouseY >= cardY && mouseY < cardY + MINI_H;
-            PrestigeHubScreen.drawCard(g, PrestigeCard.ALL.get(nextTab), rightX, cardY, MINI_W, MINI_H, hovered, 0.8f);
+            ArcadiaHubScreen.drawCard(g, allCards.get(nextIdx), rightX, cardY, MINI_W, MINI_H, hovered, 0.8f);
         }
     }
 
@@ -148,27 +159,34 @@ public class DashboardScreen extends AbstractContainerScreen<DashboardMenu> {
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button == 0) {
             int currentTab = menu.getCurrentTab();
-            // Center the card vertically at 30% of the total inventory height from the top
-        int cardY = this.topPos + (int)(this.imageHeight * 0.30f) - MINI_H / 2;
+            java.util.List<ArcadiaModCard> allCards = ArcadiaModRegistry.getCards();
+            int currentIdx = -1;
+            for (int i = 0; i < allCards.size(); i++) {
+                if (allCards.get(i).sortOrder() == currentTab) { currentIdx = i; break; }
+            }
+
+            int cardY = this.topPos + (int)(this.imageHeight * 0.30f) - MINI_H / 2;
             int leftX  = this.leftPos - MINI_GAP - MINI_W;
             int rightX = this.leftPos + this.imageWidth + MINI_GAP;
 
-            // Left mini card — navigate to prev tab (in-place refresh, no container reopen)
-            if (leftX >= 0
+            // Left mini card
+            if (currentIdx >= 0 && leftX >= 0
                     && mouseX >= leftX && mouseX < leftX + MINI_W
                     && mouseY >= cardY && mouseY < cardY + MINI_H) {
                 playClick();
-                int prevTab = (currentTab + 3) % 4;
+                int prevIdx = (currentIdx + allCards.size() - 1) % allCards.size();
+                int prevTab = allCards.get(prevIdx).sortOrder();
                 PacketDistributor.sendToServer(new C2SDashboardAction(C2SDashboardAction.SWITCH_TAB, String.valueOf(prevTab)));
                 return true;
             }
 
-            // Right mini card — navigate to next tab (in-place refresh, no container reopen)
-            if (rightX + MINI_W <= this.width
+            // Right mini card
+            if (currentIdx >= 0 && rightX + MINI_W <= this.width
                     && mouseX >= rightX && mouseX < rightX + MINI_W
                     && mouseY >= cardY && mouseY < cardY + MINI_H) {
                 playClick();
-                int nextTab = (currentTab + 1) % 4;
+                int nextIdx = (currentIdx + 1) % allCards.size();
+                int nextTab = allCards.get(nextIdx).sortOrder();
                 PacketDistributor.sendToServer(new C2SDashboardAction(C2SDashboardAction.SWITCH_TAB, String.valueOf(nextTab)));
                 return true;
             }

@@ -31,10 +31,15 @@ public final class ArcadiaAH {
     }
 
     private void onCommonSetup(net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent event) {
-        // Register AH tab handler via the central lib registry.
-        // The tab opener is registered by the dashboard mod (prestige).
+        // Register AH tab handler via the central lib registry
         com.arcadia.lib.ArcadiaModRegistry.registerTabHandler(3,
                 com.arcadia.ah.server.AhDashboardTab::new);
+
+        // Register hub card so the Arcadia Hub displays the AH module
+        com.arcadia.lib.ArcadiaModRegistry.registerCard(
+                new com.arcadia.lib.client.ArcadiaModCard("ah", "★",
+                        "arcadia_prestige.hub.auction.label", "arcadia_prestige.hub.auction.sub",
+                        0xB87333, 3, true));
         LOGGER.info("[ArcadiaAH] Registered AH tab in ArcadiaModRegistry.");
     }
 

@@ -24,6 +24,6 @@ public record S2COpenHub() implements CustomPacketPayload {
 
     @OnlyIn(Dist.CLIENT)
     public void handle(IPayloadContext ctx) {
-        ctx.enqueueWork(() -> com.arcadia.prestige.client.PrestigeHubScreen.open());
+        ctx.enqueueWork(() -> com.arcadia.lib.client.ArcadiaHubScreen.open());
     }
 }

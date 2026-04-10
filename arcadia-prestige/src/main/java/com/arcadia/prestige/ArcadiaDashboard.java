@@ -66,6 +66,23 @@ public class ArcadiaDashboard {
             DashboardMenu.registerAhHandler(ahFactory);
             com.arcadia.lib.ArcadiaModRegistry.registerTabOpener(3, p -> DashboardMenu.openFor(p, 3));
         }
+
+        // Register hub cards for prestige's own tabs (cosmetics + daily)
+        com.arcadia.lib.ArcadiaModRegistry.registerCard(
+                new com.arcadia.lib.client.ArcadiaModCard("cosmetics", "✨",
+                        "arcadia_prestige.hub.cosmetics.label", "arcadia_prestige.hub.cosmetics.sub",
+                        0x6BB8D4, 0, true));
+        com.arcadia.lib.ArcadiaModRegistry.registerCard(
+                new com.arcadia.lib.client.ArcadiaModCard("daily", "⭐",
+                        "arcadia_prestige.hub.daily.label", "arcadia_prestige.hub.daily.sub",
+                        0xD4A847, 2, true));
+
+        // Register generic client-side tab opener (sends the C2SDashboardAction packet)
+        com.arcadia.lib.ArcadiaModRegistry.registerClientTabOpener(tabIndex ->
+                net.neoforged.neoforge.network.PacketDistributor.sendToServer(
+                        new com.arcadia.prestige.network.C2SDashboardAction(
+                                com.arcadia.prestige.network.C2SDashboardAction.OPEN_TAB,
+                                String.valueOf(tabIndex))));
     }
 
     private void onServerAboutToStart(ServerAboutToStartEvent event) {

@@ -28,10 +28,15 @@ public final class ArcadiaPets {
     }
 
     private void onCommonSetup(net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent event) {
-        // Register pets tab handler via the central lib registry.
-        // The tab opener is registered by the dashboard mod (prestige).
+        // Register pets tab handler via the central lib registry
         com.arcadia.lib.ArcadiaModRegistry.registerTabHandler(1,
                 com.arcadia.pets.server.PetsDashboardTab::new);
+
+        // Register hub card so the Arcadia Hub displays the Pets module
+        com.arcadia.lib.ArcadiaModRegistry.registerCard(
+                new com.arcadia.lib.client.ArcadiaModCard("pets", "♦",
+                        "arcadia_prestige.hub.pets.label", "arcadia_prestige.hub.pets.sub",
+                        0x4ECCA3, 1, true));
         LOGGER.info("[ArcadiaPets] Registered pets tab in ArcadiaModRegistry.");
     }
 
