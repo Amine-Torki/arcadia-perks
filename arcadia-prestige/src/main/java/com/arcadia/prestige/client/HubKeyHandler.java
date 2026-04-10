@@ -7,12 +7,12 @@ import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import org.lwjgl.glfw.GLFW;
 
 /**
  * Registers and handles the "Open Arcadia Hub" keybind (default: L).
- * Opens the ArcadiaHubScreen from the lib directly on the client.
+ * Uses ClientTickEvent (not PlayerTickEvent) to avoid server-thread interference in singleplayer.
  */
 @EventBusSubscriber(modid = ArcadiaDashboard.MOD_ID, value = Dist.CLIENT)
 public final class HubKeyHandler {
@@ -26,9 +26,10 @@ public final class HubKeyHandler {
     private HubKeyHandler() {}
 
     @SubscribeEvent
-    public static void onPlayerTick(PlayerTickEvent.Post event) {
+    public static void onClientTick(ClientTickEvent.Post event) {
         if (!OPEN_HUB.consumeClick()) return;
-        if (Minecraft.getInstance().screen != null) return;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.screen != null || mc.player == null) return;
         ArcadiaHubScreen.open();
     }
 }
