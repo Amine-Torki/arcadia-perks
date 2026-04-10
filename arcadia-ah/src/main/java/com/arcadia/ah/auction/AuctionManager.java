@@ -12,6 +12,7 @@ import net.minecraft.world.item.ItemStack;
 import org.slf4j.Logger;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -31,11 +32,14 @@ public final class AuctionManager {
     /** In-memory cache — refreshed from DB periodically. */
     private static volatile List<AuctionListing> cache = new CopyOnWriteArrayList<>();
 
+    /** Listings currently being processed (bought/cancelled) — excluded from cache refresh. */
+    private static final Set<UUID> pendingSales = ConcurrentHashMap.newKeySet();
+
     /** Server-side search state per player UUID. */
-    private static final Map<UUID, String> playerSearch = new HashMap<>();
+    private static final Map<UUID, String> playerSearch = new ConcurrentHashMap<>();
 
     /** Timestamp of last search per player — throttled to 1 query/sec. */
-    private static final Map<UUID, Long> lastSearchTime = new HashMap<>();
+    private static final Map<UUID, Long> lastSearchTime = new ConcurrentHashMap<>();
 
     private static final long SEARCH_COOLDOWN_MS = 1_000L;
 
@@ -48,6 +52,8 @@ public final class AuctionManager {
     public static void refreshCache() {
         com.arcadia.lib.data.DatabaseManager.executeAsync(() -> {
             List<AuctionListing> fresh = AuctionDatabase.fetchAllActive();
+            // Filter out listings currently being processed to prevent race condition double-buy
+            fresh.removeIf(l -> pendingSales.contains(l.listingId()));
             cache = new CopyOnWriteArrayList<>(fresh);
         });
     }
@@ -177,7 +183,8 @@ public final class AuctionManager {
             return;
         }
 
-        // Remove from cache immediately to prevent double-buys
+        // Mark as pending sale to prevent race condition with cache refresh
+        pendingSales.add(listingId);
         cache.removeIf(l -> l.listingId().equals(listingId));
 
         net.minecraft.core.HolderLookup.Provider reg = server.registryAccess();
@@ -206,6 +213,7 @@ public final class AuctionManager {
             AuctionDatabase.insertMailbox(payment);
             AuctionDatabase.logSale(listing.sellerUuid(), listing.sellerName(),
                     buyer.getUUID(), listing.price());
+            pendingSales.remove(listingId); // Safe to re-appear in cache now (deleted from DB)
         });
 
         // If seller is online on THIS server, pay them directly
@@ -295,26 +303,31 @@ public final class AuctionManager {
             List<MailboxEntry> entries = AuctionDatabase.fetchMailbox(player.getUUID());
             if (entries.isEmpty()) return;
 
-            net.minecraft.core.HolderLookup.Provider reg = server.registryAccess();
-            for (MailboxEntry entry : entries) {
-                if ("coins".equals(entry.type())) {
-                    NumismaticsCompat.addBalance(player, entry.coins());
-                    String reason = entry.reason() != null ? entry.reason() : "Auction sale";
-                    player.sendSystemMessage(Component.literal(
-                            "§6[AH Mailbox] §f" + NumismaticsCompat.formatPrice(entry.coins())
-                            + " §6received: §7" + reason));
-                } else if ("item".equals(entry.type()) && entry.itemNbt() != null) {
-                    ItemStack item = AuctionItemSerializer.fromBase64(entry.itemNbt(), reg);
-                    if (!item.isEmpty()) {
-                        if (!player.getInventory().add(item)) player.drop(item, false);
-                        String reason = entry.reason() != null ? entry.reason() : "Auction return";
+            // Schedule inventory mutations back on the main server thread
+            server.execute(() -> {
+                net.minecraft.core.HolderLookup.Provider reg = server.registryAccess();
+                for (MailboxEntry entry : entries) {
+                    if ("coins".equals(entry.type())) {
+                        NumismaticsCompat.addBalance(player, entry.coins());
+                        String reason = entry.reason() != null ? entry.reason() : "Auction sale";
                         player.sendSystemMessage(Component.literal(
-                                "§6[AH Mailbox] Item returned: §f"
-                                + item.getHoverName().getString() + " §7(" + reason + ")"));
+                                "§6[AH Mailbox] §f" + NumismaticsCompat.formatPrice(entry.coins())
+                                + " §6received: §7" + reason));
+                    } else if ("item".equals(entry.type()) && entry.itemNbt() != null) {
+                        ItemStack item = AuctionItemSerializer.fromBase64(entry.itemNbt(), reg);
+                        if (!item.isEmpty()) {
+                            if (!player.getInventory().add(item)) player.drop(item, false);
+                            String reason = entry.reason() != null ? entry.reason() : "Auction return";
+                            player.sendSystemMessage(Component.literal(
+                                    "§6[AH Mailbox] Item returned: §f"
+                                    + item.getHoverName().getString() + " §7(" + reason + ")"));
+                        }
                     }
+                    // Delete processed entries asynchronously
+                    com.arcadia.lib.data.DatabaseManager.executeAsync(() ->
+                            AuctionDatabase.deleteMailboxEntry(entry.entryId()));
                 }
-                AuctionDatabase.deleteMailboxEntry(entry.entryId());
-            }
+            });
         });
     }
 }

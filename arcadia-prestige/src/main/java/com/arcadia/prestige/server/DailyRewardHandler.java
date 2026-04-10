@@ -83,44 +83,45 @@ public final class DailyRewardHandler {
     // Milestone gift claims
     // -------------------------------------------------------------------------
 
-    /** In-memory fallback for debug mode: (uuid, cycle) → bitmask. */
-    private static final java.util.Map<String, Integer> DEBUG_CLAIMS = new java.util.concurrent.ConcurrentHashMap<>();
+    /** In-memory cache for milestone claims: "uuid:cycle" → bitmask. Also used as fallback in debug/singleplayer. */
+    private static final java.util.Map<String, Integer> claimsCache = new java.util.concurrent.ConcurrentHashMap<>();
 
-    private static String debugKey(UUID uuid, int cycle) { return uuid + ":" + cycle; }
+    private static String claimKey(UUID uuid, int cycle) { return uuid + ":" + cycle; }
 
-    /** Returns the bitmask of milestone gifts claimed by the player in the given cycle. */
+    /** Returns the bitmask of milestone gifts claimed by the player in the given cycle. Uses in-memory cache to avoid blocking the main thread. */
     public static int getMilestoneClaims(UUID uuid, int cycle) {
-        if (DatabaseManager.isDebugMode()) {
-            return DEBUG_CLAIMS.getOrDefault(debugKey(uuid, cycle), 0);
-        }
+        return claimsCache.getOrDefault(claimKey(uuid, cycle), 0);
+    }
+
+    /** Pre-loads milestone claims from DB into cache. Call on player login via executeAsync. */
+    public static void preloadClaims(UUID uuid, int cycle) {
+        if (DatabaseManager.isDebugMode()) return; // already in-memory
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(
                      "SELECT claims FROM arcadia_prestige_daily_milestone_claims WHERE uuid=? AND cycle=?")) {
             ps.setString(1, uuid.toString());
             ps.setInt(2, cycle);
             try (ResultSet rs = ps.executeQuery()) {
-                return rs.next() ? rs.getInt("claims") : 0;
+                if (rs.next()) claimsCache.put(claimKey(uuid, cycle), rs.getInt("claims"));
             }
-        } catch (SQLException e) {
-            return 0;
-        }
+        } catch (SQLException ignored) {}
     }
 
     private static void saveClaims(UUID uuid, int cycle, int claims) {
-        if (DatabaseManager.isDebugMode()) {
-            DEBUG_CLAIMS.put(debugKey(uuid, cycle), claims);
-            return;
-        }
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement(
-                     "INSERT INTO arcadia_prestige_daily_milestone_claims (uuid, cycle, claims) VALUES (?,?,?) " +
-                     "ON DUPLICATE KEY UPDATE claims=?")) {
-            ps.setString(1, uuid.toString());
-            ps.setInt(2, cycle);
-            ps.setInt(3, claims);
-            ps.setInt(4, claims);
-            ps.executeUpdate();
-        } catch (SQLException ignored) {}
+        claimsCache.put(claimKey(uuid, cycle), claims);
+        if (DatabaseManager.isDebugMode()) return;
+        DatabaseManager.executeAsync(() -> {
+            try (Connection conn = DatabaseManager.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(
+                         "INSERT INTO arcadia_prestige_daily_milestone_claims (uuid, cycle, claims) VALUES (?,?,?) " +
+                         "ON DUPLICATE KEY UPDATE claims=?")) {
+                ps.setString(1, uuid.toString());
+                ps.setInt(2, cycle);
+                ps.setInt(3, claims);
+                ps.setInt(4, claims);
+                ps.executeUpdate();
+            } catch (SQLException ignored) {}
+        });
     }
 
     /** Bit index for a (milestoneIdx, rankIdx) pair. */

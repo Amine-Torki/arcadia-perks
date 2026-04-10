@@ -30,41 +30,37 @@ public final class PetHistoryDatabase {
     // Write
     // -------------------------------------------------------------------------
 
-    /** Logs a pet reveal to the database. */
+    /** Logs a pet reveal to the database. Insert + trim in a single async task / single connection. */
     public static void log(UUID ownerUuid, UUID petId, CompoundTag petTag, long timestamp) {
         DatabaseManager.executeAsync(() -> {
-            try (Connection conn = DatabaseManager.getConnection();
-                 PreparedStatement ps = conn.prepareStatement(
-                         "INSERT INTO arcadia_pet_history (owner_uuid, pet_id, pet_nbt, created_at) VALUES (?, ?, ?, ?)")) {
-                ps.setString(1, ownerUuid.toString());
-                ps.setString(2, petId.toString());
-                ps.setString(3, serializeTag(petTag));
-                ps.setLong(4, timestamp);
-                ps.executeUpdate();
-            } catch (SQLException e) {
-                LOGGER.error("[ArcadiaPets] Failed to log pet history for {}", ownerUuid, e);
-            }
-        });
-
-        // Enforce max log cap per player
-        DatabaseManager.executeAsync(() -> {
-            try (Connection conn = DatabaseManager.getConnection();
-                 PreparedStatement count = conn.prepareStatement(
-                         "SELECT COUNT(*) FROM arcadia_pet_history WHERE owner_uuid = ?")) {
-                count.setString(1, ownerUuid.toString());
-                try (ResultSet rs = count.executeQuery()) {
-                    if (rs.next() && rs.getInt(1) > PetHistorySavedData.MAX_LOGS) {
-                        int excess = rs.getInt(1) - PetHistorySavedData.MAX_LOGS;
-                        try (PreparedStatement del = conn.prepareStatement(
-                                "DELETE FROM arcadia_pet_history WHERE owner_uuid = ? ORDER BY created_at ASC LIMIT ?")) {
-                            del.setString(1, ownerUuid.toString());
-                            del.setInt(2, excess);
-                            del.executeUpdate();
+            try (Connection conn = DatabaseManager.getConnection()) {
+                // Insert
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "INSERT INTO arcadia_pet_history (owner_uuid, pet_id, pet_nbt, created_at) VALUES (?, ?, ?, ?)")) {
+                    ps.setString(1, ownerUuid.toString());
+                    ps.setString(2, petId.toString());
+                    ps.setString(3, serializeTag(petTag));
+                    ps.setLong(4, timestamp);
+                    ps.executeUpdate();
+                }
+                // Trim excess in the same connection
+                try (PreparedStatement count = conn.prepareStatement(
+                        "SELECT COUNT(*) FROM arcadia_pet_history WHERE owner_uuid = ?")) {
+                    count.setString(1, ownerUuid.toString());
+                    try (ResultSet rs = count.executeQuery()) {
+                        if (rs.next() && rs.getInt(1) > PetHistorySavedData.MAX_LOGS) {
+                            int excess = rs.getInt(1) - PetHistorySavedData.MAX_LOGS;
+                            try (PreparedStatement del = conn.prepareStatement(
+                                    "DELETE FROM arcadia_pet_history WHERE owner_uuid = ? ORDER BY created_at ASC LIMIT ?")) {
+                                del.setString(1, ownerUuid.toString());
+                                del.setInt(2, excess);
+                                del.executeUpdate();
+                            }
                         }
                     }
                 }
             } catch (SQLException e) {
-                LOGGER.error("[ArcadiaPets] Failed to trim pet history for {}", ownerUuid, e);
+                LOGGER.error("[ArcadiaPets] Failed to log pet history for {}", ownerUuid, e);
             }
         });
     }

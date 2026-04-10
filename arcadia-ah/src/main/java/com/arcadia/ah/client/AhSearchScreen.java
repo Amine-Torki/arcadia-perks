@@ -67,8 +67,7 @@ public class AhSearchScreen extends Screen {
     }
 
     private void cancel() {
-        // Reopen dashboard at AH tab without changing the search
-        PacketDistributor.sendToServer(new C2SAhSearch(initialQuery));
+        // Close without sending any packet — the server still has the old query
         this.onClose();
     }
 

@@ -311,29 +311,33 @@ public final class AuctionDatabase {
         // Step 1: per-buyer totals (how much each buyer spent with each seller)
         // Step 2: aggregate across sellers — count unique buyers, median of per-buyer totals
         // MySQL doesn't have a native MEDIAN, so we pull per-seller/per-buyer totals and compute in Java.
+        // Rolling 30-day window to bound result set size
+        long windowStart = System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000;
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(
                      """
                      SELECT seller_uuid, seller_name, buyer_uuid, SUM(amount) as buyer_total
                      FROM arcadia_prestige_auction_sales_log
+                     WHERE sold_at > ?
                      GROUP BY seller_uuid, seller_name, buyer_uuid
                      ORDER BY seller_uuid, buyer_total
                      """)) {
+            ps.setLong(1, windowStart);
             try (ResultSet rs = ps.executeQuery()) {
-                // Group by seller in Java and compute median + stats
                 Map<String, String> names = new LinkedHashMap<>();
                 Map<String, List<Long>> perBuyerTotals = new LinkedHashMap<>();
                 Map<String, Long> totalRevenues = new HashMap<>();
                 Map<String, Integer> totalSalesCounts = new HashMap<>();
 
-                // We also need total sale count — run a second query
                 try (PreparedStatement ps2 = conn.prepareStatement(
-                        "SELECT seller_uuid, COUNT(*) as cnt, SUM(amount) as rev FROM arcadia_prestige_auction_sales_log GROUP BY seller_uuid");
-                     ResultSet rs2 = ps2.executeQuery()) {
-                    while (rs2.next()) {
-                        String su = rs2.getString("seller_uuid");
-                        totalSalesCounts.put(su, rs2.getInt("cnt"));
-                        totalRevenues.put(su, rs2.getLong("rev"));
+                        "SELECT seller_uuid, COUNT(*) as cnt, SUM(amount) as rev FROM arcadia_prestige_auction_sales_log WHERE sold_at > ? GROUP BY seller_uuid")) {
+                    ps2.setLong(1, windowStart);
+                    try (ResultSet rs2 = ps2.executeQuery()) {
+                        while (rs2.next()) {
+                            String su = rs2.getString("seller_uuid");
+                            totalSalesCounts.put(su, rs2.getInt("cnt"));
+                            totalRevenues.put(su, rs2.getLong("rev"));
+                        }
                     }
                 }
 
