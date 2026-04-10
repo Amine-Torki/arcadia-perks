@@ -21,6 +21,14 @@ public final class DatabaseManager {
     private static boolean inMemoryMode = false;
     private static final ExecutorService EXECUTOR = Executors.newFixedThreadPool(4);
 
+    /** Registered table definitions from all Arcadia modules. */
+    private static final java.util.List<TableDefinition> registeredTables = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+    /** Register a table definition. Call during FMLCommonSetupEvent. */
+    public static void registerTables(TableDefinition def) {
+        registeredTables.add(def);
+    }
+
     private DatabaseManager() {}
 
     /**
@@ -78,7 +86,7 @@ public final class DatabaseManager {
         config.setJdbcUrl("jdbc:mysql://" + host + ":" + port + "/" + dbName + "?useSSL=false&autoReconnect=true&allowPublicKeyRetrieval=true");
         config.setUsername(user);
         config.setPassword(pass);
-        config.setPoolName("ArcadiaDashboard");
+        config.setPoolName("ArcadiaLib");
         config.setMaximumPoolSize(maxPoolSize);
         config.setConnectionTimeout(5000);
         config.setLeakDetectionThreshold(10000);
@@ -89,7 +97,7 @@ public final class DatabaseManager {
 
         try {
             dataSource = new HikariDataSource(config);
-            LOGGER.info("ArcadiaDashboard database pool initialized.");
+            LOGGER.info("ArcadiaLib database pool initialized.");
             createTables();
         } catch (Exception e) {
             LOGGER.error("Failed to initialize database connection pool", e);
@@ -107,70 +115,31 @@ public final class DatabaseManager {
         return dataSource.getConnection();
     }
 
+    /**
+     * Creates all tables registered by Arcadia modules via {@link #registerTables(TableDefinition)}.
+     * Called automatically after the connection pool initializes.
+     */
     private static void createTables() {
+        if (registeredTables.isEmpty()) {
+            LOGGER.info("[ArcadiaLib] No table definitions registered.");
+            return;
+        }
         try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
-            stmt.executeUpdate("""
-                    CREATE TABLE IF NOT EXISTS arcadia_prestige_player_data (
-                        uuid VARCHAR(36) PRIMARY KEY,
-                        grade VARCHAR(16),
-                        particle_id VARCHAR(64) DEFAULT '',
-                        last_claim BIGINT DEFAULT 0,
-                        streak INT DEFAULT 0
-                    )
-                    """);
-
-            stmt.executeUpdate("""
-                    CREATE TABLE IF NOT EXISTS arcadia_prestige_pet_registry (
-                        pet_id VARCHAR(36) PRIMARY KEY,
-                        owner_uuid VARCHAR(36),
-                        mob_type VARCHAR(64),
-                        rarity TINYINT,
-                        total_stars TINYINT,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        INDEX idx_owner_uuid (owner_uuid)
-                    )
-                    """);
-
-            stmt.executeUpdate("""
-                    CREATE TABLE IF NOT EXISTS arcadia_prestige_daily_milestone_claims (
-                        uuid VARCHAR(36) NOT NULL,
-                        cycle INT NOT NULL,
-                        claims INT NOT NULL DEFAULT 0,
-                        PRIMARY KEY (uuid, cycle)
-                    )
-                    """);
-
-            stmt.executeUpdate("""
-                    CREATE TABLE IF NOT EXISTS arcadia_pet_collections (
-                        owner_uuid  VARCHAR(36)  NOT NULL,
-                        slot_index  INT          NOT NULL,
-                        item_nbt    MEDIUMTEXT   NOT NULL,
-                        PRIMARY KEY (owner_uuid, slot_index)
-                    )
-                    """);
-
-            stmt.executeUpdate("""
-                    CREATE TABLE IF NOT EXISTS arcadia_pet_history (
-                        id          BIGINT       AUTO_INCREMENT PRIMARY KEY,
-                        owner_uuid  VARCHAR(36)  NOT NULL,
-                        pet_id      VARCHAR(36)  NOT NULL,
-                        pet_nbt     MEDIUMTEXT   NOT NULL,
-                        created_at  BIGINT       NOT NULL,
-                        INDEX idx_pet_hist_owner (owner_uuid),
-                        INDEX idx_pet_hist_pet   (pet_id)
-                    )
-                    """);
-
-            LOGGER.info("ArcadiaDashboard database tables verified.");
+            for (TableDefinition def : registeredTables) {
+                for (String sql : def.createTableStatements()) {
+                    stmt.executeUpdate(sql);
+                }
+                LOGGER.info("[ArcadiaLib] Tables verified for module: {}", def.moduleId());
+            }
         } catch (SQLException e) {
-            LOGGER.error("Failed to create database tables", e);
+            LOGGER.error("[ArcadiaLib] Failed to create database tables", e);
         }
     }
 
     public static void shutdown() {
         if (dataSource != null && !dataSource.isClosed()) {
             dataSource.close();
-            LOGGER.info("ArcadiaDashboard database pool shut down.");
+            LOGGER.info("ArcadiaLib database pool shut down.");
         }
         EXECUTOR.shutdown();
     }

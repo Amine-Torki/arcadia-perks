@@ -84,10 +84,10 @@ public final class CosmeticPermissionScanner {
 
             // Ordered from lowest to highest rank — first match wins for each cosmetic.
             String[][] tiers = {
-                    { PrestigeConfig.GRADE_PERM_VIP,      "VIP"     },
-                    { PrestigeConfig.GRADE_PERM_VIP_PLUS, "VIP+"    },
-                    { PrestigeConfig.GRADE_PERM_MVP,      "MVP"     },
-                    { PrestigeConfig.GRADE_PERM_FOUNDER,  "Founder" },
+                    { com.arcadia.lib.permissions.PermissionConfig.GRADE_PERM_VIP,      "VIP"     },
+                    { com.arcadia.lib.permissions.PermissionConfig.GRADE_PERM_VIP_PLUS, "VIP+"    },
+                    { com.arcadia.lib.permissions.PermissionConfig.GRADE_PERM_MVP,      "MVP"     },
+                    { com.arcadia.lib.permissions.PermissionConfig.GRADE_PERM_FOUNDER,  "Founder" },
             };
 
             // cosmetic_id → index of the lowest tier that directly grants it

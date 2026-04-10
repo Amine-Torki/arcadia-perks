@@ -28,6 +28,9 @@ public final class ArcadiaPets {
     }
 
     private void onCommonSetup(net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent event) {
+        // Register database tables
+        com.arcadia.lib.data.DatabaseManager.registerTables(new com.arcadia.pets.server.PetsTableDefinition());
+
         // Register pets tab handler via the central lib registry
         com.arcadia.lib.ArcadiaModRegistry.registerTabHandler(1,
                 com.arcadia.pets.server.PetsDashboardTab::new);

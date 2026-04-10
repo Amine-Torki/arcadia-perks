@@ -31,6 +31,9 @@ public final class ArcadiaAH {
     }
 
     private void onCommonSetup(net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent event) {
+        // Register database tables
+        com.arcadia.lib.data.DatabaseManager.registerTables(new com.arcadia.ah.auction.AuctionTableDefinition());
+
         // Register AH tab handler via the central lib registry
         com.arcadia.lib.ArcadiaModRegistry.registerTabHandler(3,
                 com.arcadia.ah.server.AhDashboardTab::new);
@@ -44,12 +47,9 @@ public final class ArcadiaAH {
     }
 
     private void onServerAboutToStart(ServerAboutToStartEvent event) {
-        if (com.arcadia.lib.data.DatabaseManager.isDatabaseActive()) {
-            AuctionDatabase.createTables();
-            LOGGER.info("[ArcadiaAH] Auction tables verified.");
-        } else {
-            LOGGER.info("[ArcadiaAH] Database inactive — auction data will use in-memory storage.");
-        }
+        // Tables are now created centrally by DatabaseManager via AuctionTableDefinition
+        LOGGER.info("[ArcadiaAH] Server starting. DB active: {}",
+                com.arcadia.lib.data.DatabaseManager.isDatabaseActive());
     }
 
     private void onConfigLoad(ModConfigEvent event) {

@@ -26,59 +26,7 @@ public final class AuctionDatabase {
 
     private AuctionDatabase() {}
 
-    // -------------------------------------------------------------------------
-    // Table creation (called from DatabaseManager.createTables)
-    // -------------------------------------------------------------------------
-
-    public static void createTables() {
-        if (DatabaseManager.isDebugMode()) return;
-        try (Connection conn = DatabaseManager.getConnection(); Statement stmt = conn.createStatement()) {
-            stmt.executeUpdate("""
-                CREATE TABLE IF NOT EXISTS arcadia_prestige_auction_listings (
-                    listing_id   VARCHAR(36)  PRIMARY KEY,
-                    server_id    VARCHAR(32)  NOT NULL,
-                    seller_uuid  VARCHAR(36)  NOT NULL,
-                    seller_name  VARCHAR(32)  NOT NULL,
-                    item_nbt     MEDIUMTEXT   NOT NULL,
-                    item_name    VARCHAR(128) NOT NULL DEFAULT '',
-                    item_type    VARCHAR(128) NOT NULL DEFAULT '',
-                    category     VARCHAR(32)  NOT NULL DEFAULT 'misc',
-                    price        BIGINT       NOT NULL DEFAULT 0,
-                    listed_at    BIGINT       NOT NULL,
-                    expires_at   BIGINT       NOT NULL,
-                    INDEX idx_seller (seller_uuid),
-                    INDEX idx_expires (expires_at)
-                )
-                """);
-            stmt.executeUpdate("""
-                CREATE TABLE IF NOT EXISTS arcadia_prestige_auction_mailbox (
-                    entry_id      VARCHAR(36) PRIMARY KEY,
-                    recipient_uuid VARCHAR(36) NOT NULL,
-                    type          VARCHAR(8)  NOT NULL,
-                    item_nbt      MEDIUMTEXT,
-                    coins         BIGINT      NOT NULL DEFAULT 0,
-                    reason        VARCHAR(256),
-                    created_at    BIGINT      NOT NULL,
-                    INDEX idx_recipient (recipient_uuid)
-                )
-                """);
-            stmt.executeUpdate("""
-                CREATE TABLE IF NOT EXISTS arcadia_prestige_auction_sales_log (
-                    sale_id      VARCHAR(36) PRIMARY KEY,
-                    seller_uuid  VARCHAR(36) NOT NULL,
-                    seller_name  VARCHAR(32) NOT NULL,
-                    buyer_uuid   VARCHAR(36) NOT NULL,
-                    amount       BIGINT      NOT NULL,
-                    sold_at      BIGINT      NOT NULL,
-                    INDEX idx_sales_seller (seller_uuid),
-                    INDEX idx_sales_buyer  (buyer_uuid)
-                )
-                """);
-            LOGGER.info("[ArcadiaPrestige] Auction tables verified.");
-        } catch (SQLException e) {
-            LOGGER.error("[ArcadiaPrestige] Failed to create auction tables", e);
-        }
-    }
+    // Table creation is now handled centrally by DatabaseManager via AuctionTableDefinition.
 
     // -------------------------------------------------------------------------
     // Listings — write

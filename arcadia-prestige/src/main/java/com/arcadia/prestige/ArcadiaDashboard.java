@@ -42,6 +42,9 @@ public class ArcadiaDashboard {
     }
 
     private void onCommonSetup(FMLCommonSetupEvent event) {
+        // Register database tables for this module
+        com.arcadia.lib.data.DatabaseManager.registerTables(new com.arcadia.prestige.server.PrestigeCoreTableDefinition());
+
         // Register hub opener so /arcadia and other mods can open the hub
         com.arcadia.lib.ArcadiaModRegistry.registerHubOpener(p -> {
             PacketHandler.sendToPlayer(p, new com.arcadia.prestige.network.S2COpenHub());
@@ -89,7 +92,8 @@ public class ArcadiaDashboard {
         boolean isDedicated = event.getServer().isDedicatedServer();
         DatabaseManager.initialize(isDedicated);
         com.arcadia.lib.data.PlayerDataHandler.setServer(event.getServer());
-        LuckPermsHook.init();
+        com.arcadia.lib.permissions.PermissionService.init(
+                com.arcadia.lib.permissions.LuckPermsBackend.createOrFallback());
         CosmeticPermissionScanner.init();
         LOGGER.info("[ArcadiaPrestige] Server initialized. Dedicated: {}, DB active: {}, Debug: {}",
                 isDedicated, DatabaseManager.isDatabaseActive(), DebugMode.ENABLED);
@@ -97,6 +101,7 @@ public class ArcadiaDashboard {
 
     private void onServerStopping(ServerStoppingEvent event) {
         DatabaseManager.shutdown();
+        com.arcadia.lib.permissions.PermissionService.shutdown();
     }
 
     private void onConfigLoad(ModConfigEvent event) {
