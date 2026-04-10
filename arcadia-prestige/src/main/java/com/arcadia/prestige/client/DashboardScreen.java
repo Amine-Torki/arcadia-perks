@@ -138,12 +138,19 @@ public class DashboardScreen extends AbstractContainerScreen<DashboardMenu> {
             graphics.fill(dotX + 2, dotY + 2, dotX + dotSize - 2, dotY + dotSize - 2, 0xFF55CC55);
         }
 
-        // Label text
+        // Label text (scaled to fit within panel width)
         Component label = Component.translatable(hidden
                 ? "arcadia_prestige.gui.cosmetics.toggle_on"
                 : "arcadia_prestige.gui.cosmetics.toggle_off");
-        graphics.drawString(this.font, label, bx + dotSize + 8, by + 3,
-                hovered ? ArcadiaTheme.TEXT_PRIMARY : ArcadiaTheme.TEXT_SECONDARY, false);
+        int textColor = hovered ? ArcadiaTheme.TEXT_PRIMARY : ArcadiaTheme.TEXT_SECONDARY;
+        float scale = 0.75f;
+        int textX = bx + dotSize + 8;
+        int textY = by + 4;
+        graphics.pose().pushPose();
+        graphics.pose().translate(textX, textY, 0);
+        graphics.pose().scale(scale, scale, 1f);
+        graphics.drawString(this.font, label, 0, 0, textColor, false);
+        graphics.pose().popPose();
     }
 
     // -------------------------------------------------------------------------
