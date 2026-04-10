@@ -115,42 +115,41 @@ public class DashboardScreen extends AbstractContainerScreen<DashboardMenu> {
 
     private void renderFirstPersonToggle(GuiGraphics graphics, int mouseX, int mouseY) {
         boolean hidden = PlayerEffectCache.isHideOwnEffectsFirstPerson();
-        int bx = this.leftPos + 4;
-        int by = this.topPos + this.imageHeight + 4;
-        int bw = this.imageWidth - 8;
-        int bh = 14;
-        boolean hovered = mouseX >= bx && mouseX <= bx + bw && mouseY >= by && mouseY <= by + bh;
+        // Compact icon button: eye icon with toggle state
+        int btnSize = 12;
+        int bx = this.leftPos + this.imageWidth - btnSize - 4;
+        int by = this.topPos + this.imageHeight + 3;
+        boolean hovered = mouseX >= bx && mouseX <= bx + btnSize && mouseY >= by && mouseY <= by + btnSize;
 
         // Background
-        graphics.fill(bx, by, bx + bw, by + bh, hovered ? 0xDD1E1A24 : 0xCC141018);
-        // Border
-        ArcadiaTheme.drawBorder(graphics, bx, by, bw, bh, hovered ? ArcadiaTheme.COPPER : ArcadiaTheme.BORDER_IDLE);
+        graphics.fill(bx, by, bx + btnSize, by + btnSize, hovered ? 0xDD1E1A24 : 0xAA141018);
+        ArcadiaTheme.drawBorder(graphics, bx, by, btnSize, btnSize,
+                hovered ? ArcadiaTheme.COPPER : ArcadiaTheme.BORDER_IDLE);
 
-        // Toggle indicator
-        int dotX = bx + 4;
-        int dotY = by + 3;
-        int dotSize = 8;
-        graphics.fill(dotX, dotY, dotX + dotSize, dotY + dotSize,
-                hidden ? 0xFF2A4A2A : 0xFF3A2020);
-        ArcadiaTheme.drawBorder(graphics, dotX, dotY, dotSize, dotSize,
-                hidden ? 0xFF44AA44 : 0xFF664444);
-        if (hidden) {
-            graphics.fill(dotX + 2, dotY + 2, dotX + dotSize - 2, dotY + dotSize - 2, 0xFF55CC55);
+        // Eye icon (crossed out when hidden)
+        String icon = hidden ? "\uD83D\uDC41" : "\uD83D\uDC41";
+        graphics.pose().pushPose();
+        graphics.pose().translate(bx + 2, by + 2, 0);
+        graphics.pose().scale(0.7f, 0.7f, 1f);
+        graphics.drawString(this.font, icon, 0, 0,
+                hidden ? 0xFF55CC55 : ArcadiaTheme.TEXT_DIM, false);
+        graphics.pose().popPose();
+
+        // Strikethrough line when NOT hidden (effects visible = eye open, no line)
+        if (!hidden) {
+            // no line needed — eye open = effects visible
+        } else {
+            // small green dot to indicate "hidden" state
+            graphics.fill(bx + btnSize - 4, by + btnSize - 4, bx + btnSize - 1, by + btnSize - 1, 0xFF55CC55);
         }
 
-        // Label text (scaled to fit within panel width)
-        Component label = Component.translatable(hidden
-                ? "arcadia_prestige.gui.cosmetics.toggle_on"
-                : "arcadia_prestige.gui.cosmetics.toggle_off");
-        int textColor = hovered ? ArcadiaTheme.TEXT_PRIMARY : ArcadiaTheme.TEXT_SECONDARY;
-        float scale = 0.75f;
-        int textX = bx + dotSize + 8;
-        int textY = by + 4;
-        graphics.pose().pushPose();
-        graphics.pose().translate(textX, textY, 0);
-        graphics.pose().scale(scale, scale, 1f);
-        graphics.drawString(this.font, label, 0, 0, textColor, false);
-        graphics.pose().popPose();
+        // Tooltip on hover
+        if (hovered) {
+            Component tooltip = Component.translatable(hidden
+                    ? "arcadia_prestige.gui.cosmetics.toggle_on"
+                    : "arcadia_prestige.gui.cosmetics.toggle_off");
+            graphics.renderTooltip(this.font, tooltip, (int) mouseX, (int) mouseY);
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -198,12 +197,12 @@ public class DashboardScreen extends AbstractContainerScreen<DashboardMenu> {
                 return true;
             }
 
-            // First-person toggle
+            // First-person toggle (compact icon button, bottom-right)
             if (currentTab == 0 || currentTab == 1) {
-                int bx = this.leftPos + 4;
-                int by = this.topPos + this.imageHeight + 4;
-                int bw = this.imageWidth - 8;
-                if (mouseX >= bx && mouseX <= bx + bw && mouseY >= by && mouseY <= by + 14) {
+                int btnSize = 12;
+                int bx = this.leftPos + this.imageWidth - btnSize - 4;
+                int by = this.topPos + this.imageHeight + 3;
+                if (mouseX >= bx && mouseX <= bx + btnSize && mouseY >= by && mouseY <= by + btnSize) {
                     playClick();
                     PlayerEffectCache.toggleHideOwnEffectsFirstPerson();
                     return true;
