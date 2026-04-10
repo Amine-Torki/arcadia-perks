@@ -176,7 +176,7 @@
   "arcadia_prestige.reward.token_snack":   "Jetons Arcadia + Collation Premium",
   "arcadia_prestige.reward.token_treat":   "Jetons Arcadia + Friandises",
 
-  "arcadia_prestige.msg.pet_deposited":     "Familier déposé dans ta collection. Utilise /pets pour le gérer.",
+  "arcadia_prestige.msg.pet_deposited":     "Familier déposé dans ta collection. Utilise /arcadia_pets pour le gérer.",
   "arcadia_prestige.msg.pet_retrieved":     "← Familier retourné dans ton inventaire.",
   "arcadia_prestige.msg.collection_full":   "Ta collection est pleine (54/54). Libère une place d'abord.",
   "arcadia_prestige.msg.inventory_full":    "⚠ Ton inventaire est plein.",
@@ -200,7 +200,7 @@
   "arcadia_prestige.msg.luck_bonus":        "  \u2728 Bonus de chance activé !",
   "arcadia_prestige.msg.daily_already_claimed": "Déjà récupéré aujourd'hui ! Reviens demain.",
   "arcadia_prestige.msg.daily_claimed_headline": "Jour %s récupéré ! ",
-  "arcadia_prestige.msg.daily_ready":              "Ta récompense quotidienne est prête ! Ouvre /prestige ou utilise /prestige daily.",
+  "arcadia_prestige.msg.daily_ready":              "Ta récompense quotidienne est prête ! Utilise /arcadia ou /arcadia_prestige daily.",
   "arcadia_prestige.msg.daily_cycle_complete":     "Parcours terminé ! Un nouveau cycle commence...",
   "arcadia_prestige.msg.daily_milestone_autocollect": "[Daily] Les cadeaux de rang non réclamés ont été collectés automatiquement !",
   "arcadia_prestige.msg.streak_reset":       "\u26A0 Tu as manqué un jour : ta série a été réinitialisée.",
@@ -317,5 +317,22 @@
   "arcadia_prestige.hub.daily.label":     "Récompense Journalière",
   "arcadia_prestige.hub.daily.sub":       "Récupère ton bonus de série",
   "arcadia_prestige.hub.auction.label":   "Hôtel des Ventes",
-  "arcadia_prestige.hub.auction.sub":     "Achète & vends entre serveurs"
+  "arcadia_prestige.hub.auction.sub":     "Achète & vends entre serveurs",
+
+  "arcadia_prestige.hub.not_installed":   "Non installé",
+
+  "arcadia_prestige.gui.multi_reveal.title":   "Ouverture de Caisses",
+  "arcadia_prestige.gui.multi_reveal.rolling": "Ouverture de %s caisses...",
+  "arcadia_prestige.gui.multi_reveal.hint":    "Survole une carte pour inspecter",
+  "arcadia_prestige.gui.multi_reveal.inspect": "Inspecter ▲",
+  "arcadia_prestige.gui.multi_reveal.close":   "Clique n'importe où pour fermer",
+
+  "arcadia_prestige.gui.pet_bag.shift_to_open_all": "⇧ Shift + Clic droit pour tout ouvrir d'un coup",
+  "arcadia_prestige.gui.pet_bag.sent_to_collection": "★ Familier envoyé dans ta collection ! Utilise /arcadia_prestige → Familiers pour le gérer.",
+  "arcadia_prestige.gui.pet_bag.collection_full_to_inv": "⚠ Collection pleine (108/108) — familier ajouté dans ton inventaire.",
+
+  "arcadia_prestige.cmd.enabled":    "§a[Arcadia] Fonctionnalités Prestige activées pour tous les joueurs.",
+  "arcadia_prestige.cmd.disabled":   "§c[Arcadia] Fonctionnalités Prestige désactivées. Les opérateurs ne sont pas affectés.",
+  "arcadia_prestige.cmd.disabled_msg": "§c[Arcadia] Les fonctionnalités Prestige sont actuellement désactivées sur ce serveur.",
+  "arcadia_prestige.cmd.simday_self": "[Debug] +24h appliqué à ton timer journalier."
 }

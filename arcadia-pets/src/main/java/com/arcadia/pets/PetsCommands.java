@@ -5,7 +5,7 @@ import com.arcadia.pets.item.PetData;
 import com.arcadia.pets.item.PetRarity;
 import com.arcadia.pets.item.PetRoller;
 import com.arcadia.pets.item.PetStat;
-import com.arcadia.pets.server.DashboardMenuBridge;
+import com.arcadia.lib.ArcadiaModRegistry;
 import com.arcadia.pets.server.FusionMenu;
 import com.arcadia.pets.server.PetHistoryMenu;
 import com.arcadia.pets.server.PetHistorySavedData;
@@ -41,11 +41,11 @@ public final class PetsCommands {
     @SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event) {
         event.getDispatcher().register(
-            Commands.literal("pets")
+            Commands.literal("arcadia_pets")
                 .executes(ctx -> {
                     if (!checkEnabled(ctx.getSource())) return 0;
                     if (ctx.getSource().getEntity() instanceof ServerPlayer player) {
-                        DashboardMenuBridge.openPetsTab(player);
+                        ArcadiaModRegistry.openTab(player, 1);
                     }
                     return Command.SINGLE_SUCCESS;
                 })
@@ -220,6 +220,7 @@ public final class PetsCommands {
                 )
         );
 
+        // Keep /fuse as alias for convenience
         event.getDispatcher().register(
             Commands.literal("fuse")
                 .executes(ctx -> {

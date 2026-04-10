@@ -47,7 +47,7 @@ public class PetCollectionBookItem extends Item {
                         .withStyle(ChatFormatting.RED));
             } else {
                 // Right-click → open the dashboard Pets tab (/pets)
-                com.arcadia.pets.server.DashboardMenuBridge.openPetsTab(sp);
+                com.arcadia.lib.ArcadiaModRegistry.openTab(sp, 1);
             }
         }
         return InteractionResultHolder.sidedSuccess(player.getItemInHand(hand), level.isClientSide);

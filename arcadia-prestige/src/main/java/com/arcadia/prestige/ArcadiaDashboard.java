@@ -42,32 +42,29 @@ public class ArcadiaDashboard {
     }
 
     private void onCommonSetup(FMLCommonSetupEvent event) {
-        if (net.neoforged.fml.ModList.get().isLoaded("arcadia_pets")) PetsModuleSetup.init();
-        if (net.neoforged.fml.ModList.get().isLoaded("arcadia_ah"))   AhModuleSetup.init();
-    }
+        // Register hub opener so /arcadia and other mods can open the hub
+        com.arcadia.lib.ArcadiaModRegistry.registerHubOpener(p -> {
+            PacketHandler.sendToPlayer(p, new com.arcadia.prestige.network.S2COpenHub());
+        });
 
-    /**
-     * Inner class — only loaded/instantiated when arcadia-pets is confirmed present.
-     * Java does not load inner classes until they are first referenced at runtime.
-     */
-    private static final class PetsModuleSetup {
-        static void init() {
-            com.arcadia.pets.server.DashboardMenuBridge.register(p -> DashboardMenu.openFor(p, 1));
-            DashboardMenu.registerPetsHandler(com.arcadia.pets.server.PetsDashboardTab::new);
+        // Register tab openers for cosmetics and daily (always available)
+        com.arcadia.lib.ArcadiaModRegistry.registerTabOpener(0, p -> DashboardMenu.openFor(p, 0));
+        com.arcadia.lib.ArcadiaModRegistry.registerTabOpener(2, p -> DashboardMenu.openFor(p, 2));
+
+        // Search refresher for AH (reopen dashboard at tab 3 after search)
+        com.arcadia.lib.ArcadiaModRegistry.registerSearchRefresher(p -> DashboardMenu.openFor(p, 3));
+
+        // Discover pet/ah tab handlers registered by their respective mods
+        var petsFactory = com.arcadia.lib.ArcadiaModRegistry.getTabHandler(1);
+        if (petsFactory != null) {
+            DashboardMenu.registerPetsHandler(petsFactory);
+            com.arcadia.lib.ArcadiaModRegistry.registerTabOpener(1, p -> DashboardMenu.openFor(p, 1));
         }
-    }
 
-    /**
-     * Inner class — only loaded/instantiated when arcadia-ah is confirmed present.
-     */
-    private static final class AhModuleSetup {
-        static void init() {
-            com.arcadia.ah.server.AhDashboardBridge.register(p -> DashboardMenu.openFor(p, 3));
-            // Reopen the dashboard at tab 3 after search — the client closed the search screen
-            // and needs the dashboard screen to come back.
-            com.arcadia.ah.server.AhDashboardBridge.registerSearchRefresher(
-                sp -> DashboardMenu.openFor(sp, 3));
-            DashboardMenu.registerAhHandler(com.arcadia.ah.server.AhDashboardTab::new);
+        var ahFactory = com.arcadia.lib.ArcadiaModRegistry.getTabHandler(3);
+        if (ahFactory != null) {
+            DashboardMenu.registerAhHandler(ahFactory);
+            com.arcadia.lib.ArcadiaModRegistry.registerTabOpener(3, p -> DashboardMenu.openFor(p, 3));
         }
     }
 

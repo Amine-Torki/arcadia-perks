@@ -120,7 +120,7 @@ public class AhLeaderboardMenu extends AbstractContainerMenu {
     @Override
     public void clicked(int slotId, int button, net.minecraft.world.inventory.ClickType clickType, Player player) {
         if (slotId == BACK_SLOT && player instanceof net.minecraft.server.level.ServerPlayer sp) {
-            AhDashboardBridge.openAhTab(sp);
+            com.arcadia.lib.ArcadiaModRegistry.openTab(sp, 3);
             return;
         }
         broadcastChanges();

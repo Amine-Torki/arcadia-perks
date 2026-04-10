@@ -22,8 +22,17 @@ public final class ArcadiaPets {
 
         modBus.addListener(PetPacketHandler::onRegisterPayloadHandlers);
         modBus.addListener(this::onConfigLoad);
+        modBus.addListener(this::onCommonSetup);
 
         container.registerConfig(ModConfig.Type.SERVER, PetPoolConfig.SPEC, "arcadia/pets/pets.toml");
+    }
+
+    private void onCommonSetup(net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent event) {
+        // Register pets tab handler via the central lib registry.
+        // The tab opener is registered by the dashboard mod (prestige).
+        com.arcadia.lib.ArcadiaModRegistry.registerTabHandler(1,
+                com.arcadia.pets.server.PetsDashboardTab::new);
+        LOGGER.info("[ArcadiaPets] Registered pets tab in ArcadiaModRegistry.");
     }
 
     private void onConfigLoad(ModConfigEvent event) {

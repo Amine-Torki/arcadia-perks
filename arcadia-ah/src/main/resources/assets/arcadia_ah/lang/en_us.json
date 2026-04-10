@@ -1,1 +1,6 @@
-{}
+{
+  "arcadia_ah.cmd.enabled":   "§a[Arcadia] Auction House enabled for all players.",
+  "arcadia_ah.cmd.disabled":  "§c[Arcadia] Auction House disabled. Operators are unaffected.",
+  "arcadia_ah.cmd.disabled_msg": "§c[Arcadia] The Auction House is currently disabled on this server.",
+  "arcadia_ah.cmd.hold_item": "Hold the item you want to sell."
+}

@@ -23,10 +23,19 @@ public final class ArcadiaAH {
 
         modBus.addListener(AhPacketHandler::onRegisterPayloadHandlers);
         modBus.addListener(this::onConfigLoad);
+        modBus.addListener(this::onCommonSetup);
 
         NeoForge.EVENT_BUS.addListener(this::onServerAboutToStart);
 
         container.registerConfig(ModConfig.Type.SERVER, AhConfig.SPEC, "arcadia/ah/ah.toml");
+    }
+
+    private void onCommonSetup(net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent event) {
+        // Register AH tab handler via the central lib registry.
+        // The tab opener is registered by the dashboard mod (prestige).
+        com.arcadia.lib.ArcadiaModRegistry.registerTabHandler(3,
+                com.arcadia.ah.server.AhDashboardTab::new);
+        LOGGER.info("[ArcadiaAH] Registered AH tab in ArcadiaModRegistry.");
     }
 
     private void onServerAboutToStart(ServerAboutToStartEvent event) {

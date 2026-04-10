@@ -72,7 +72,7 @@
   "arcadia_prestige.gui.pet_bag.shift_to_open_all": "\u21e7 Shift + Right-click to open all at once",
   "arcadia_prestige.gui.pet_bag.loot_chances":  "Loot Chances:",
   "arcadia_prestige.gui.pet_bag.chance_format": "  \u2022 %s: \u00a7f%s%%",
-  "arcadia_prestige.gui.pet_bag.sent_to_collection":    "\u2605 Pet sent to your collection! Use /prestige \u2192 Pets to manage it.",
+  "arcadia_prestige.gui.pet_bag.sent_to_collection":    "\u2605 Pet sent to your collection! Use /arcadia_prestige \u2192 Pets to manage it.",
   "arcadia_prestige.gui.pet_bag.collection_full_to_inv": "\u26A0 Collection full (108/108) \u2014 pet added to your inventory instead.",
   "arcadia_prestige.gui.pet_bag.all_full":              "\u274C Collection and inventory are both full! Your pet dropped on the ground.",
 
@@ -185,7 +185,7 @@
   "arcadia_prestige.reward.token_snack":   "Arcadia Tokens + Pet Snack",
   "arcadia_prestige.reward.token_treat":   "Arcadia Tokens + Pet Treats",
 
-  "arcadia_prestige.msg.pet_deposited":     "Pet deposited to your collection. Use /pets to manage it.",
+  "arcadia_prestige.msg.pet_deposited":     "Pet deposited to your collection. Use /arcadia_pets to manage it.",
   "arcadia_prestige.msg.pet_retrieved":     "← Pet returned to your inventory.",
   "arcadia_prestige.msg.collection_full":   "Your collection is full (108/108). Free a slot first.",
   "arcadia_prestige.msg.inventory_full":    "⚠ Your inventory is full.",
@@ -209,7 +209,7 @@
   "arcadia_prestige.msg.luck_bonus":        "  \u2728 Luck bonus activated!",
   "arcadia_prestige.msg.daily_already_claimed": "Already claimed today! Come back tomorrow.",
   "arcadia_prestige.msg.daily_claimed_headline": "Day %s claimed! ",
-  "arcadia_prestige.msg.daily_ready":              "Your daily reward is ready! Open /prestige or use /prestige daily.",
+  "arcadia_prestige.msg.daily_ready":              "Your daily reward is ready! Use /arcadia or /arcadia_prestige daily.",
   "arcadia_prestige.msg.daily_cycle_complete":     "Path complete! A new cycle begins...",
   "arcadia_prestige.msg.daily_milestone_autocollect": "[Daily] Unclaimed rank gifts were automatically collected!",
   "arcadia_prestige.msg.streak_reset":       "\u26A0 You missed a day \u2014 your streak has reset.",
@@ -323,5 +323,10 @@
   "arcadia_prestige.hub.daily.sub":       "Claim your streak bonus",
   "arcadia_prestige.hub.not_installed":   "Not installed",
   "arcadia_prestige.hub.auction.label":   "Auction House",
-  "arcadia_prestige.hub.auction.sub":     "Buy & sell cross-server"
+  "arcadia_prestige.hub.auction.sub":     "Buy & sell cross-server",
+
+  "arcadia_prestige.cmd.enabled":    "§a[Arcadia] Prestige features enabled for all players.",
+  "arcadia_prestige.cmd.disabled":   "§c[Arcadia] Prestige features disabled. Operators are unaffected.",
+  "arcadia_prestige.cmd.disabled_msg": "§c[Arcadia] Prestige features are currently disabled on this server.",
+  "arcadia_prestige.cmd.simday_self": "[Debug] +24h applied to your daily timer."
 }

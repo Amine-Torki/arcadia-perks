@@ -1,1 +1,4 @@
-{"item.arcadia_lib.arcadia_token": "Arcadia Token"}
+{
+  "item.arcadia_lib.arcadia_token": "Arcadia Token",
+  "arcadia_lib.msg.hub_not_available": "§c[Arcadia] The hub is not available. Install Arcadia Prestige."
+}

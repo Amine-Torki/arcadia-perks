@@ -34,16 +34,28 @@ public class PrestigeHubScreen extends Screen {
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
 
+        // Semi-transparent dark overlay
+        g.fill(0, 0, this.width, this.height, 0xAA0A0A14);
+
         int totalW = CARD_COUNT * CARD_W + (CARD_COUNT - 1) * CARD_GAP;
         int startX = (this.width - totalW) / 2;
         int startY = (this.height - CARD_H) / 2 - 12;
 
-        // Title
+        // Decorative top line
+        int lineW = totalW + 40;
+        int lineX = (this.width - lineW) / 2;
+        g.fill(lineX, startY - 38, lineX + lineW, startY - 37, 0x44FFD700);
+
+        // Title with shadow
         Component title = Component.translatable("arcadia_prestige.hub.title").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
+        g.drawCenteredString(this.font, title, this.width / 2 + 1, startY - 27, 0x44000000); // shadow
         g.drawCenteredString(this.font, title, this.width / 2, startY - 28, 0xFFD700);
 
         Component sub = Component.translatable("arcadia_prestige.hub.subtitle").withStyle(ChatFormatting.GRAY);
-        g.drawCenteredString(this.font, sub, this.width / 2, startY - 16, 0x888888);
+        g.drawCenteredString(this.font, sub, this.width / 2, startY - 16, 0x999999);
+
+        // Decorative bottom line below subtitle
+        g.fill(lineX, startY - 6, lineX + lineW, startY - 5, 0x22FFFFFF);
 
         hoveredCard = -1;
         for (int i = 0; i < PrestigeCard.ALL.size(); i++) {
@@ -54,16 +66,18 @@ public class PrestigeHubScreen extends Screen {
             if (hovered) hoveredCard = i;
             drawCard(g, card, cx, startY, CARD_W, CARD_H, hovered, card.available() ? 1.0f : 0.35f);
             if (!card.available()) {
-                // "Not installed" overlay text
                 g.drawCenteredString(this.font,
                         Component.translatable("arcadia_prestige.hub.not_installed"),
                         cx + CARD_W / 2, startY + CARD_H - 14, 0xFF554444);
             }
         }
 
+        // Bottom decorative line
+        g.fill(lineX, startY + CARD_H + 8, lineX + lineW, startY + CARD_H + 9, 0x22FFFFFF);
+
         // Hint at bottom
         Component hint = Component.translatable("arcadia_prestige.hub.close").withStyle(ChatFormatting.DARK_GRAY);
-        g.drawCenteredString(this.font, hint, this.width / 2, startY + CARD_H + 16, 0x555555);
+        g.drawCenteredString(this.font, hint, this.width / 2, startY + CARD_H + 18, 0x555555);
 
         super.render(g, mouseX, mouseY, partialTick);
     }
@@ -75,61 +89,91 @@ public class PrestigeHubScreen extends Screen {
     static void drawCard(GuiGraphics g, PrestigeCard card, int x, int y,
                          int cardW, int cardH, boolean hovered, float textScale) {
         var font = Minecraft.getInstance().font;
-
-        // Shadow
-        g.fill(x + 3, y + 3, x + cardW + 3, y + cardH + 3, 0x55000000);
-
-        // Card background
-        int bg = hovered ? 0xEE1A1A2E : 0xCC111122;
-        g.fill(x, y, x + cardW, y + cardH, bg);
-
-        // Colored top accent bar
         int accent = card.color() | 0xFF000000;
-        g.fill(x, y, x + cardW, y + 3, accent);
 
-        // Border
-        int border = hovered ? (card.color() | 0xFF000000) : 0xFF333355;
+        // Outer glow on hover (soft colored shadow)
+        if (hovered) {
+            int glowColor = (card.color() & 0x00FFFFFF) | 0x22000000;
+            g.fill(x - 2, y - 2, x + cardW + 2, y + cardH + 2, glowColor);
+            g.fill(x - 1, y - 1, x + cardW + 1, y + cardH + 1, (card.color() & 0x00FFFFFF) | 0x33000000);
+        }
+
+        // Drop shadow (offset)
+        g.fill(x + 3, y + 3, x + cardW + 3, y + cardH + 3, 0x66000000);
+
+        // Card background — gradient effect (darker at bottom)
+        int bgTop    = hovered ? 0xEE1E1E35 : 0xDD141428;
+        int bgBottom = hovered ? 0xEE12122A : 0xDD0C0C1E;
+        g.fill(x, y, x + cardW, y + cardH / 2, bgTop);
+        g.fill(x, y + cardH / 2, x + cardW, y + cardH, bgBottom);
+
+        // Colored top accent bar (thicker on hover)
+        int accentH = hovered ? 4 : 3;
+        g.fill(x, y, x + cardW, y + accentH, accent);
+
+        // Inner highlight line at top (subtle light)
+        g.fill(x + 1, y + accentH, x + cardW - 1, y + accentH + 1,
+                hovered ? 0x33FFFFFF : 0x15FFFFFF);
+
+        // Border — glowing on hover, subtle otherwise
+        int border = hovered ? accent : 0xFF2A2A44;
         g.hLine(x, x + cardW - 1, y, border);
         g.hLine(x, x + cardW - 1, y + cardH - 1, border);
         g.vLine(x, y, y + cardH - 1, border);
         g.vLine(x + cardW - 1, y, y + cardH - 1, border);
 
+        // Second border (inner) on hover for depth
+        if (hovered) {
+            int innerBorder = (card.color() & 0x00FFFFFF) | 0x44000000;
+            g.hLine(x + 1, x + cardW - 2, y + 1, innerBorder);
+            g.hLine(x + 1, x + cardW - 2, y + cardH - 2, innerBorder);
+            g.vLine(x + 1, y + 1, y + cardH - 2, innerBorder);
+            g.vLine(x + cardW - 2, y + 1, y + cardH - 2, innerBorder);
+        }
+
         int cx = x + cardW / 2;
 
-        // Emoji — proportionally placed
+        // Emoji — larger and centered, with glow effect on hover
         int emojiY = y + cardH / 5;
-        drawScaled(g, font, Component.literal(card.emoji()), cx, emojiY, card.color() | 0xFF000000, textScale);
+        float emojiScale = textScale * (hovered ? 1.3f : 1.15f);
+        drawScaled(g, font, Component.literal(card.emoji()), cx, emojiY, accent, emojiScale);
 
-        // Label (with 2-line wrap), overflow checked in scaled space
+        // Separator line below emoji
+        int sepY = y + (int) (cardH * 0.34f);
+        int sepPad = cardW / 5;
+        g.fill(x + sepPad, sepY, x + cardW - sepPad, sepY + 1,
+                hovered ? (accent & 0x00FFFFFF) | 0x66000000 : 0x22FFFFFF);
+
+        // Label (with 2-line wrap)
         Component label = Component.translatable(card.labelKey()).withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD);
-        int labelY = y + (int) (cardH * 0.42f);
+        int labelY = y + (int) (cardH * 0.44f);
         float scaledMax = (cardW - 8) / textScale;
         if (font.width(label) <= scaledMax) {
-            drawScaled(g, font, label, cx, labelY, 0xFFFFFF, textScale);
+            drawScaled(g, font, label, cx, labelY, hovered ? 0xFFFFFF : 0xDDDDDD, textScale);
         } else {
             String ls = label.getString();
             int lmid = ls.length() / 2;
             int lsplit = nearestSpace(ls, lmid);
             int lineGap = (int) (5 / textScale);
-            drawScaled(g, font, Component.literal(ls.substring(0, lsplit)).withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD), cx, labelY - lineGap, 0xFFFFFF, textScale);
-            drawScaled(g, font, Component.literal(ls.substring(lsplit + 1)).withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD), cx, labelY + lineGap, 0xFFFFFF, textScale);
+            int labelColor = hovered ? 0xFFFFFF : 0xDDDDDD;
+            drawScaled(g, font, Component.literal(ls.substring(0, lsplit)).withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD), cx, labelY - lineGap, labelColor, textScale);
+            drawScaled(g, font, Component.literal(ls.substring(lsplit + 1)).withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD), cx, labelY + lineGap, labelColor, textScale);
         }
 
-        // Sub-label (with 2-line wrap) — extra vertical gap from label
+        // Sub-label (with 2-line wrap)
         Component sub = Component.translatable(card.sublabelKey()).withStyle(ChatFormatting.GRAY);
         int subY = y + (int) (cardH * 0.73f);
+        int subColor = hovered ? 0xAAAAAACC : 0x777777;
         if (font.width(sub) <= scaledMax) {
-            drawScaled(g, font, sub, cx, subY, 0x888888, textScale);
+            drawScaled(g, font, sub, cx, subY, subColor, textScale);
         } else {
             String s = sub.getString();
             int mid = s.length() / 2;
             int split = nearestSpace(s, mid);
             int lineGap = (int) (4 / textScale);
-            drawScaled(g, font, Component.literal(s.substring(0, split)), cx, subY - lineGap, 0x888888, textScale);
-            drawScaled(g, font, Component.literal(s.substring(split + 1)), cx, subY + lineGap, 0x888888, textScale);
+            drawScaled(g, font, Component.literal(s.substring(0, split)), cx, subY - lineGap, subColor, textScale);
+            drawScaled(g, font, Component.literal(s.substring(split + 1)), cx, subY + lineGap, subColor, textScale);
         }
-
-
     }
 
     /**

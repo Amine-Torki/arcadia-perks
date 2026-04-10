@@ -30,10 +30,17 @@ public final class PlayerDataHandler {
         }
 
         // Debug mode: create a Founder-level default record without hitting the DB
-        if (DatabaseManager.isDebugMode()) {
+        if (com.arcadia.lib.DebugMode.ENABLED) {
             PlayerRecord debugRecord = new PlayerRecord(uuid, "founder", "", 0L, 0);
             cache.put(uuid, debugRecord);
             return debugRecord;
+        }
+
+        // In-memory mode (singleplayer): return a default record without DB
+        if (DatabaseManager.isDebugMode()) {
+            PlayerRecord defaultRecord = new PlayerRecord(uuid, null, "", 0L, 0);
+            cache.put(uuid, defaultRecord);
+            return defaultRecord;
         }
 
         String uuidStr = uuid.toString();
@@ -115,8 +122,8 @@ public final class PlayerDataHandler {
         long now = System.currentTimeMillis();
         long elapsed = now - record.lastClaim();
 
-        // In debug mode: always allow claiming (no cooldown) for easy testing
-        if (!DatabaseManager.isDebugMode() && elapsed < CLAIM_COOLDOWN_MS) {
+        // In debug mode only: skip cooldown for easy testing
+        if (!com.arcadia.lib.DebugMode.ENABLED && elapsed < CLAIM_COOLDOWN_MS) {
             return -1;
         }
 
@@ -182,7 +189,7 @@ public final class PlayerDataHandler {
     }
 
     public static boolean canClaimDaily(UUID uuid) {
-        if (DatabaseManager.isDebugMode()) return true;
+        if (com.arcadia.lib.DebugMode.ENABLED) return true;
         long elapsed = System.currentTimeMillis() - loadPlayer(uuid).lastClaim();
         return elapsed >= CLAIM_COOLDOWN_MS;
     }
