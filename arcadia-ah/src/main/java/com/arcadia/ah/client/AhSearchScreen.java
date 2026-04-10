@@ -1,6 +1,7 @@
 package com.arcadia.ah.client;
 
 import com.arcadia.ah.network.C2SAhSearch;
+import com.arcadia.lib.client.ArcadiaTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -73,12 +74,13 @@ public class AhSearchScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        graphics.fill(0, 0, this.width, this.height, 0x88000000);
+        graphics.fill(0, 0, this.width, this.height, ArcadiaTheme.OVERLAY_BG);
         int cx = this.width / 2;
         int cy = this.height / 2;
-        graphics.fill(cx - 110, cy - 30, cx + 110, cy + 65, 0xCC000000);
-        graphics.drawCenteredString(this.font, Component.literal("§6Search Auction House"),
-                cx, cy - 24, 0xFFFFFF);
+        ArcadiaTheme.drawPanel(graphics, cx - 110, cy - 30, 220, 95, false, ArcadiaTheme.COPPER);
+        ArcadiaTheme.drawCenteredText(graphics,
+                Component.translatable("arcadia_prestige.gui.tab.auction_house"),
+                cx, cy - 24, ArcadiaTheme.BRASS);
         super.render(graphics, mouseX, mouseY, partialTick);
     }
 

@@ -1,6 +1,7 @@
 package com.arcadia.pets.client;
 
 
+import com.arcadia.lib.client.ArcadiaTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -35,13 +36,13 @@ public class PetGuideScreen extends Screen {
     public void render(GuiGraphics g, int mouseX, int mouseY, float partial) {
         super.render(g, mouseX, mouseY, partial);
 
-        // Background panel
-        g.fill(left - 2, top - 2, left + W + 2, top + H + 2, 0xCC000000);
-        g.fill(left, top, left + W, top + H, 0xEE1A1A2E);
+        // Themed background panel
+        ArcadiaTheme.drawPanel(g, left, top, W, H, false);
 
-        // Title
+        // Title with copper theme
         Component title = Component.translatable("arcadia_prestige.guide.page" + page + ".title");
-        g.drawCenteredString(this.font, title, left + W / 2, top + 6, 0xFFD700);
+        g.drawCenteredString(this.font, title, left + W / 2 + 1, top + 7, 0x22000000);
+        g.drawCenteredString(this.font, title, left + W / 2, top + 6, ArcadiaTheme.BRASS);
 
         // Content lines
         int y = top + 22;
@@ -93,9 +94,9 @@ public class PetGuideScreen extends Screen {
         int btnW = W - 16;
         int btnH = 12;
         boolean btnHovered = mouseX >= btnX && mouseX <= btnX + btnW && mouseY >= btnY && mouseY <= btnY + btnH;
-        g.fill(btnX, btnY, btnX + btnW, btnY + btnH, btnHovered ? 0x90303030 : 0x70101010);
+        g.fill(btnX, btnY, btnX + btnW, btnY + btnH, btnHovered ? 0x90382818 : 0x70201510);
         Component back = Component.translatable("arcadia_prestige.guide.back");
-        g.drawCenteredString(this.font, back, left + W / 2, btnY + 2, 0xFFFFFF);
+        g.drawCenteredString(this.font, back, left + W / 2, btnY + 2, ArcadiaTheme.TEXT_PRIMARY);
     }
 
     private static void playClick() {

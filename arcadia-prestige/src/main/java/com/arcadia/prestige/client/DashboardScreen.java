@@ -1,5 +1,6 @@
 package com.arcadia.prestige.client;
 
+import com.arcadia.lib.client.ArcadiaTheme;
 import com.arcadia.prestige.PrestigeCard;
 import com.arcadia.prestige.network.C2SDashboardAction;
 import com.arcadia.prestige.server.DashboardMenu;
@@ -52,8 +53,10 @@ public class DashboardScreen extends AbstractContainerScreen<DashboardMenu> {
             case 3 -> Component.translatable("arcadia_prestige.gui.tab.auction_house");
             default -> this.title;
         };
-        graphics.drawString(this.font, displayTitle,
-                (this.imageWidth - this.font.width(displayTitle)) / 2, 6, 0xFFD700, false);
+        // Centered title with copper theme
+        int titleX = (this.imageWidth - this.font.width(displayTitle)) / 2;
+        graphics.drawString(this.font, displayTitle, titleX + 1, 7, 0x22000000, false);
+        graphics.drawString(this.font, displayTitle, titleX, 6, ArcadiaTheme.BRASS, false);
         graphics.drawString(this.font, this.playerInventoryTitle,
                 this.inventoryLabelX, this.inventoryLabelY, 0x404040, false);
     }
@@ -109,8 +112,8 @@ public class DashboardScreen extends AbstractContainerScreen<DashboardMenu> {
         int by = this.topPos + this.imageHeight + 3;
         int bw = this.imageWidth - 8;
         boolean hovered = mouseX >= bx && mouseX <= bx + bw && mouseY >= by && mouseY <= by + 10;
-        graphics.fill(bx - 1, by - 1, bx + bw + 1, by + 11, hovered ? 0x90303030 : 0x70101010);
-        graphics.drawString(this.font, label, bx + 2, by + 1, 0xFFFFFF, false);
+        graphics.fill(bx - 1, by - 1, bx + bw + 1, by + 11, hovered ? 0x90302818 : 0x70181210);
+        graphics.drawString(this.font, label, bx + 2, by + 1, ArcadiaTheme.TEXT_PRIMARY, false);
     }
 
     // -------------------------------------------------------------------------
