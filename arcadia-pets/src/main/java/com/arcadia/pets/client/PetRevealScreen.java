@@ -1,5 +1,6 @@
 package com.arcadia.pets.client;
 
+import com.arcadia.lib.client.ArcadiaTheme;
 import com.arcadia.pets.client.HudSettings;
 import com.arcadia.pets.config.PetPoolConfig;
 import com.arcadia.pets.item.PetData;
@@ -205,52 +206,41 @@ public class PetRevealScreen extends Screen {
     }
 
     private void renderSpinningStrip(GuiGraphics graphics, float partialTick) {
-        // Smooth interpolation between the last two tick positions
         float interpolatedScroll = prevScrollPosition + (scrollPosition - prevScrollPosition) * partialTick;
         int centerX = this.width / 2;
         int stripY = stripYCenter;
 
-        // Dark background bar
-        graphics.fill(0, stripY - 5, this.width, stripY + CARD_HEIGHT + 5, 0xCC000000);
+        // Themed background bar with subtle gradient
+        graphics.fill(0, stripY - 8, this.width, stripY + CARD_HEIGHT + 8, 0xDD0E0B14);
+        graphics.fill(0, stripY - 8, this.width, stripY - 6, ArcadiaTheme.withAlpha(ArcadiaTheme.COPPER, 0x55));
+        graphics.fill(0, stripY + CARD_HEIGHT + 6, this.width, stripY + CARD_HEIGHT + 8, ArcadiaTheme.withAlpha(ArcadiaTheme.COPPER, 0x55));
 
         // Draw cards
         for (int i = 0; i < candidates.size(); i++) {
             int cardCenterX = (int) (i * (CARD_WIDTH + CARD_GAP) + CARD_WIDTH / 2.0f - interpolatedScroll);
             int screenX = centerX + cardCenterX;
-
-            // Skip if off-screen
-            if (screenX < -CARD_WIDTH || screenX > this.width + CARD_WIDTH) {
-                continue;
-            }
-
-            int cardLeft = screenX - CARD_WIDTH / 2;
-            int cardTop = stripY;
-
-            boolean isSelected = (i == resultIndex && phase > 0);
-            drawCard(graphics, cardLeft, cardTop, candidates.get(i), isSelected);
+            if (screenX < -CARD_WIDTH || screenX > this.width + CARD_WIDTH) continue;
+            drawCard(graphics, screenX - CARD_WIDTH / 2, stripY, candidates.get(i), i == resultIndex && phase > 0);
         }
 
-        // Selection indicator: golden frame in center
-        int selectorLeft = centerX - CARD_WIDTH / 2 - 2;
-        int selectorTop = stripY - 7;
-        int selectorRight = centerX + CARD_WIDTH / 2 + 2;
-        int selectorBottom = stripY + CARD_HEIGHT + 7;
+        // Selection indicator: copper/brass frame
+        int sL = centerX - CARD_WIDTH / 2 - 3;
+        int sT = stripY - 8;
+        int sR = centerX + CARD_WIDTH / 2 + 3;
+        int sB = stripY + CARD_HEIGHT + 8;
+        ArcadiaTheme.drawGlow(graphics, sL, sT, sR - sL, sB - sT, ArcadiaTheme.BRASS);
+        ArcadiaTheme.drawBorder(graphics, sL, sT, sR - sL, sB - sT, ArcadiaTheme.BRASS);
+        ArcadiaTheme.drawBorder(graphics, sL + 1, sT + 1, sR - sL - 2, sB - sT - 2, ArcadiaTheme.withAlpha(ArcadiaTheme.COPPER, 0xAA));
 
-        // Golden border
-        graphics.fill(selectorLeft, selectorTop, selectorRight, selectorTop + 2, 0xFFFFD700);
-        graphics.fill(selectorLeft, selectorBottom - 2, selectorRight, selectorBottom, 0xFFFFD700);
-        graphics.fill(selectorLeft, selectorTop, selectorLeft + 2, selectorBottom, 0xFFFFD700);
-        graphics.fill(selectorRight - 2, selectorTop, selectorRight, selectorBottom, 0xFFFFD700);
-
-        // Arrow indicator above
+        // Arrow indicator
         int arrowX = centerX;
-        int arrowY = stripY - 12;
-        graphics.fill(arrowX - 4, arrowY, arrowX + 4, arrowY + 5, 0xFFFFD700);
-        graphics.fill(arrowX - 2, arrowY + 5, arrowX + 2, arrowY + 8, 0xFFFFD700);
+        int arrowY = stripY - 14;
+        graphics.fill(arrowX - 4, arrowY, arrowX + 4, arrowY + 5, ArcadiaTheme.BRASS);
+        graphics.fill(arrowX - 2, arrowY + 5, arrowX + 2, arrowY + 8, ArcadiaTheme.BRASS);
 
         // Title
-        graphics.drawCenteredString(this.font, Component.translatable("arcadia_prestige.gui.reveal.rolling").withStyle(s -> s.withBold(true)),
-                centerX, stripY - 25, 0xFFFFD700);
+        Component title = Component.translatable("arcadia_prestige.gui.reveal.rolling").withStyle(s -> s.withBold(true));
+        ArcadiaTheme.drawCenteredText(graphics, title, centerX, stripY - 28, ArcadiaTheme.BRASS);
     }
 
     private void renderReveal(GuiGraphics graphics, int mouseX, int mouseY) {
@@ -272,16 +262,8 @@ public class PetRevealScreen extends Screen {
             graphics.fill(cardLeft - 4, cardTop - 4, cardLeft + cardW + 4, cardTop + cardH + 4, glowColor);
         }
 
-        // Card background
-        graphics.fill(cardLeft, cardTop, cardLeft + cardW, cardTop + cardH, 0xE0101020);
-
-        // Rarity-colored top border
-        graphics.fill(cardLeft, cardTop, cardLeft + cardW, cardTop + 3, rarityColor);
-        // Side borders
-        graphics.fill(cardLeft, cardTop, cardLeft + 2, cardTop + cardH, rarityColor);
-        graphics.fill(cardLeft + cardW - 2, cardTop, cardLeft + cardW, cardTop + cardH, rarityColor);
-        // Bottom border
-        graphics.fill(cardLeft, cardTop + cardH - 2, cardLeft + cardW, cardTop + cardH, rarityColor);
+        // Themed card panel with rarity accent
+        ArcadiaTheme.drawPanel(graphics, cardLeft, cardTop, cardW, cardH, false, rarityColor);
 
         int textY = cardTop + 12;
 
@@ -324,11 +306,11 @@ public class PetRevealScreen extends Screen {
             graphics.drawString(this.font, f2, rowStartX, textY, 0xFFD700, false);
         }
         textY += 10;
-        graphics.drawCenteredString(this.font, Component.translatable("arcadia_prestige.gui.reveal.total_stars", totalStars), centerX, textY, 0xAAAAAA);
+        graphics.drawCenteredString(this.font, Component.translatable("arcadia_prestige.gui.reveal.total_stars", totalStars), centerX, textY, ArcadiaTheme.TEXT_SECONDARY);
         textY += 16;
 
         // Divider
-        graphics.fill(cardLeft + 10, textY, cardLeft + cardW - 10, textY + 1, 0x60FFFFFF);
+        ArcadiaTheme.drawSeparator(graphics, cardLeft, textY, cardW, ArcadiaTheme.withAlpha(ArcadiaTheme.COPPER, 0x55));
         textY += 8;
 
         // Stats revealed one by one — 2 columns × 3 rows
@@ -368,7 +350,7 @@ public class PetRevealScreen extends Screen {
         if (!skills.isEmpty()) {
             int skillsY = textY + 3 * 14 + 6;
             // Divider
-            graphics.fill(cardLeft + 10, skillsY, cardLeft + cardW - 10, skillsY + 1, 0x40FFFFFF);
+            ArcadiaTheme.drawSeparator(graphics, cardLeft, skillsY, cardW, ArcadiaTheme.withAlpha(ArcadiaTheme.COPPER, 0x44));
             skillsY += 5;
             // "Skills" label
             graphics.drawCenteredString(this.font,
@@ -404,43 +386,29 @@ public class PetRevealScreen extends Screen {
     }
 
     private void drawCard(GuiGraphics graphics, int x, int y, PetData data, boolean selected) {
-        int bgColor = getRarityColor(data.rarity());
-        // Darken background slightly
-        int cardBg = (0xCC000000) | (bgColor & 0x00FFFFFF);
-        graphics.fill(x, y, x + CARD_WIDTH, y + CARD_HEIGHT, cardBg);
+        int rarityCol = getRarityColor(data.rarity());
 
-        // Inner slightly darker panel
-        graphics.fill(x + 2, y + 2, x + CARD_WIDTH - 2, y + CARD_HEIGHT - 2, 0xCC101020);
+        // Card panel with rarity accent
+        ArcadiaTheme.drawPanel(graphics, x, y, CARD_WIDTH, CARD_HEIGHT, selected, rarityCol);
 
         if (selected) {
-            // Golden highlight border
-            graphics.fill(x, y, x + CARD_WIDTH, y + 2, 0xFFFFD700);
-            graphics.fill(x, y + CARD_HEIGHT - 2, x + CARD_WIDTH, y + CARD_HEIGHT, 0xFFFFD700);
-            graphics.fill(x, y, x + 2, y + CARD_HEIGHT, 0xFFFFD700);
-            graphics.fill(x + CARD_WIDTH - 2, y, x + CARD_WIDTH, y + CARD_HEIGHT, 0xFFFFD700);
+            ArcadiaTheme.drawGlow(graphics, x, y, CARD_WIDTH, CARD_HEIGHT, ArcadiaTheme.BRASS);
         }
 
         // Mob name
         String mobName = data.mobType();
-        if (mobName.contains(":")) {
-            mobName = mobName.substring(mobName.indexOf(':') + 1);
-        }
-        if (mobName.length() > 8) {
-            mobName = mobName.substring(0, 7) + ".";
-        }
+        if (mobName.contains(":")) mobName = mobName.substring(mobName.indexOf(':') + 1);
+        if (mobName.length() > 8) mobName = mobName.substring(0, 7) + ".";
         mobName = mobName.substring(0, 1).toUpperCase() + mobName.substring(1).replace('_', ' ');
 
         int chatColor = data.rarity().getColor().getColor() != null ? data.rarity().getColor().getColor() : 0xFFFFFF;
+        int cx = x + CARD_WIDTH / 2;
 
-        graphics.drawCenteredString(this.font, data.rarity().getDisplayName(),
-                x + CARD_WIDTH / 2, y + 10, chatColor);
-        graphics.drawCenteredString(this.font, mobName,
-                x + CARD_WIDTH / 2, y + 28, 0xFFFFFF);
+        graphics.drawCenteredString(this.font, data.rarity().getDisplayName(), cx, y + 10, chatColor);
+        graphics.drawCenteredString(this.font, mobName, cx, y + 28, ArcadiaTheme.TEXT_PRIMARY);
 
         // Star count
-        int total = data.totalStars();
-        graphics.drawCenteredString(this.font, total + "\u2605",
-                x + CARD_WIDTH / 2, y + CARD_HEIGHT - 18, 0xFFD700);
+        graphics.drawCenteredString(this.font, data.totalStars() + "\u2605", cx, y + CARD_HEIGHT - 18, ArcadiaTheme.BRASS);
     }
 
     private static int getRarityColor(PetRarity rarity) {
