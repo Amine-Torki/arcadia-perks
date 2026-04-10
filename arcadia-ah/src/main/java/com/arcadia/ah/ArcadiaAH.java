@@ -30,8 +30,12 @@ public final class ArcadiaAH {
     }
 
     private void onServerAboutToStart(ServerAboutToStartEvent event) {
-        AuctionDatabase.createTables();
-        LOGGER.info("[ArcadiaAH] Auction tables verified.");
+        if (com.arcadia.lib.data.DatabaseManager.isDatabaseActive()) {
+            AuctionDatabase.createTables();
+            LOGGER.info("[ArcadiaAH] Auction tables verified.");
+        } else {
+            LOGGER.info("[ArcadiaAH] Database inactive — auction data will use in-memory storage.");
+        }
     }
 
     private void onConfigLoad(ModConfigEvent event) {

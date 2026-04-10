@@ -72,10 +72,12 @@ public class ArcadiaDashboard {
     }
 
     private void onServerAboutToStart(ServerAboutToStartEvent event) {
-        DatabaseManager.initialize();
+        boolean isDedicated = event.getServer().isDedicatedServer();
+        DatabaseManager.initialize(isDedicated);
         LuckPermsHook.init();
         CosmeticPermissionScanner.init();
-        LOGGER.info("[ArcadiaPrestige] Server initialized. Debug mode: {}", DebugMode.ENABLED);
+        LOGGER.info("[ArcadiaPrestige] Server initialized. Dedicated: {}, DB active: {}, Debug: {}",
+                isDedicated, DatabaseManager.isDatabaseActive(), DebugMode.ENABLED);
     }
 
     private void onServerStopping(ServerStoppingEvent event) {

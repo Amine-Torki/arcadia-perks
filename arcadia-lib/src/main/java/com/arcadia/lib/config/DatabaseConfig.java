@@ -12,6 +12,7 @@ public final class DatabaseConfig {
 
     public static final ModConfigSpec SPEC;
 
+    public static final ModConfigSpec.ConfigValue<Boolean> ENABLED;
     public static final ModConfigSpec.ConfigValue<String> HOST;
     public static final ModConfigSpec.IntValue            PORT;
     public static final ModConfigSpec.ConfigValue<String> NAME;
@@ -23,6 +24,13 @@ public final class DatabaseConfig {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
 
         b.comment("MySQL connection settings for the Arcadia Prestige mod.").push("database");
+
+        ENABLED = b.comment(
+                        "Enable MySQL database storage. When false, all data is stored in-memory/world files.",
+                        "Set to false for singleplayer or servers that do not need cross-server persistence.",
+                        "When running on an integrated server (singleplayer), the database is automatically",
+                        "disabled regardless of this setting.")
+                .define("enabled", true);
 
         HOST = b.comment("Database host address")
                 .define("host", "localhost");
@@ -43,6 +51,7 @@ public final class DatabaseConfig {
 
     // ── Applied values (populated by apply()) ────────────────────────────────
 
+    public static boolean DB_ENABLED    = true;
     public static String  DB_HOST       = "localhost";
     public static int     DB_PORT       = 3306;
     public static String  DB_NAME       = "arcadia_prestige";
@@ -54,6 +63,7 @@ public final class DatabaseConfig {
 
     /** Applies loaded config values into static fields for DatabaseManager. */
     public static void apply() {
+        DB_ENABLED    = ENABLED.get();
         DB_HOST       = HOST.get();
         DB_PORT       = PORT.get();
         DB_NAME       = NAME.get();

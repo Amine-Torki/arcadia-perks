@@ -34,9 +34,14 @@ public final class PetHistorySavedData extends SavedData {
     // -------------------------------------------------------------------------
 
     public static PetHistorySavedData getOrCreate(MinecraftServer server) {
-        return server.overworld().getDataStorage().computeIfAbsent(
+        PetHistorySavedData data = server.overworld().getDataStorage().computeIfAbsent(
                 new Factory<>(PetHistorySavedData::new, PetHistorySavedData::load, null), NAME);
+        data.serverRef = server;
+        return data;
     }
+
+    /** Reference to the server for DB operations. */
+    private transient MinecraftServer serverRef;
 
     // -------------------------------------------------------------------------
     // Write API
@@ -49,10 +54,16 @@ public final class PetHistorySavedData extends SavedData {
     public void log(UUID playerUuid, CompoundTag petTag) {
         PetData data = PetData.fromTag(petTag);
         if (data == null) return;
+        long now = System.currentTimeMillis();
         List<HistoryEntry> entries = history.computeIfAbsent(playerUuid, k -> new ArrayList<>());
-        entries.add(new HistoryEntry(data.petId(), petTag.copy(), System.currentTimeMillis()));
+        entries.add(new HistoryEntry(data.petId(), petTag.copy(), now));
         if (entries.size() > MAX_LOGS) entries.remove(0); // drop oldest
         setDirty();
+
+        // Sync to database if active
+        if (PetHistoryDatabase.isActive()) {
+            PetHistoryDatabase.log(playerUuid, data.petId(), petTag.copy(), now);
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -61,6 +72,7 @@ public final class PetHistorySavedData extends SavedData {
 
     /** Returns `PAGE_SIZE` entries for page N (1-based), newest first. */
     public List<HistoryEntry> getPage(UUID playerUuid, int page) {
+        loadFromDatabase(playerUuid);
         List<HistoryEntry> all = history.getOrDefault(playerUuid, List.of());
         // Reverse view (newest first)
         List<HistoryEntry> reversed = new ArrayList<>(all);
@@ -90,10 +102,34 @@ public final class PetHistorySavedData extends SavedData {
 
     /** Finds a history entry by its pet UUID, or empty if not found. */
     public Optional<HistoryEntry> findByPetId(UUID playerUuid, UUID petId) {
+        loadFromDatabase(playerUuid);
         for (HistoryEntry e : history.getOrDefault(playerUuid, List.of())) {
             if (e.petId().equals(petId)) return Optional.of(e);
         }
+        // Fallback: check DB directly if not in local cache
+        if (PetHistoryDatabase.isActive()) {
+            return PetHistoryDatabase.findByPetId(playerUuid, petId);
+        }
         return Optional.empty();
+    }
+
+    // -------------------------------------------------------------------------
+    // Database sync
+    // -------------------------------------------------------------------------
+
+    /**
+     * Loads history from the database into local cache on first access per player.
+     */
+    private void loadFromDatabase(UUID playerUuid) {
+        if (!PetHistoryDatabase.isActive()) return;
+        if (history.containsKey(playerUuid)) return; // already loaded
+        List<HistoryEntry> dbEntries = PetHistoryDatabase.loadHistory(playerUuid);
+        if (!dbEntries.isEmpty()) {
+            // DB returns newest-first, we store oldest-first
+            List<HistoryEntry> ordered = new ArrayList<>(dbEntries);
+            Collections.reverse(ordered);
+            history.put(playerUuid, ordered);
+        }
     }
 
     // -------------------------------------------------------------------------

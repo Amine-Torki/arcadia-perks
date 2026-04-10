@@ -18,33 +18,59 @@ public final class DatabaseManager {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     private static HikariDataSource dataSource;
-    private static boolean debugMode = false;
+    private static boolean inMemoryMode = false;
     private static final ExecutorService EXECUTOR = Executors.newFixedThreadPool(4);
 
     private DatabaseManager() {}
 
     /**
-     * Called at mod startup. Uses in-memory mode when DebugMode is enabled,
-     * otherwise connects to MySQL using ArcadiaConfig values.
+     * Called at server startup. Determines the storage backend:
+     * <ul>
+     *   <li>DebugMode enabled → in-memory (no MySQL)</li>
+     *   <li>Integrated server (singleplayer) → in-memory (no MySQL)</li>
+     *   <li>Database config disabled → in-memory (no MySQL)</li>
+     *   <li>Otherwise → connects to MySQL via HikariCP</li>
+     * </ul>
+     *
+     * @param isDedicatedServer true when running on a dedicated server, false for integrated (singleplayer)
      */
-    public static void initialize() {
+    public static void initialize(boolean isDedicatedServer) {
         if (com.arcadia.lib.DebugMode.ENABLED) {
-            debugMode = true;
+            inMemoryMode = true;
             LOGGER.info("[ArcadiaPrestige] DEBUG MODE — MySQL disabled, using in-memory storage.");
-        } else {
-            init(
-                com.arcadia.lib.config.DatabaseConfig.DB_HOST,
-                com.arcadia.lib.config.DatabaseConfig.DB_PORT,
-                com.arcadia.lib.config.DatabaseConfig.DB_NAME,
-                com.arcadia.lib.config.DatabaseConfig.DB_USER,
-                com.arcadia.lib.config.DatabaseConfig.DB_PASS,
-                com.arcadia.lib.config.DatabaseConfig.MAX_POOL_SIZE
-            );
+            return;
         }
+
+        if (!isDedicatedServer) {
+            inMemoryMode = true;
+            LOGGER.info("[ArcadiaPrestige] Integrated server (singleplayer) detected — MySQL disabled, using world save data.");
+            return;
+        }
+
+        if (!com.arcadia.lib.config.DatabaseConfig.DB_ENABLED) {
+            inMemoryMode = true;
+            LOGGER.info("[ArcadiaPrestige] Database disabled in config — using in-memory storage.");
+            return;
+        }
+
+        init(
+            com.arcadia.lib.config.DatabaseConfig.DB_HOST,
+            com.arcadia.lib.config.DatabaseConfig.DB_PORT,
+            com.arcadia.lib.config.DatabaseConfig.DB_NAME,
+            com.arcadia.lib.config.DatabaseConfig.DB_USER,
+            com.arcadia.lib.config.DatabaseConfig.DB_PASS,
+            com.arcadia.lib.config.DatabaseConfig.MAX_POOL_SIZE
+        );
     }
 
+    /** Returns true when running without a MySQL connection (debug, singleplayer, or config disabled). */
     public static boolean isDebugMode() {
-        return debugMode;
+        return inMemoryMode;
+    }
+
+    /** Returns true when a live MySQL connection pool is active. */
+    public static boolean isDatabaseActive() {
+        return !inMemoryMode && dataSource != null && !dataSource.isClosed();
     }
 
     public static void init(String host, int port, String dbName, String user, String pass, int maxPoolSize) {
@@ -72,7 +98,7 @@ public final class DatabaseManager {
     }
 
     public static Connection getConnection() throws SQLException {
-        if (debugMode) {
+        if (inMemoryMode) {
             throw new SQLException("Debug mode active — no database connection available.");
         }
         if (dataSource == null) {
@@ -111,6 +137,27 @@ public final class DatabaseManager {
                         cycle INT NOT NULL,
                         claims INT NOT NULL DEFAULT 0,
                         PRIMARY KEY (uuid, cycle)
+                    )
+                    """);
+
+            stmt.executeUpdate("""
+                    CREATE TABLE IF NOT EXISTS arcadia_pet_collections (
+                        owner_uuid  VARCHAR(36)  NOT NULL,
+                        slot_index  INT          NOT NULL,
+                        item_nbt    MEDIUMTEXT   NOT NULL,
+                        PRIMARY KEY (owner_uuid, slot_index)
+                    )
+                    """);
+
+            stmt.executeUpdate("""
+                    CREATE TABLE IF NOT EXISTS arcadia_pet_history (
+                        id          BIGINT       AUTO_INCREMENT PRIMARY KEY,
+                        owner_uuid  VARCHAR(36)  NOT NULL,
+                        pet_id      VARCHAR(36)  NOT NULL,
+                        pet_nbt     MEDIUMTEXT   NOT NULL,
+                        created_at  BIGINT       NOT NULL,
+                        INDEX idx_pet_hist_owner (owner_uuid),
+                        INDEX idx_pet_hist_pet   (pet_id)
                     )
                     """);
 
