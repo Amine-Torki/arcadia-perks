@@ -26,7 +26,7 @@ public final class ArcadiaAH {
 
         NeoForge.EVENT_BUS.addListener(this::onServerAboutToStart);
 
-        container.registerConfig(ModConfig.Type.SERVER, AhConfig.SPEC, "arcadia-ah.toml");
+        container.registerConfig(ModConfig.Type.SERVER, AhConfig.SPEC, "arcadia/ah/ah.toml");
     }
 
     private void onServerAboutToStart(ServerAboutToStartEvent event) {

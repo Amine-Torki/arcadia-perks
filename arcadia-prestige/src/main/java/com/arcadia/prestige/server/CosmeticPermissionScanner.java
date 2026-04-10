@@ -69,7 +69,7 @@ public final class CosmeticPermissionScanner {
                     rescan();
                 }
             });
-        } catch (Exception e) {
+        } catch (Throwable e) {
             LOGGER.warn("[CosmeticPermissionScanner] Could not subscribe to LP events: {}", e.getMessage());
         }
     }
@@ -121,8 +121,8 @@ public final class CosmeticPermissionScanner {
             tierLabels = Map.copyOf(result);
             LOGGER.info("[CosmeticPermissionScanner] Scanned — {} tier assignments found.", result.size());
 
-        } catch (Exception e) {
-            LOGGER.warn("[CosmeticPermissionScanner] Scan failed: {}", e.getMessage());
+        } catch (Throwable e) {
+            LOGGER.warn("[CosmeticPermissionScanner] Scan skipped — LuckPerms not available: {}", e.getMessage());
         }
     }
 

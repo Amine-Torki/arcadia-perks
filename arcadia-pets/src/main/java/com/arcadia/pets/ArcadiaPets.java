@@ -23,7 +23,7 @@ public final class ArcadiaPets {
         modBus.addListener(PetPacketHandler::onRegisterPayloadHandlers);
         modBus.addListener(this::onConfigLoad);
 
-        container.registerConfig(ModConfig.Type.SERVER, PetPoolConfig.SPEC, "arcadia-pets.toml");
+        container.registerConfig(ModConfig.Type.SERVER, PetPoolConfig.SPEC, "arcadia/pets/pets.toml");
     }
 
     private void onConfigLoad(ModConfigEvent event) {

@@ -37,8 +37,8 @@ public class ArcadiaDashboard {
         NeoForge.EVENT_BUS.addListener(this::onServerAboutToStart);
         NeoForge.EVENT_BUS.addListener(this::onServerStopping);
 
-        container.registerConfig(ModConfig.Type.SERVER, DatabaseConfig.SPEC, "arcadia-database.toml");
-        container.registerConfig(ModConfig.Type.SERVER, PrestigeConfig.SPEC, "arcadia-prestige.toml");
+        container.registerConfig(ModConfig.Type.SERVER, DatabaseConfig.SPEC, "arcadia/lib/database.toml");
+        container.registerConfig(ModConfig.Type.SERVER, PrestigeConfig.SPEC, "arcadia/prestige/prestige.toml");
     }
 
     private void onCommonSetup(FMLCommonSetupEvent event) {
