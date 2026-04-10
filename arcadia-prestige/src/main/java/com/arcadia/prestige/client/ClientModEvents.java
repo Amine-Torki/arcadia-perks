@@ -50,5 +50,6 @@ public final class ClientModEvents {
     @SubscribeEvent
     public static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
         event.register(PetKeyHandler.OPEN_PET_PANEL);
+        event.register(HubKeyHandler.OPEN_HUB);
     }
 }
