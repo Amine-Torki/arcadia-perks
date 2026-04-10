@@ -12,3 +12,10 @@ out/
 *.iws
 .DS_Store
 CHANGELOG.md
+
+# Claude Code
+.claude/
+CLAUDE.md
+
+# IDE
+.vscode/
