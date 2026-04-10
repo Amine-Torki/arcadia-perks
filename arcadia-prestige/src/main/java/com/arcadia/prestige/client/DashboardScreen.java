@@ -35,12 +35,8 @@ public class DashboardScreen extends AbstractContainerScreen<DashboardMenu> {
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        int x = this.leftPos;
-        int y = this.topPos;
-        // Top section: 6 rows of slots + header
-        graphics.blit(TEXTURE, x, y, 0, 0, this.imageWidth, 6 * 18 + 17);
-        // Bottom section: player inventory
-        graphics.blit(TEXTURE, x, y + 6 * 18 + 17, 0, 126, this.imageWidth, 96);
+        // Custom steampunk container — no chest texture
+        ArcadiaTheme.drawContainerBg(graphics, this.leftPos, this.topPos, this.imageWidth, 6);
     }
 
     @Override
@@ -53,12 +49,13 @@ public class DashboardScreen extends AbstractContainerScreen<DashboardMenu> {
             case 3 -> Component.translatable("arcadia_prestige.gui.tab.auction_house");
             default -> this.title;
         };
-        // Centered title with copper theme
+        // Centered title with copper theme + shadow
         int titleX = (this.imageWidth - this.font.width(displayTitle)) / 2;
         graphics.drawString(this.font, displayTitle, titleX + 1, 7, 0x22000000, false);
         graphics.drawString(this.font, displayTitle, titleX, 6, ArcadiaTheme.BRASS, false);
+        // Player inventory label in warm tone
         graphics.drawString(this.font, this.playerInventoryTitle,
-                this.inventoryLabelX, this.inventoryLabelY, 0x404040, false);
+                this.inventoryLabelX, this.inventoryLabelY, ArcadiaTheme.TEXT_DIM, false);
     }
 
     @Override

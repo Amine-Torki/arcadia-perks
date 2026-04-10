@@ -186,6 +186,103 @@ public final class ArcadiaTheme {
         g.drawCenteredString(font, title, cx, y, BRASS);
     }
 
+    // ── Container GUI rendering ───────────────────────────────────────────
+
+    /** Slot background color (dark iron). */
+    public static final int SLOT_BG       = 0xFF1A1620;
+    /** Slot border light edge (top/left). */
+    public static final int SLOT_LIGHT    = 0xFF3A3430;
+    /** Slot border dark edge (bottom/right). */
+    public static final int SLOT_DARK     = 0xFF0C0A0E;
+
+    /**
+     * Draws a single 18×18 item slot with beveled iron edges at the given position.
+     * The (x,y) is the slot's top-left corner (same as Minecraft's Slot.x, Slot.y minus 1).
+     */
+    public static void drawSlot(GuiGraphics g, int x, int y) {
+        // Outer bevel (top-left = light, bottom-right = dark)
+        g.hLine(x, x + 17, y, SLOT_LIGHT);
+        g.vLine(x, y, y + 17, SLOT_LIGHT);
+        g.hLine(x, x + 17, y + 17, SLOT_DARK);
+        g.vLine(x + 17, y, y + 17, SLOT_DARK);
+        // Inner fill
+        g.fill(x + 1, y + 1, x + 17, y + 17, SLOT_BG);
+    }
+
+    /**
+     * Draws a grid of item slots (rows × 9 columns) starting at (x, y).
+     * Slots are 18×18 with no gap (standard Minecraft layout).
+     */
+    public static void drawSlotGrid(GuiGraphics g, int x, int y, int rows) {
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < 9; col++) {
+                drawSlot(g, x + col * 18, y + row * 18);
+            }
+        }
+    }
+
+    /**
+     * Draws a full container background (replaces the chest texture):
+     * header with title area, content slots, player inventory, and hotbar.
+     * Positions match standard Minecraft slot layout: content at y+18, inv at y+140, hotbar at y+198.
+     *
+     * @param x          left edge
+     * @param y          top edge
+     * @param w          width (176 standard)
+     * @param contentRows number of content slot rows (typically 6 for a double chest)
+     */
+    public static void drawContainerBg(GuiGraphics g, int x, int y, int w, int contentRows) {
+        // Matches Minecraft's standard slot positions:
+        // Content: (8 + col*18, 18 + row*18) → bg starts at (7, 17)
+        // Player inv: (8 + col*18, 140 + row*18) → bg starts at (7, 139)
+        // Hotbar: (8 + col*18, 198) → bg starts at (7, 197)
+        int totalH = 222; // Standard 6-row container height
+
+        // Drop shadow
+        g.fill(x + 3, y + 3, x + w + 3, y + totalH + 3, 0x55000000);
+
+        // Main background gradient
+        g.fill(x, y, x + w, y + totalH / 2, 0xF01E1A24);
+        g.fill(x, y + totalH / 2, x + w, y + totalH, 0xF0141018);
+
+        // Outer border (copper)
+        drawBorder(g, x, y, w, totalH, BORDER_IDLE);
+
+        // Top accent bar
+        g.fill(x, y, x + w, y + 2, COPPER);
+
+        // Corner rivets
+        int rivet = 0xFF504030;
+        g.fill(x + 1, y + 1, x + 3, y + 3, rivet);
+        g.fill(x + w - 3, y + 1, x + w - 1, y + 3, rivet);
+        g.fill(x + 1, y + totalH - 3, x + 3, y + totalH - 1, rivet);
+        g.fill(x + w - 3, y + totalH - 3, x + w - 1, y + totalH - 1, rivet);
+
+        // Header inner highlight
+        g.fill(x + 1, y + 2, x + w - 1, y + 3, 0x18FFFFFF);
+
+        int slotX = x + 7;
+
+        // Content slot area (6 rows starting at y+17)
+        drawSlotGrid(g, slotX, y + 17, contentRows);
+
+        // Separator between content and player inventory
+        int sepY = y + 17 + contentRows * 18 + 3;
+        g.fill(x + 7, sepY, x + w - 7, sepY + 1, withAlpha(COPPER, 0x33));
+
+        // Player inventory label area highlight
+        g.fill(x + 6, y + 127, x + w - 6, y + 128, 0x0CFFFFFF);
+
+        // Player inventory slots (3 rows starting at y+139)
+        drawSlotGrid(g, slotX, y + 139, 3);
+
+        // Hotbar (1 row starting at y+197)
+        drawSlotGrid(g, slotX, y + 197, 1);
+
+        // Bottom accent bar
+        g.fill(x, y + totalH - 2, x + w, y + totalH, darken(COPPER, 40));
+    }
+
     // ── Color utilities ─────────────────────────────────────────────────────
 
     /** Brightens an ARGB color by the given amount (0-255). */
