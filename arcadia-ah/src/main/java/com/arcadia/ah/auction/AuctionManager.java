@@ -106,7 +106,7 @@ public final class AuctionManager {
     public static boolean listItem(ServerPlayer seller, ItemStack stack, long price, MinecraftServer server) {
         if (stack.isEmpty()) return false;
         if (price <= 0) {
-            seller.sendSystemMessage(Component.literal("§cPrice must be greater than 0."));
+            seller.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.error("Price must be greater than 0."));
             return false;
         }
 
@@ -147,14 +147,13 @@ public final class AuctionManager {
         int qty = stack.getCount();
         String itemName = stack.getHoverName().getString();
         if (qty > 1) {
-            seller.sendSystemMessage(Component.literal(
-                    "§a[AH] Listed §f" + qty + "×" + itemName
-                    + " §afor §f" + NumismaticsCompat.formatPrice(price) + " §7total §a(§f"
-                    + NumismaticsCompat.formatPrice(price / qty) + "§7/unit§a)."));
+            seller.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.success(
+                    "Listed " + qty + "×" + itemName
+                    + " for " + NumismaticsCompat.formatPrice(price) + " total ("
+                    + NumismaticsCompat.formatPrice(price / qty) + "/unit)."));
         } else {
-            seller.sendSystemMessage(Component.literal(
-                    "§a[AH] Listed §f" + itemName
-                    + " §afor §f" + NumismaticsCompat.formatPrice(price) + "§a."));
+            seller.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.success(
+                    "Listed " + itemName + " for " + NumismaticsCompat.formatPrice(price) + "."));
         }
         return true;
     }
@@ -167,19 +166,19 @@ public final class AuctionManager {
         Optional<AuctionListing> opt = cache.stream()
                 .filter(l -> l.listingId().equals(listingId)).findFirst();
         if (opt.isEmpty()) {
-            buyer.sendSystemMessage(Component.literal("§cListing no longer available."));
+            buyer.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.error("Listing no longer available."));
             return;
         }
         AuctionListing listing = opt.get();
 
         if (listing.sellerUuid().equals(buyer.getUUID())) {
-            buyer.sendSystemMessage(Component.literal("§cYou cannot buy your own listing."));
+            buyer.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.error("You cannot buy your own listing."));
             return;
         }
 
         if (!NumismaticsCompat.deductBalance(buyer, listing.price())) {
-            buyer.sendSystemMessage(Component.literal(
-                    "§cNot enough funds. Need §f" + NumismaticsCompat.formatPrice(listing.price()) + "§c."));
+            buyer.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.error(
+                    "Not enough funds. Need " + NumismaticsCompat.formatPrice(listing.price()) + "."));
             return;
         }
 
@@ -221,15 +220,15 @@ public final class AuctionManager {
         if (sellerOnline != null) {
             NumismaticsCompat.addBalance(sellerOnline, listing.price());
             AuctionDatabase.deleteMailboxEntry(payment.entryId());
-            sellerOnline.sendSystemMessage(Component.literal(
-                    "§6[AH] §f" + buyer.getGameProfile().getName()
-                    + " §6bought your §f" + listing.itemDisplayName()
-                    + " §6for §f" + NumismaticsCompat.formatPrice(listing.price()) + "§6."));
+            sellerOnline.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.success(
+                    buyer.getGameProfile().getName() + " bought your "
+                    + listing.itemDisplayName() + " for "
+                    + NumismaticsCompat.formatPrice(listing.price()) + "."));
         }
 
-        buyer.sendSystemMessage(Component.literal(
-                "§a[AH] Bought §f" + listing.itemDisplayName()
-                + " §afor §f" + NumismaticsCompat.formatPrice(listing.price()) + "§a."));
+        buyer.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.success(
+                "Bought " + listing.itemDisplayName()
+                + " for " + NumismaticsCompat.formatPrice(listing.price()) + "."));
     }
 
     // -------------------------------------------------------------------------
@@ -240,12 +239,12 @@ public final class AuctionManager {
         Optional<AuctionListing> opt = cache.stream()
                 .filter(l -> l.listingId().equals(listingId)).findFirst();
         if (opt.isEmpty()) {
-            seller.sendSystemMessage(Component.literal("§cListing not found."));
+            seller.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.error("Listing not found."));
             return;
         }
         AuctionListing listing = opt.get();
         if (!listing.sellerUuid().equals(seller.getUUID())) {
-            seller.sendSystemMessage(Component.literal("§cThis is not your listing."));
+            seller.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.error("This is not your listing."));
             return;
         }
 
@@ -261,8 +260,8 @@ public final class AuctionManager {
         com.arcadia.lib.data.DatabaseManager.executeAsync(() ->
                 AuctionDatabase.deleteListing(listingId));
 
-        seller.sendSystemMessage(Component.literal(
-                "§e[AH] Cancelled listing for §f" + listing.itemDisplayName() + "§e. Item returned."));
+        seller.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.warning(
+                "Cancelled listing for " + listing.itemDisplayName() + ". Item returned."));
     }
 
     // -------------------------------------------------------------------------
@@ -311,7 +310,7 @@ public final class AuctionManager {
                         NumismaticsCompat.addBalance(player, entry.coins());
                         String reason = entry.reason() != null ? entry.reason() : "Auction sale";
                         player.sendSystemMessage(Component.literal(
-                                "§6[AH Mailbox] §f" + NumismaticsCompat.formatPrice(entry.coins())
+                                "§6⚙ Arcadia §8▸ §a" + NumismaticsCompat.formatPrice(entry.coins())
                                 + " §6received: §7" + reason));
                     } else if ("item".equals(entry.type()) && entry.itemNbt() != null) {
                         ItemStack item = AuctionItemSerializer.fromBase64(entry.itemNbt(), reg);
@@ -319,7 +318,7 @@ public final class AuctionManager {
                             if (!player.getInventory().add(item)) player.drop(item, false);
                             String reason = entry.reason() != null ? entry.reason() : "Auction return";
                             player.sendSystemMessage(Component.literal(
-                                    "§6[AH Mailbox] Item returned: §f"
+                                    "§6⚙ Arcadia §8▸ §aItem returned: §f"
                                     + item.getHoverName().getString() + " §7(" + reason + ")"));
                         }
                     }

@@ -53,8 +53,8 @@ public final class PetsCommands {
                     .requires(src -> src.hasPermission(2))
                     .executes(ctx -> {
                         PetsGlobalFlags.PETS_ENABLED = true;
-                        ctx.getSource().sendSuccess(() -> Component.literal(
-                                "§a[Arcadia] Pets enabled for all players."), true);
+                        ctx.getSource().sendSuccess(() -> com.arcadia.lib.ArcadiaMessages.success(
+                                "Pets enabled for all players."), true);
                         return Command.SINGLE_SUCCESS;
                     })
                 )
@@ -68,8 +68,8 @@ public final class PetsCommands {
                                 if (!p.hasPermissions(2)) PetManager.despawn(p);
                             }
                         }
-                        ctx.getSource().sendSuccess(() -> Component.literal(
-                                "§c[Arcadia] Pets disabled. All active pets recalled. Operators are unaffected."), true);
+                        ctx.getSource().sendSuccess(() -> com.arcadia.lib.ArcadiaMessages.warning(
+                                "Pets disabled. All active pets recalled. Operators are unaffected."), true);
                         return Command.SINGLE_SUCCESS;
                     })
                 )
@@ -192,7 +192,7 @@ public final class PetsCommands {
                             .executes(ctx -> {
                                 PetsGlobalFlags.AFTERSHOCK_ON_HOSTILE = BoolArgumentType.getBool(ctx, "value");
                                 ctx.getSource().sendSuccess(() -> Component.literal(
-                                        "§6[Arcadia] Aftershock on hostile mobs: §e" + PetsGlobalFlags.AFTERSHOCK_ON_HOSTILE), true);
+                                        "§6⚙ Arcadia §8▸ §eAftershock on hostile mobs: §f" + PetsGlobalFlags.AFTERSHOCK_ON_HOSTILE), true);
                                 return Command.SINGLE_SUCCESS;
                             })
                         )
@@ -202,7 +202,7 @@ public final class PetsCommands {
                             .executes(ctx -> {
                                 PetsGlobalFlags.AFTERSHOCK_ON_NEUTRAL = BoolArgumentType.getBool(ctx, "value");
                                 ctx.getSource().sendSuccess(() -> Component.literal(
-                                        "§6[Arcadia] Aftershock on neutral/passive mobs: §e" + PetsGlobalFlags.AFTERSHOCK_ON_NEUTRAL), true);
+                                        "§6⚙ Arcadia §8▸ §eAftershock on neutral/passive mobs: §f" + PetsGlobalFlags.AFTERSHOCK_ON_NEUTRAL), true);
                                 return Command.SINGLE_SUCCESS;
                             })
                         )
@@ -212,7 +212,7 @@ public final class PetsCommands {
                             .executes(ctx -> {
                                 PetsGlobalFlags.AFTERSHOCK_ON_PLAYERS = BoolArgumentType.getBool(ctx, "value");
                                 ctx.getSource().sendSuccess(() -> Component.literal(
-                                        "§6[Arcadia] Aftershock on players: §e" + PetsGlobalFlags.AFTERSHOCK_ON_PLAYERS), true);
+                                        "§6⚙ Arcadia §8▸ §eAftershock on players: §f" + PetsGlobalFlags.AFTERSHOCK_ON_PLAYERS), true);
                                 return Command.SINGLE_SUCCESS;
                             })
                         )
@@ -239,7 +239,7 @@ public final class PetsCommands {
         if (!PetsGlobalFlags.PETS_ENABLED
                 && src.getEntity() instanceof ServerPlayer p
                 && !p.hasPermissions(2)) {
-            src.sendFailure(Component.literal("§c[Arcadia] This feature is currently disabled on this server."));
+            src.sendFailure(com.arcadia.lib.ArcadiaMessages.error("This feature is currently disabled on this server."));
             return false;
         }
         return true;
@@ -319,7 +319,7 @@ public final class PetsCommands {
         giveOrDrop(target, restored);
         String label = pet.rarity().getDisplayName() + " " + pet.mobType();
         src.sendSuccess(() -> Component.literal("§6[Arcadia] Restored §f" + label + " §6to §e" + target.getGameProfile().getName()), true);
-        target.sendSystemMessage(Component.literal("§6[Arcadia] An admin has restored your pet: §f" + label));
+        target.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.success("An admin has restored your pet: " + label));
         return Command.SINGLE_SUCCESS;
     }
 }

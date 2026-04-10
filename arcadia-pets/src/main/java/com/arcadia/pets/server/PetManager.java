@@ -642,8 +642,7 @@ public final class PetManager {
 
     public static void handlePetAction(ServerPlayer player, int actionId, UUID petId) {
         if (!com.arcadia.pets.PetsGlobalFlags.PETS_ENABLED && !player.hasPermissions(2)) {
-            player.sendSystemMessage(Component.literal("§c[Arcadia] Pets are currently disabled on this server.")
-                    .withStyle(ChatFormatting.RED));
+            player.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.error("Pets are currently disabled on this server."));
             return;
         }
         int baseAction = actionId >= 256 ? actionId / 256 : actionId;

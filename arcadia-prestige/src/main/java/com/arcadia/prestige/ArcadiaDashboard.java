@@ -88,6 +88,7 @@ public class ArcadiaDashboard {
     private void onServerAboutToStart(ServerAboutToStartEvent event) {
         boolean isDedicated = event.getServer().isDedicatedServer();
         DatabaseManager.initialize(isDedicated);
+        com.arcadia.lib.data.PlayerDataHandler.setServer(event.getServer());
         LuckPermsHook.init();
         CosmeticPermissionScanner.init();
         LOGGER.info("[ArcadiaPrestige] Server initialized. Dedicated: {}, DB active: {}, Debug: {}",

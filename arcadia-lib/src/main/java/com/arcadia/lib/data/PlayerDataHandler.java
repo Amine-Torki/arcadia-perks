@@ -19,6 +19,14 @@ public final class PlayerDataHandler {
     private static final long CLAIM_COOLDOWN_MS = 24L * 60 * 60 * 1000;
     private static final long STREAK_RESET_MS = 48L * 60 * 60 * 1000;
 
+    /** Server reference for SavedData access in singleplayer mode. */
+    private static net.minecraft.server.MinecraftServer serverRef;
+
+    /** Called from ArcadiaDashboard.onServerAboutToStart to provide server reference. */
+    public static void setServer(net.minecraft.server.MinecraftServer server) {
+        serverRef = server;
+    }
+
     private PlayerDataHandler() {}
 
     public record PlayerRecord(UUID uuid, String grade, String particleId, long lastClaim, int streak) {}
@@ -36,11 +44,17 @@ public final class PlayerDataHandler {
             return debugRecord;
         }
 
-        // In-memory mode (singleplayer): return a default record without DB
+        // In-memory mode (singleplayer): load from world SavedData for persistence across restarts
         if (DatabaseManager.isDebugMode()) {
-            PlayerRecord defaultRecord = new PlayerRecord(uuid, null, "", 0L, 0);
-            cache.put(uuid, defaultRecord);
-            return defaultRecord;
+            long lastClaim = 0L;
+            int streak = 0;
+            if (serverRef != null) {
+                long[] saved = PlayerDataSavedData.getOrCreate(serverRef).get(uuid);
+                if (saved != null) { lastClaim = saved[0]; streak = (int) saved[1]; }
+            }
+            PlayerRecord record = new PlayerRecord(uuid, null, "", lastClaim, streak);
+            cache.put(uuid, record);
+            return record;
         }
 
         String uuidStr = uuid.toString();
@@ -137,7 +151,13 @@ public final class PlayerDataHandler {
         PlayerRecord updated = new PlayerRecord(uuid, record.grade(), record.particleId(), now, newStreak);
         cache.put(uuid, updated);
 
-        if (DatabaseManager.isDebugMode()) return newStreak;
+        if (DatabaseManager.isDebugMode()) {
+            // Persist to world SavedData for singleplayer so claims survive restarts
+            if (serverRef != null) {
+                PlayerDataSavedData.getOrCreate(serverRef).save(uuid, now, newStreak);
+            }
+            return newStreak;
+        }
 
         String uuidStr = uuid.toString();
 

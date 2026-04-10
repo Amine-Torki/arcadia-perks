@@ -29,8 +29,7 @@ public class PetCollectionBookItem extends Item {
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         if (!level.isClientSide && player instanceof ServerPlayer sp) {
             if (!com.arcadia.pets.PetsGlobalFlags.PETS_ENABLED && !sp.hasPermissions(2)) {
-                sp.sendSystemMessage(Component.literal("§c[Arcadia] Pets are currently disabled on this server.")
-                        .withStyle(ChatFormatting.RED));
+                sp.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.error("Pets are currently disabled on this server."));
                 return InteractionResultHolder.fail(player.getItemInHand(hand));
             }
             if (player.isShiftKeyDown()) {
