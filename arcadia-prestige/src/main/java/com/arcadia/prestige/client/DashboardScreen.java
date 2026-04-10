@@ -104,13 +104,35 @@ public class DashboardScreen extends AbstractContainerScreen<DashboardMenu> {
 
     private void renderFirstPersonToggle(GuiGraphics graphics, int mouseX, int mouseY) {
         boolean hidden = PlayerEffectCache.isHideOwnEffectsFirstPerson();
-        Component label = Component.translatable(hidden ? "arcadia_prestige.gui.cosmetics.hide_effects_on" : "arcadia_prestige.gui.cosmetics.hide_effects_off");
         int bx = this.leftPos + 4;
-        int by = this.topPos + this.imageHeight + 3;
+        int by = this.topPos + this.imageHeight + 4;
         int bw = this.imageWidth - 8;
-        boolean hovered = mouseX >= bx && mouseX <= bx + bw && mouseY >= by && mouseY <= by + 10;
-        graphics.fill(bx - 1, by - 1, bx + bw + 1, by + 11, hovered ? 0x90302818 : 0x70181210);
-        graphics.drawString(this.font, label, bx + 2, by + 1, ArcadiaTheme.TEXT_PRIMARY, false);
+        int bh = 14;
+        boolean hovered = mouseX >= bx && mouseX <= bx + bw && mouseY >= by && mouseY <= by + bh;
+
+        // Background
+        graphics.fill(bx, by, bx + bw, by + bh, hovered ? 0xDD1E1A24 : 0xCC141018);
+        // Border
+        ArcadiaTheme.drawBorder(graphics, bx, by, bw, bh, hovered ? ArcadiaTheme.COPPER : ArcadiaTheme.BORDER_IDLE);
+
+        // Toggle indicator
+        int dotX = bx + 4;
+        int dotY = by + 3;
+        int dotSize = 8;
+        graphics.fill(dotX, dotY, dotX + dotSize, dotY + dotSize,
+                hidden ? 0xFF2A4A2A : 0xFF3A2020);
+        ArcadiaTheme.drawBorder(graphics, dotX, dotY, dotSize, dotSize,
+                hidden ? 0xFF44AA44 : 0xFF664444);
+        if (hidden) {
+            graphics.fill(dotX + 2, dotY + 2, dotX + dotSize - 2, dotY + dotSize - 2, 0xFF55CC55);
+        }
+
+        // Label text
+        Component label = Component.translatable(hidden
+                ? "arcadia_prestige.gui.cosmetics.toggle_on"
+                : "arcadia_prestige.gui.cosmetics.toggle_off");
+        graphics.drawString(this.font, label, bx + dotSize + 8, by + 3,
+                hovered ? ArcadiaTheme.TEXT_PRIMARY : ArcadiaTheme.TEXT_SECONDARY, false);
     }
 
     // -------------------------------------------------------------------------
@@ -154,9 +176,9 @@ public class DashboardScreen extends AbstractContainerScreen<DashboardMenu> {
             // First-person toggle
             if (currentTab == 0 || currentTab == 1) {
                 int bx = this.leftPos + 4;
-                int by = this.topPos + this.imageHeight + 3;
+                int by = this.topPos + this.imageHeight + 4;
                 int bw = this.imageWidth - 8;
-                if (mouseX >= bx && mouseX <= bx + bw && mouseY >= by && mouseY <= by + 10) {
+                if (mouseX >= bx && mouseX <= bx + bw && mouseY >= by && mouseY <= by + 14) {
                     playClick();
                     PlayerEffectCache.toggleHideOwnEffectsFirstPerson();
                     return true;

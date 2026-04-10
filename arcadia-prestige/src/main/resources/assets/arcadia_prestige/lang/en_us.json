@@ -61,6 +61,8 @@
   "arcadia_prestige.gui.cosmetics.activate_hint": "Click to activate",
   "arcadia_prestige.gui.cosmetics.hide_effects_on":  "\u00a7a[\u00a7f\u2714\u00a7a] \u00a77Hide effects & pet in 1st person",
   "arcadia_prestige.gui.cosmetics.hide_effects_off": "\u00a77[ ] \u00a77Hide effects & pet in 1st person",
+  "arcadia_prestige.gui.cosmetics.toggle_on":  "Hide effects & pet in 1st person",
+  "arcadia_prestige.gui.cosmetics.toggle_off": "Hide effects & pet in 1st person",
 
   "arcadia_prestige.gui.pet_panel.title":      "Pet Panel",
   "arcadia_prestige.gui.pet_panel.name_label": "Pet name",

@@ -54,6 +54,8 @@
   "arcadia_prestige.gui.cosmetics.activate_hint": "Clique pour activer",
   "arcadia_prestige.gui.cosmetics.hide_effects_on":  "\u00a7a[\u00a7f\u2714\u00a7a] \u00a77Masquer effets & pet en 1ère pers.",
   "arcadia_prestige.gui.cosmetics.hide_effects_off": "\u00a77[ ] \u00a77Masquer effets & pet en 1ère pers.",
+  "arcadia_prestige.gui.cosmetics.toggle_on":  "Masquer effets & familier en 1ère personne",
+  "arcadia_prestige.gui.cosmetics.toggle_off": "Masquer effets & familier en 1ère personne",
 
   "arcadia_prestige.gui.pet_panel.title":      "Panneau du Familier",
   "arcadia_prestige.gui.pet_panel.name_label": "Nom du familier",
