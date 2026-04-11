@@ -571,17 +571,18 @@ public class DashboardMenu extends AbstractContainerMenu {
 
         @Override
         public boolean isActive() {
-            // On Pets tab → show everything (including pets)
+            // On Pets tab → show everything (including pet items)
             if (currentTab == 1) return true;
-            // On other tabs → hide PetItem stacks
+            // On other tabs → hide ALL arcadia_pets items
             ItemStack stack = getItem();
-            if (!stack.isEmpty() && isPetItem(stack)) return false;
+            if (!stack.isEmpty() && isPetsModItem(stack)) return false;
             return true;
         }
 
-        private static boolean isPetItem(ItemStack stack) {
-            // Check by item class name to avoid importing PetItem from arcadia-pets
-            return stack.getItem().getClass().getSimpleName().equals("PetItem");
+        private static boolean isPetsModItem(ItemStack stack) {
+            // Check by item registry namespace — catches PetItem, bags, treats, essence, etc.
+            var key = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
+            return key.getNamespace().equals("arcadia_pets");
         }
     }
 }
