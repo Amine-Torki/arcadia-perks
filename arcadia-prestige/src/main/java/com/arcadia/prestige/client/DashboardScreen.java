@@ -6,8 +6,6 @@ import com.arcadia.lib.client.ArcadiaModCard;
 import com.arcadia.lib.client.ArcadiaTheme;
 import com.arcadia.prestige.network.C2SDashboardAction;
 import com.arcadia.prestige.server.DashboardMenu;
-import com.arcadia.pets.client.PetGuideScreen;
-import com.arcadia.pets.client.PetHudSettingsScreen;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -232,7 +230,7 @@ public class DashboardScreen extends AbstractContainerScreen<DashboardMenu> {
                 int sy = this.topPos + slot47.y;
                 if (mouseX >= sx && mouseX < sx + 16 && mouseY >= sy && mouseY < sy + 16) {
                     playClick();
-                    net.minecraft.client.Minecraft.getInstance().setScreen(new PetGuideScreen());
+                    com.arcadia.lib.ArcadiaModRegistry.executeClientAction("pets.open_guide");
                     return true;
                 }
             }
@@ -244,7 +242,7 @@ public class DashboardScreen extends AbstractContainerScreen<DashboardMenu> {
                 int sy = this.topPos + slot48.y;
                 if (mouseX >= sx && mouseX < sx + 16 && mouseY >= sy && mouseY < sy + 16) {
                     playClick();
-                    net.minecraft.client.Minecraft.getInstance().setScreen(new PetHudSettingsScreen());
+                    com.arcadia.lib.ArcadiaModRegistry.executeClientAction("pets.open_hud_settings");
                     return true;
                 }
             }

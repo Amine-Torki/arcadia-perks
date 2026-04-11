@@ -35,12 +35,60 @@ public final class ArcadiaPets {
         com.arcadia.lib.ArcadiaModRegistry.registerTabHandler(1,
                 com.arcadia.pets.server.PetsDashboardTab::new);
 
-        // Register hub card so the Arcadia Hub displays the Pets module
+        // Register hub card
         com.arcadia.lib.ArcadiaModRegistry.registerCard(
                 new com.arcadia.lib.client.ArcadiaModCard("pets", "♦",
                         "arcadia_prestige.hub.pets.label", "arcadia_prestige.hub.pets.sub",
                         0x4ECCA3, 1, true));
-        LOGGER.info("[ArcadiaPets] Registered pets tab in ArcadiaModRegistry.");
+
+        // Register server-side actions (so prestige can call them without importing us)
+        com.arcadia.lib.ArcadiaModRegistry.registerServerAction("pets.despawn",
+                p -> com.arcadia.pets.server.PetManager.despawn(p));
+        com.arcadia.lib.ArcadiaModRegistry.registerServerActionWithPayload("pets.summon",
+                (p, slot) -> {
+                    try { com.arcadia.pets.server.PetManager.summonFromInventory(p, Integer.parseInt(slot)); }
+                    catch (NumberFormatException ignored) {}
+                });
+        com.arcadia.lib.ArcadiaModRegistry.registerServerActionWithPayload("pets.star_essence",
+                (p, slot) -> {
+                    try { com.arcadia.pets.server.PetManager.applyStarEssence(p, Integer.parseInt(slot)); }
+                    catch (NumberFormatException ignored) {}
+                });
+
+        // Register client-side actions (so prestige's DashboardScreen can open our screens)
+        com.arcadia.lib.ArcadiaModRegistry.registerClientAction("pets.open_guide",
+                () -> net.minecraft.client.Minecraft.getInstance().setScreen(new com.arcadia.pets.client.PetGuideScreen()));
+        com.arcadia.lib.ArcadiaModRegistry.registerClientAction("pets.open_hud_settings",
+                () -> net.minecraft.client.Minecraft.getInstance().setScreen(new com.arcadia.pets.client.PetHudSettingsScreen()));
+
+        // Register menu screen initializers (so prestige doesn't need to import our screens)
+        com.arcadia.lib.ArcadiaModRegistry.registerMenuScreenInit("arcadia_pets", () -> {
+            net.neoforged.neoforge.client.event.RegisterMenuScreensEvent e = null; // handled in own client events
+        });
+
+        // Register reward items (so DailyRewardHandler can give pet items without importing us)
+        com.arcadia.lib.ArcadiaModRegistry.registerRewardItem("common_pet_bag",
+                () -> new net.minecraft.world.item.ItemStack(PetsModItems.COMMON_PET_BAG.get()));
+        com.arcadia.lib.ArcadiaModRegistry.registerRewardItem("uncommon_pet_bag",
+                () -> new net.minecraft.world.item.ItemStack(PetsModItems.UNCOMMON_PET_BAG.get()));
+        com.arcadia.lib.ArcadiaModRegistry.registerRewardItem("rare_pet_bag",
+                () -> new net.minecraft.world.item.ItemStack(PetsModItems.RARE_PET_BAG.get()));
+        com.arcadia.lib.ArcadiaModRegistry.registerRewardItem("epic_pet_bag",
+                () -> new net.minecraft.world.item.ItemStack(PetsModItems.EPIC_PET_BAG.get()));
+        com.arcadia.lib.ArcadiaModRegistry.registerRewardItem("legendary_pet_bag",
+                () -> new net.minecraft.world.item.ItemStack(PetsModItems.LEGENDARY_GUARANTEED_BAG.get()));
+        com.arcadia.lib.ArcadiaModRegistry.registerRewardItem("star_essence",
+                () -> new net.minecraft.world.item.ItemStack(PetsModItems.STAR_ESSENCE.get()));
+        com.arcadia.lib.ArcadiaModRegistry.registerRewardItem("pet_treat",
+                () -> new net.minecraft.world.item.ItemStack(PetsModItems.PET_TREAT.get()));
+        com.arcadia.lib.ArcadiaModRegistry.registerRewardItem("pet_snack",
+                () -> new net.minecraft.world.item.ItemStack(PetsModItems.PET_SNACK.get()));
+
+        // Register server-side player logout action for pet cleanup
+        com.arcadia.lib.ArcadiaModRegistry.registerServerAction("pets.player_logout",
+                p -> com.arcadia.pets.server.PetManager.handlePlayerLogout(p));
+
+        LOGGER.info("[ArcadiaPets] Registered in ArcadiaModRegistry (tab, cards, actions, items).");
     }
 
     private void onConfigLoad(ModConfigEvent event) {

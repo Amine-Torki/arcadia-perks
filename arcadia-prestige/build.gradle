@@ -15,9 +15,8 @@ neoForge {
 
 dependencies {
     compileOnly project(':arcadia-lib')
-    compileOnly project(':arcadia-pets')
-    compileOnly project(':arcadia-ah')
-    compileOnly "net.luckperms:api:5.4"
+    compileOnly "net.luckperms:api:5.4"  // CosmeticPermissionScanner uses LP Group API directly
+    // No dependencies on arcadia-pets or arcadia-ah — all communication via ArcadiaModRegistry
 }
 
 jar { manifest { attributes 'Implementation-Version': project.version } }

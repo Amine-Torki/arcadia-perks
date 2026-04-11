@@ -38,6 +38,12 @@ public final class ArcadiaAH {
         com.arcadia.lib.ArcadiaModRegistry.registerTabHandler(3,
                 com.arcadia.ah.server.AhDashboardTab::new);
 
+        // Register server-side actions
+        com.arcadia.lib.ArcadiaModRegistry.registerServerAction("ah.refresh_cache",
+                p -> com.arcadia.ah.auction.AuctionManager.refreshCache());
+        com.arcadia.lib.ArcadiaModRegistry.registerServerActionWithPayload("ah.clear_search",
+                (p, unused) -> com.arcadia.ah.auction.AuctionManager.clearSearch(p.getUUID()));
+
         // Register hub card so the Arcadia Hub displays the AH module
         com.arcadia.lib.ArcadiaModRegistry.registerCard(
                 new com.arcadia.lib.client.ArcadiaModCard("ah", "★",

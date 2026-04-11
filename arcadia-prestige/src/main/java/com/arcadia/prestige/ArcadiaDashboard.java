@@ -7,7 +7,7 @@ import com.arcadia.prestige.config.PrestigeConfig;
 import com.arcadia.prestige.network.PacketHandler;
 import com.arcadia.prestige.server.DashboardMenu;
 import com.arcadia.prestige.server.CosmeticPermissionScanner;
-import com.arcadia.prestige.server.LuckPermsHook;
+// LuckPermsHook moved to lib as LuckPermsBackend — initialized via PermissionService
 import com.mojang.logging.LogUtils;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;

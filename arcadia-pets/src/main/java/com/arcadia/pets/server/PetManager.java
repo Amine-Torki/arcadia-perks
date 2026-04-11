@@ -340,31 +340,38 @@ public final class PetManager {
     // Event handlers
     // =========================================================================
 
+    /** Called via ArcadiaModRegistry server action from prestige's ParticleScheduler. */
+    public static void handlePlayerLogout(ServerPlayer sp) {
+        onPlayerLogout_internal(sp);
+    }
+
     public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getEntity() instanceof ServerPlayer sp) {
-            UUID pid = sp.getUUID();
-            // Save designated pet (the selection, independent of equipped state)
-            UUID designated = designatedPetId.get(pid);
-            if (designated != null) {
-                sp.getPersistentData().putUUID("arcadia_active_pet", designated);
-            } else {
-                sp.getPersistentData().remove("arcadia_active_pet");
-            }
-            // Save equipped pet for auto re-summon on login
-            PetData active = activePetData.get(pid);
-            PetData pocket = pocketPets.get(pid);
-            PetData equipped = active != null ? active : pocket;
-            if (equipped != null) {
-                sp.getPersistentData().putUUID("arcadia_last_pet", equipped.petId());
-            } else {
-                sp.getPersistentData().remove("arcadia_last_pet");
-            }
-            despawn(sp);
-            designatedPetId.remove(pid);
-            petMovement.remove(pid);
-            petBehaviour.remove(pid);
-            disabledSkills.remove(pid);
+            onPlayerLogout_internal(sp);
         }
+    }
+
+    private static void onPlayerLogout_internal(ServerPlayer sp) {
+        UUID pid = sp.getUUID();
+        UUID designated = designatedPetId.get(pid);
+        if (designated != null) {
+            sp.getPersistentData().putUUID("arcadia_active_pet", designated);
+        } else {
+            sp.getPersistentData().remove("arcadia_active_pet");
+        }
+        PetData active = activePetData.get(pid);
+        PetData pocket = pocketPets.get(pid);
+        PetData equipped = active != null ? active : pocket;
+        if (equipped != null) {
+            sp.getPersistentData().putUUID("arcadia_last_pet", equipped.petId());
+        } else {
+            sp.getPersistentData().remove("arcadia_last_pet");
+        }
+        despawn(sp);
+        designatedPetId.remove(pid);
+        petMovement.remove(pid);
+        petBehaviour.remove(pid);
+        disabledSkills.remove(pid);
     }
 
     // =========================================================================

@@ -122,7 +122,7 @@ public class DashboardMenu extends AbstractContainerMenu {
     public void switchTab(int tab, Player player) {
         // Clear AH search when navigating away from the AH tab
         if (this.currentTab == 3 && tab != 3 && player instanceof net.minecraft.server.level.ServerPlayer sp) {
-            com.arcadia.ah.auction.AuctionManager.clearSearch(sp.getUUID());
+            com.arcadia.lib.ArcadiaModRegistry.executeServerAction("ah.clear_search", sp);
         }
         this.currentTab = tab;
         this.tabSlot.set(tab);
@@ -144,7 +144,7 @@ public class DashboardMenu extends AbstractContainerMenu {
                 for (int ri = 0; ri < 3; ri++) {
                     if (slotId == DailyRewardHandler.MILESTONE_GIFT_SLOTS[mi][ri]) {
                         if (pathPos > DailyRewardHandler.MILESTONE_PATH_INDICES[mi]
-                                && LuckPermsHook.hasMinimumGrade(sp, DailyRewardHandler.RANK_GRADES[ri])) {
+                                && com.arcadia.lib.permissions.PermissionService.hasMinimumGrade(sp, DailyRewardHandler.RANK_GRADES[ri])) {
                             DailyRewardHandler.claimMilestoneGift(sp, cycle, mi, ri);
                             refreshTab();
                         }
@@ -293,7 +293,7 @@ public class DashboardMenu extends AbstractContainerMenu {
                     int idx = r * 5 + col;
                     if (idx >= ids.length) return;
                     String pid = ids[idx];
-                    if (LuckPermsHook.canUseParticle(sp, pid)) {
+                    if (com.arcadia.lib.permissions.PermissionService.canUseCosmetic(sp, pid)) {
                         com.arcadia.lib.data.DatabaseManager.executeAsync(
                                 () -> PlayerDataHandler.saveParticle(sp.getUUID(), pid));
                         ParticleScheduler.broadcastParticleChange(sp, pid);
@@ -397,7 +397,7 @@ public class DashboardMenu extends AbstractContainerMenu {
     }
 
     private ItemStack buildParticleIcon(String id, String name, net.minecraft.world.item.Item icon, String currentParticle) {
-        boolean unlocked = LuckPermsHook.canUseParticle(player, id);
+        boolean unlocked = com.arcadia.lib.permissions.PermissionService.canUseCosmetic(player, id);
         boolean selected  = id.equals(currentParticle);
         String  tierLabel = CosmeticPermissionScanner.getTierLabel(id); // null = individually sold
 
@@ -476,7 +476,7 @@ public class DashboardMenu extends AbstractContainerMenu {
                 int giftSlot         = DailyRewardHandler.MILESTONE_GIFT_SLOTS[mi][ri];
                 String requiredGrade = DailyRewardHandler.RANK_GRADES[ri];
                 String displayRank   = DailyRewardHandler.RANK_DISPLAY[ri];
-                boolean hasGrade = LuckPermsHook.hasMinimumGrade(player, requiredGrade);
+                boolean hasGrade = com.arcadia.lib.permissions.PermissionService.hasMinimumGrade(player, requiredGrade);
                 boolean claimed  = (milestoneClaims & DailyRewardHandler.claimBit(mi, ri)) != 0;
                 ChatFormatting rankColor = ri == 0 ? ChatFormatting.GOLD : ri == 1 ? ChatFormatting.LIGHT_PURPLE : ChatFormatting.AQUA;
                 net.minecraft.world.item.Item rankIcon = ri == 0 ? Items.GOLD_INGOT : ri == 1 ? Items.AMETHYST_SHARD : Items.NETHER_STAR;

@@ -2,7 +2,7 @@ package com.arcadia.ah.auction;
 
 
 import com.arcadia.ah.config.AhConfig;
-import com.arcadia.pets.item.PetItem;
+// PetItem check via item registry name to avoid depending on arcadia-pets
 import com.mojang.logging.LogUtils;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
@@ -121,7 +121,7 @@ public final class AuctionManager {
         String nbt = AuctionItemSerializer.toBase64(stack, reg);
         if (nbt.isEmpty()) return false;
 
-        String category = (stack.getItem() instanceof PetItem) ? "pet" : "misc";
+        String category = stack.getItem().getClass().getSimpleName().equals("PetItem") ? "pet" : "misc";
         long now = System.currentTimeMillis();
 
         AuctionListing listing = new AuctionListing(

@@ -71,6 +71,99 @@ public final class ArcadiaModRegistry {
         if (clientTabOpener != null) clientTabOpener.accept(tabIndex);
     }
 
+    // ── Server-side action callbacks (decouples mods from each other) ──────
+
+    private static final Map<String, java.util.function.Consumer<ServerPlayer>> serverActions = new ConcurrentHashMap<>();
+    private static final Map<String, java.util.function.BiConsumer<ServerPlayer, String>> serverActionsWithPayload = new ConcurrentHashMap<>();
+
+    /** Registers a named server-side action. Any mod can trigger it by ID. */
+    public static void registerServerAction(String actionId, java.util.function.Consumer<ServerPlayer> handler) {
+        serverActions.put(actionId, handler);
+    }
+
+    /** Registers a server-side action with a string payload parameter. */
+    public static void registerServerActionWithPayload(String actionId, java.util.function.BiConsumer<ServerPlayer, String> handler) {
+        serverActionsWithPayload.put(actionId, handler);
+    }
+
+    /**
+     * Executes a registered server-side action.
+     * Supports "actionId:payload" format — splits on first ':' and passes payload to handler.
+     */
+    public static void executeServerAction(String actionIdOrCompound, ServerPlayer player) {
+        // Try exact match first
+        var handler = serverActions.get(actionIdOrCompound);
+        if (handler != null) { handler.accept(player); return; }
+
+        // Try "prefix:payload" format
+        int colon = actionIdOrCompound.indexOf(':');
+        if (colon > 0) {
+            String prefix = actionIdOrCompound.substring(0, colon);
+            String payload = actionIdOrCompound.substring(colon + 1);
+            var payloadHandler = serverActionsWithPayload.get(prefix);
+            if (payloadHandler != null) { payloadHandler.accept(player, payload); return; }
+            // Also try simple action with prefix only
+            var simpleHandler = serverActions.get(prefix);
+            if (simpleHandler != null) simpleHandler.accept(player);
+        }
+    }
+
+    /** Checks if a server action is registered. */
+    public static boolean hasServerAction(String actionId) {
+        return serverActions.containsKey(actionId) || serverActionsWithPayload.containsKey(actionId);
+    }
+
+    // ── Client-side action callbacks ────────────────────────────────────────
+
+    private static final Map<String, Runnable> clientActions = new ConcurrentHashMap<>();
+
+    /** Registers a named client-side action (e.g. opening a specific screen). */
+    public static void registerClientAction(String actionId, Runnable handler) {
+        clientActions.put(actionId, handler);
+    }
+
+    /** Executes a registered client-side action. */
+    public static void executeClientAction(String actionId) {
+        var handler = clientActions.get(actionId);
+        if (handler != null) handler.run();
+    }
+
+    // ── Reward item registry (decouples reward systems from item mods) ──────
+
+    private static final Map<String, java.util.function.Supplier<net.minecraft.world.item.ItemStack>> rewardItems = new ConcurrentHashMap<>();
+
+    /** Registers a reward item factory. Used by daily rewards, etc. */
+    public static void registerRewardItem(String itemId, java.util.function.Supplier<net.minecraft.world.item.ItemStack> factory) {
+        rewardItems.put(itemId, factory);
+    }
+
+    /** Creates a reward item by ID. Returns EMPTY if not registered. */
+    public static net.minecraft.world.item.ItemStack createRewardItem(String itemId) {
+        var factory = rewardItems.get(itemId);
+        return factory != null ? factory.get() : net.minecraft.world.item.ItemStack.EMPTY;
+    }
+
+    /** Creates a reward item with a specific count. */
+    public static net.minecraft.world.item.ItemStack createRewardItem(String itemId, int count) {
+        var stack = createRewardItem(itemId);
+        if (!stack.isEmpty()) stack.setCount(count);
+        return stack;
+    }
+
+    // ── Screen/menu registration registry (for client-side menu registrations) ──
+
+    private static final Map<String, Runnable> menuRegistrations = new ConcurrentHashMap<>();
+
+    /** Registers a menu screen registration callback. Called during RegisterMenuScreensEvent. */
+    public static void registerMenuScreenInit(String modId, Runnable registrar) {
+        menuRegistrations.put(modId, registrar);
+    }
+
+    /** Returns all registered menu screen initializers. */
+    public static java.util.Collection<Runnable> getMenuRegistrations() {
+        return menuRegistrations.values();
+    }
+
     // ── Hub ──────────────────────────────────────────────────────────────────
 
     /** Registered by the dashboard mod to allow any mod to open the main hub. */

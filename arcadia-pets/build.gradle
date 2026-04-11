@@ -15,7 +15,7 @@ neoForge {
 
 dependencies {
     compileOnly project(':arcadia-lib')
-    compileOnly "net.luckperms:api:5.4"
+    // LuckPerms is provided by arcadia-lib — no need here
 }
 
 jar {
