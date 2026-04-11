@@ -28,7 +28,8 @@ It provides a complete, ready-to-use toolkit: **permissions**, **database**, **U
 17. [Sound Helper](#sound-helper)
 18. [Message Helper](#message-helper)
 19. [Player Utilities](#player-utilities)
-20. [API Reference](#api-reference)
+20. [Economy System](#economy-system)
+21. [API Reference](#api-reference)
 
 ---
 
@@ -410,8 +411,11 @@ All Arcadia configs follow the convention: `config/arcadia/<module>/<file>.toml`
 |-----------------------------------|----------|--------------------------------------|
 | `arcadia/lib/database.toml`       | lib      | MySQL connection (host, port, etc.)  |
 | `arcadia/lib/permissions.toml`    | lib      | Grade permission nodes               |
+| `arcadia/lib/staff.toml`          | lib      | Staff role permission nodes          |
+| `arcadia/lib/economy.toml`        | lib      | Economy provider + currency config   |
 | `arcadia/prestige/prestige.toml`  | prestige | Server ID, prestige settings         |
 | `arcadia/pets/pets.toml`          | pets     | Pet pool weights, rarities           |
+| `arcadia/pets/hud.json`           | pets     | HUD position + toggle settings       |
 | `arcadia/ah/ah.toml`             | ah       | Listing duration, max listings       |
 
 Your mod should follow the same pattern:
@@ -734,6 +738,99 @@ int diamonds = PlayerUtils.countItem(player, Items.DIAMOND);
 
 ---
 
+## Economy System
+
+Centralized, configurable economy for all Arcadia mods. Supports multiple currency providers out of the box.
+
+### Configuration (`config/arcadia/lib/economy.toml`)
+
+```toml
+[economy]
+# Options: 'numismatics', 'items', 'none'
+provider = "numismatics"
+
+# Display name used in chat messages
+currency_name = "Coins"
+
+# Short symbol for compact displays
+currency_symbol = "¤"
+
+# When provider = 'items', the item used as currency
+item_currency_id = "minecraft:emerald"
+```
+
+### Supported Providers
+
+| Provider | Mod Required | How it Works |
+|----------|-------------|--------------|
+| `numismatics` | Create: Numismatics | Bank account API (spurs/copper/silver/gold). Auto-detects if installed, falls back to `none` if absent. |
+| `items` | None (vanilla) | Any Minecraft item as currency. Counts items in inventory, removes on purchase, gives on sale. Configurable via `item_currency_id`. |
+| `none` | None | Free mode — no currency deducted. Good for testing or free servers. |
+
+### Item Currency Examples
+
+```toml
+# Use emeralds as currency
+item_currency_id = "minecraft:emerald"
+
+# Use diamonds
+item_currency_id = "minecraft:diamond"
+
+# Use gold ingots
+item_currency_id = "minecraft:gold_ingot"
+
+# Use a modded item
+item_currency_id = "create:experience_nugget"
+```
+
+### Usage from any mod
+
+```java
+import com.arcadia.lib.economy.EconomyService;
+
+// Check balance
+long balance = EconomyService.getBalance(player);
+
+// Deduct currency (returns false if insufficient funds)
+if (EconomyService.deduct(player, 500)) {
+    // purchase successful
+} else {
+    player.sendSystemMessage(ArcadiaMessages.error("Not enough funds!"));
+}
+
+// Add currency
+EconomyService.add(player, 1000);
+
+// Format for display (adapts to active provider)
+String price = EconomyService.formatPrice(1500);
+// Numismatics: "15s"
+// Items: "1500 Coins"
+// None: "Free"
+
+// Check provider info
+boolean available = EconomyService.isAvailable();
+String name = EconomyService.getProviderName(); // "Create: Numismatics"
+```
+
+### Creating a Custom Backend
+
+Implement `EconomyBackend` to add support for other economy mods:
+
+```java
+public class MyEconomyBackend implements EconomyBackend {
+    @Override public long getBalance(ServerPlayer player) { ... }
+    @Override public boolean deduct(ServerPlayer player, long amount) { ... }
+    @Override public void add(ServerPlayer player, long amount) { ... }
+    @Override public boolean isAvailable() { ... }
+    @Override public String getName() { return "My Economy Mod"; }
+    @Override public String formatPrice(long amount) { return amount + " coins"; }
+}
+```
+
+Register it by modifying `EconomyService.init()` to recognize your provider name in the config.
+
+---
+
 ## API Reference
 
 ### Core Classes
@@ -774,6 +871,16 @@ int diamonds = PlayerUtils.countItem(player, Items.DIAMOND);
 | `TeleportManager`          | `com.arcadia.lib.teleport`       | Safe teleport with warmup/cooldown         |
 | `SchedulerService`         | `com.arcadia.lib.scheduler`      | Tick-based task scheduling                 |
 | `TextFormatter`            | `com.arcadia.lib.text`           | Placeholders, rich text, number formatting |
+
+### Economy Classes
+
+| Class                      | Package                          | Purpose                                    |
+|----------------------------|----------------------------------|--------------------------------------------|
+| `EconomyService`           | `com.arcadia.lib.economy`        | Public API (getBalance, deduct, add, formatPrice) |
+| `EconomyBackend`           | `com.arcadia.lib.economy`        | Pluggable backend interface + NONE fallback |
+| `NumismaticsBackend`       | `com.arcadia.lib.economy`        | Create: Numismatics (pure reflection)       |
+| `ItemCurrencyBackend`      | `com.arcadia.lib.economy`        | Vanilla item currency (configurable)        |
+| `EconomyConfig`            | `com.arcadia.lib.economy`        | Provider selection + currency config        |
 
 ### Staff Classes
 
