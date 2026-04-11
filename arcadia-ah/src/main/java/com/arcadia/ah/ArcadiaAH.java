@@ -47,7 +47,7 @@ public final class ArcadiaAH {
         // Register hub card so the Arcadia Hub displays the AH module
         com.arcadia.lib.ArcadiaModRegistry.registerCard(
                 new com.arcadia.lib.client.ArcadiaModCard("ah", "★",
-                        "arcadia_prestige.hub.auction.label", "arcadia_prestige.hub.auction.sub",
+                        "arcadia_ah.hub.auction.label", "arcadia_ah.hub.auction.sub",
                         0xB87333, 3, true));
         LOGGER.info("[ArcadiaAH] Registered AH tab in ArcadiaModRegistry.");
     }

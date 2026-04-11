@@ -38,7 +38,7 @@ public final class ArcadiaPets {
         // Register hub card
         com.arcadia.lib.ArcadiaModRegistry.registerCard(
                 new com.arcadia.lib.client.ArcadiaModCard("pets", "♦",
-                        "arcadia_prestige.hub.pets.label", "arcadia_prestige.hub.pets.sub",
+                        "arcadia_pets.hub.pets.label", "arcadia_pets.hub.pets.sub",
                         0x4ECCA3, 1, true));
 
         // Register server-side actions (so prestige can call them without importing us)

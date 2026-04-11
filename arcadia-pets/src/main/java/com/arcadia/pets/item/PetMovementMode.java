@@ -1,8 +1,8 @@
 package com.arcadia.pets.item;
 
 public enum PetMovementMode {
-    FOLLOW("arcadia_prestige.pet.mode.follow"),
-    POCKET("arcadia_prestige.pet.mode.pocket");
+    FOLLOW("arcadia_pets.pet.mode.follow"),
+    POCKET("arcadia_pets.pet.mode.pocket");
 
     private final String label;
 

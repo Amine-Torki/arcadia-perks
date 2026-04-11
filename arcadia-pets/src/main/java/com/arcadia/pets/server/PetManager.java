@@ -446,12 +446,12 @@ public final class PetManager {
             if (!c.isEmpty() && c.getItem() == PetsModItems.STAR_ESSENCE.get()) { essenceStack = c; break; }
         }
         if (essenceStack.isEmpty()) {
-            player.sendSystemMessage(Component.translatable("arcadia_prestige.msg.pet_no_essence").withStyle(ChatFormatting.RED));
+            player.sendSystemMessage(Component.translatable("arcadia_pets.msg.pet_no_essence").withStyle(ChatFormatting.RED));
             return false;
         }
         boolean applied = StarEssenceItem.applyToPet(petStack, essenceStack);
         if (applied) {
-            player.sendSystemMessage(Component.translatable("arcadia_prestige.msg.pet_star_upgraded").withStyle(ChatFormatting.GOLD));
+            player.sendSystemMessage(Component.translatable("arcadia_pets.msg.pet_star_upgraded").withStyle(ChatFormatting.GOLD));
         }
         return applied;
     }
@@ -511,8 +511,8 @@ public final class PetManager {
             openPanelFor(player, s);
 
             Component msg = finalName != null
-                    ? Component.translatable("arcadia_prestige.msg.pet_renamed", finalName)
-                    : Component.translatable("arcadia_prestige.msg.pet_name_cleared");
+                    ? Component.translatable("arcadia_pets.msg.pet_renamed", finalName)
+                    : Component.translatable("arcadia_pets.msg.pet_name_cleared");
             player.sendSystemMessage(msg.copy().withStyle(ChatFormatting.GREEN));
             return;
         }
@@ -543,7 +543,7 @@ public final class PetManager {
                     if (sp != null && data != null) {
                         updatePetItemOnDeath(sp, data);
                         sendHpSync(sp, 0f, 0f, false);
-                        sp.sendSystemMessage(Component.translatable("arcadia_prestige.msg.pet_died")
+                        sp.sendSystemMessage(Component.translatable("arcadia_pets.msg.pet_died")
                                 .withStyle(ChatFormatting.RED));
                     }
                 }
@@ -558,11 +558,11 @@ public final class PetManager {
             int next = Math.max(0, prev - amount);
             if (prev > 0 && next == 0)
                 player.sendSystemMessage(net.minecraft.network.chat.Component
-                        .translatable("arcadia_prestige.msg.pet_starving")
+                        .translatable("arcadia_pets.msg.pet_starving")
                         .withStyle(net.minecraft.ChatFormatting.RED));
             else if (prev > 25 && next <= 25)
                 player.sendSystemMessage(net.minecraft.network.chat.Component
-                        .translatable("arcadia_prestige.msg.pet_hungry", next)
+                        .translatable("arcadia_pets.msg.pet_hungry", next)
                         .withStyle(net.minecraft.ChatFormatting.YELLOW));
             return new PetData(d.petId(), d.mobType(), d.rarity(), d.stats(), d.modifierApplied(),
                     d.customName(), next, d.happiness(), d.skills());
@@ -662,7 +662,7 @@ public final class PetManager {
                 // Per-pet cooldown check  - other pets are unaffected
                 if (isOnCooldown(petId)) {
                     int secs = getCooldownTicks(petId) / 20;
-                    player.sendSystemMessage(Component.translatable("arcadia_prestige.msg.pet_recovery_cooldown", (secs / 60), (secs % 60))
+                    player.sendSystemMessage(Component.translatable("arcadia_pets.msg.pet_recovery_cooldown", (secs / 60), (secs % 60))
                             .withStyle(ChatFormatting.RED));
                 } else {
                     summonByPetId(player, petId);
@@ -685,7 +685,7 @@ public final class PetManager {
             }
             if (foodSlot < 0) {
                 player.sendSystemMessage(
-                        Component.translatable("arcadia_prestige.msg.pet_needs_food").withStyle(ChatFormatting.RED));
+                        Component.translatable("arcadia_pets.msg.pet_needs_food").withStyle(ChatFormatting.RED));
             } else {
                 int hungerGain    = feedType == 1 ? com.arcadia.pets.item.PetSnackItem.HUNGER_BONUS : 30;
                 int hpGain        = feedType == 1 ? 5 : 3;
@@ -702,7 +702,7 @@ public final class PetManager {
                                 pd.skills()));
                         player.getInventory().getItem(foodSlot).shrink(1);
                         // Generic feed message with HP gain
-                        player.sendSystemMessage(Component.translatable("arcadia_prestige.msg.pet_fed", hpGain).withStyle(ChatFormatting.GREEN));
+                        player.sendSystemMessage(Component.translatable("arcadia_pets.msg.pet_fed", hpGain).withStyle(ChatFormatting.GREEN));
                         if (hpGain > 0) applyHpHeal(player, petId, hpGain);
                         // Always send HP sync so hunger/happiness updates reach the client HUD
                         Mob mob = getActivePetMob(player.getUUID());
@@ -1097,7 +1097,7 @@ public final class PetManager {
             isPocket = false; // not in active/pocket cache — item-only update
         }
         if (currentData == null) {
-            player.sendSystemMessage(Component.translatable("arcadia_prestige.msg.no_active_pet")
+            player.sendSystemMessage(Component.translatable("arcadia_pets.msg.no_active_pet")
                     .withStyle(ChatFormatting.RED));
             return;
         }
@@ -1111,7 +1111,7 @@ public final class PetManager {
             if (s.level() >= 1 && s.level() < 10) { idx = i; break; }
         }
         if (idx == -1) {
-            player.sendSystemMessage(Component.translatable("arcadia_prestige.msg.skills_maxed")
+            player.sendSystemMessage(Component.translatable("arcadia_pets.msg.skills_maxed")
                     .withStyle(ChatFormatting.GOLD));
             return;
         }
@@ -1149,14 +1149,14 @@ public final class PetManager {
 
         // Feedback messages
         if (finalLvl > prevLvl) {
-            player.sendSystemMessage(Component.translatable("arcadia_prestige.msg.skill_leveled",
+            player.sendSystemMessage(Component.translatable("arcadia_pets.msg.skill_leveled",
                     target.skill().getDisplayName(), finalLvl).withStyle(ChatFormatting.GOLD));
             // Check if a new skill was unlocked by reaching Lv 10
             if (skillIdx + 1 < newData.skills().size()) {
                 com.arcadia.pets.skill.SkillInstance next = newData.skills().get(skillIdx + 1);
                 com.arcadia.pets.skill.SkillInstance wasLocked = oldData.skills().get(skillIdx + 1);
                 if (wasLocked.level() == 0 && next.level() == 1) {
-                    player.sendSystemMessage(Component.translatable("arcadia_prestige.msg.skill_revealed",
+                    player.sendSystemMessage(Component.translatable("arcadia_pets.msg.skill_revealed",
                             next.skill().getDisplayName()).withStyle(ChatFormatting.LIGHT_PURPLE));
                 }
             }
@@ -1197,7 +1197,7 @@ public final class PetManager {
         long cooldownMs = getDeathCooldownMs(data);
         deathCooldowns.put(data.petId(), System.currentTimeMillis() + cooldownMs);
         lastDeadPet.put(playerUuid, data.petId());
-        player.sendSystemMessage(Component.translatable("arcadia_prestige.msg.pocket_pet_died")
+        player.sendSystemMessage(Component.translatable("arcadia_pets.msg.pocket_pet_died")
                 .withStyle(ChatFormatting.RED));
         sendHpSync(player, 0f, maxHp, false);
         return remaining; // negative; caller uses -remaining as pass-through damage

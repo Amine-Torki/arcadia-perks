@@ -23,7 +23,7 @@ public class PetGuideScreen extends Screen {
     private int left, top;
 
     public PetGuideScreen() {
-        super(Component.translatable("arcadia_prestige.guide.title"));
+        super(Component.translatable("arcadia_pets.guide.title"));
     }
 
     @Override
@@ -40,7 +40,7 @@ public class PetGuideScreen extends Screen {
         ArcadiaTheme.drawPanel(g, left, top, W, H, false);
 
         // Title with copper theme
-        Component title = Component.translatable("arcadia_prestige.guide.page" + page + ".title");
+        Component title = Component.translatable("arcadia_pets.guide.page" + page + ".title");
         g.drawCenteredString(this.font, title, left + W / 2 + 1, top + 7, 0x22000000);
         g.drawCenteredString(this.font, title, left + W / 2, top + 6, ArcadiaTheme.BRASS);
 
@@ -50,7 +50,7 @@ public class PetGuideScreen extends Screen {
         int lineH = 10;
         int maxLines = 14;
         for (int i = 0; i < maxLines; i++) {
-            String key = "arcadia_prestige.guide.page" + page + ".line" + i;
+            String key = "arcadia_pets.guide.page" + page + ".line" + i;
             Component line = Component.translatable(key);
             String text = line.getString();
             // Skip lines whose translation key wasn't found (returns key itself)
@@ -78,13 +78,13 @@ public class PetGuideScreen extends Screen {
         // Navigation
         int navY = top + H - 36;
         if (page > 0) {
-            Component prev = Component.translatable("arcadia_prestige.guide.prev");
+            Component prev = Component.translatable("arcadia_pets.guide.prev");
             g.drawString(this.font, prev, left + 8, navY, 0xFFAAAAFF, false);
         }
         String pageStr = (page + 1) + " / " + PAGE_COUNT;
         g.drawCenteredString(this.font, pageStr, left + W / 2, navY, 0xFF888888);
         if (page < PAGE_COUNT - 1) {
-            Component next = Component.translatable("arcadia_prestige.guide.next");
+            Component next = Component.translatable("arcadia_pets.guide.next");
             g.drawString(this.font, next, left + W - 8 - this.font.width(next), navY, 0xFFAAAAFF, false);
         }
 
@@ -95,7 +95,7 @@ public class PetGuideScreen extends Screen {
         int btnH = 12;
         boolean btnHovered = mouseX >= btnX && mouseX <= btnX + btnW && mouseY >= btnY && mouseY <= btnY + btnH;
         g.fill(btnX, btnY, btnX + btnW, btnY + btnH, btnHovered ? 0x90382818 : 0x70201510);
-        Component back = Component.translatable("arcadia_prestige.guide.back");
+        Component back = Component.translatable("arcadia_pets.guide.back");
         g.drawCenteredString(this.font, back, left + W / 2, btnY + 2, ArcadiaTheme.TEXT_PRIMARY);
     }
 

@@ -42,7 +42,7 @@ public class PetCollectionBookItem extends Item {
                         return InteractionResultHolder.sidedSuccess(player.getItemInHand(hand), level.isClientSide);
                     }
                 }
-                sp.sendSystemMessage(Component.translatable("arcadia_prestige.msg.no_active_pet")
+                sp.sendSystemMessage(Component.translatable("arcadia_pets.msg.no_active_pet")
                         .withStyle(ChatFormatting.RED));
             } else {
                 // Right-click → open the dashboard Pets tab (/pets)
@@ -54,11 +54,11 @@ public class PetCollectionBookItem extends Item {
 
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext ctx, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable("arcadia_prestige.item.pet_collection_book.desc")
+        tooltip.add(Component.translatable("arcadia_pets.item.pet_collection_book.desc")
                 .withStyle(ChatFormatting.AQUA));
-        tooltip.add(Component.translatable("arcadia_prestige.item.pet_collection_book.hint")
+        tooltip.add(Component.translatable("arcadia_pets.item.pet_collection_book.hint")
                 .withStyle(ChatFormatting.DARK_GRAY));
-        tooltip.add(Component.translatable("arcadia_prestige.item.pet_collection_book.shift_hint")
+        tooltip.add(Component.translatable("arcadia_pets.item.pet_collection_book.shift_hint")
                 .withStyle(ChatFormatting.DARK_GRAY));
     }
 }

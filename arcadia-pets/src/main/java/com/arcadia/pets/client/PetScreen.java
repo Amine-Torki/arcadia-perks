@@ -104,7 +104,7 @@ public class PetScreen extends Screen {
                      float currentHp, float maxHp,
                      java.util.Map<String, Long> cdEnds,
                      java.util.Map<String, Boolean> toggles) {
-        super(Component.translatable("arcadia_prestige.gui.pet_panel.title"));
+        super(Component.translatable("arcadia_pets.gui.pet_panel.title"));
         this.petData = petData;
         this.cooldownTicks = cooldownTicks;
         this.petActive = petActive;
@@ -148,10 +148,10 @@ public class PetScreen extends Screen {
         int nameFieldY = cardTop + 32;
         int nameFieldW = CARD_W - 16 - RENAME_BTN_W - 4;
         nameInput = new EditBox(this.font, nameFieldX, nameFieldY, nameFieldW, 12,
-                Component.translatable("arcadia_prestige.gui.pet_panel.name_label"));
+                Component.translatable("arcadia_pets.gui.pet_panel.name_label"));
         nameInput.setMaxLength(20);
         nameInput.setValue(petData.customName() != null ? petData.customName() : "");
-        nameInput.setHint(Component.translatable("arcadia_prestige.gui.pet_panel.name_hint").withStyle(ChatFormatting.DARK_GRAY));
+        nameInput.setHint(Component.translatable("arcadia_pets.gui.pet_panel.name_hint").withStyle(ChatFormatting.DARK_GRAY));
         this.addRenderableWidget(nameInput);
         renameBtnX = nameFieldX + nameFieldW + 4;
         renameBtnY = nameFieldY;
@@ -229,7 +229,7 @@ public class PetScreen extends Screen {
                 && mouseY >= renameBtnY && mouseY < renameBtnY + 12;
         g.fill(renameBtnX, renameBtnY, renameBtnX + RENAME_BTN_W, renameBtnY + 12,
                 hovRename ? 0xFF5A4A2A : 0xFF3A3020);
-        Component setComp = Component.translatable("arcadia_prestige.gui.pets.set_name");
+        Component setComp = Component.translatable("arcadia_pets.gui.pets.set_name");
         g.drawString(this.font, setComp,
                 renameBtnX + (RENAME_BTN_W - this.font.width(setComp)) / 2, renameBtnY + 2,
                 ArcadiaTheme.TEXT_PRIMARY, false);
@@ -287,7 +287,7 @@ public class PetScreen extends Screen {
         g.pose().pushPose();
         g.pose().translate(statsX, statsY, 0);
         g.pose().scale(sf, sf, 1f);
-        g.drawString(this.font, Component.translatable("arcadia_prestige.hud.combat_label"), 0, 0, ArcadiaTheme.TEXT_DIM, false);
+        g.drawString(this.font, Component.translatable("arcadia_pets.hud.combat_label"), 0, 0, ArcadiaTheme.TEXT_DIM, false);
         g.pose().popPose();
         statsY += 9;
 
@@ -352,7 +352,7 @@ public class PetScreen extends Screen {
         // Hunger — read live from ClientPetState when pet is active
         int hungerVal      = ClientPetState.isActive() ? ClientPetState.getHunger() : petData.hunger();
         int hungerBarColor = hungerVal >= 70 ? 0xFF55FF55 : hungerVal >= 30 ? 0xFFFFFF55 : 0xFFFF5555;
-        g.drawString(this.font, Component.translatable("arcadia_prestige.gui.pets.hunger"), rightX, rightY, ArcadiaTheme.TEXT_PRIMARY, false);
+        g.drawString(this.font, Component.translatable("arcadia_pets.gui.pets.hunger"), rightX, rightY, ArcadiaTheme.TEXT_PRIMARY, false);
         rightY += BAR_LABEL_GAP;
         g.fill(rightX, rightY, rightX + BAR_W, rightY + BAR_H, 0x44000000);
         g.fill(rightX, rightY, rightX + (int)(BAR_W * hungerVal / 100.0f), rightY + BAR_H, hungerBarColor);
@@ -365,7 +365,7 @@ public class PetScreen extends Screen {
         float liveMax = ClientPetState.isActive() ? ClientPetState.getMaxHp()     : maxHp;
         float hpPct       = liveMax > 0 ? Math.max(0f, Math.min(1f, liveHp / liveMax)) : 0f;
         int   hpFillColor = hpPct > 0.60f ? 0xFF44AA44 : hpPct > 0.30f ? 0xFFCC8822 : 0xFFCC3333;
-        g.drawString(this.font, Component.translatable("arcadia_prestige.gui.pets.hp_label"), rightX, rightY, ArcadiaTheme.TEXT_PRIMARY, false);
+        g.drawString(this.font, Component.translatable("arcadia_pets.gui.pets.hp_label"), rightX, rightY, ArcadiaTheme.TEXT_PRIMARY, false);
         rightY += BAR_LABEL_GAP;
         g.fill(rightX, rightY, rightX + BAR_W, rightY + BAR_H, 0x44000000);
         g.fill(rightX, rightY, rightX + (int)(BAR_W * hpPct), rightY + BAR_H, hpFillColor);

@@ -21,9 +21,9 @@ import java.util.UUID;
 public final class PetKeyHandler {
 
     public static final KeyMapping OPEN_PET_PANEL = new KeyMapping(
-            "key.arcadia_prestige.open_pet_panel",
+            "key.arcadia_pets.open_pet_panel",
             GLFW.GLFW_KEY_P,
-            "key.categories.arcadia_prestige"
+            "key.categories.arcadia_pets"
     );
 
     private PetKeyHandler() {}

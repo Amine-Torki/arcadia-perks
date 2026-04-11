@@ -60,7 +60,7 @@ public class PetRevealScreen extends Screen {
     private int stripYCenter;
 
     public PetRevealScreen(PetData result, PetRarity minimumRarity) {
-        super(Component.translatable("arcadia_prestige.gui.reveal.title"));
+        super(Component.translatable("arcadia_pets.gui.reveal.title"));
         this.result = result;
         this.minimumRarity = minimumRarity;
         this.candidates = new ArrayList<>();
@@ -200,7 +200,7 @@ public class PetRevealScreen extends Screen {
             // Pulsing "click to continue" text
             int alpha = (int) (180 + 75 * Math.sin(ticksInPhase * 0.15));
             int color = (alpha << 24) | 0xFFFFFF;
-            graphics.drawCenteredString(this.font, Component.translatable("arcadia_prestige.gui.reveal.continue"),
+            graphics.drawCenteredString(this.font, Component.translatable("arcadia_pets.gui.reveal.continue"),
                     this.width / 2, this.height - 30, color);
         }
     }
@@ -239,7 +239,7 @@ public class PetRevealScreen extends Screen {
         graphics.fill(arrowX - 2, arrowY + 5, arrowX + 2, arrowY + 8, ArcadiaTheme.BRASS);
 
         // Title
-        Component title = Component.translatable("arcadia_prestige.gui.reveal.rolling").withStyle(s -> s.withBold(true));
+        Component title = Component.translatable("arcadia_pets.gui.reveal.rolling").withStyle(s -> s.withBold(true));
         ArcadiaTheme.drawCenteredText(graphics, title, centerX, stripY - 28, ArcadiaTheme.BRASS);
     }
 
@@ -306,7 +306,7 @@ public class PetRevealScreen extends Screen {
             graphics.drawString(this.font, f2, rowStartX, textY, 0xFFD700, false);
         }
         textY += 10;
-        graphics.drawCenteredString(this.font, Component.translatable("arcadia_prestige.gui.reveal.total_stars", totalStars), centerX, textY, ArcadiaTheme.TEXT_SECONDARY);
+        graphics.drawCenteredString(this.font, Component.translatable("arcadia_pets.gui.reveal.total_stars", totalStars), centerX, textY, ArcadiaTheme.TEXT_SECONDARY);
         textY += 16;
 
         // Divider
@@ -354,7 +354,7 @@ public class PetRevealScreen extends Screen {
             skillsY += 5;
             // "Skills" label
             graphics.drawCenteredString(this.font,
-                    Component.translatable("arcadia_prestige.gui.pet.skills_label").withStyle(ChatFormatting.GOLD),
+                    Component.translatable("arcadia_pets.gui.pet.skills_label").withStyle(ChatFormatting.GOLD),
                     centerX, skillsY, 0xFFAA00);
             skillsY += 9;
 

@@ -27,7 +27,7 @@ public final class PetHudSettingsScreen extends Screen {
     private boolean showHp, showAs, showPt, reducedMotion;
 
     public PetHudSettingsScreen() {
-        super(Component.translatable("arcadia_prestige.gui.hud_settings.title"));
+        super(Component.translatable("arcadia_pets.gui.hud_settings.title"));
     }
 
     @Override
@@ -52,10 +52,10 @@ public final class PetHudSettingsScreen extends Screen {
         int cx = this.width / 2;
 
         // Title
-        ArcadiaTheme.drawTitleBar(g, Component.translatable("arcadia_prestige.gui.hud_settings.header"),
+        ArcadiaTheme.drawTitleBar(g, Component.translatable("arcadia_pets.gui.hud_settings.header"),
                 cx, 10, this.width - 60);
         g.drawCenteredString(this.font,
-                Component.translatable("arcadia_prestige.gui.hud_settings.subtitle"),
+                Component.translatable("arcadia_pets.gui.hud_settings.subtitle"),
                 cx, 24, ArcadiaTheme.TEXT_DIM);
 
         renderWidgetPreview(g, mouseX, mouseY);
@@ -66,11 +66,11 @@ public final class PetHudSettingsScreen extends Screen {
 
         // Toggle buttons
         drawToggleBtn(g, mouseX, mouseY, startX, btnY, BTN_W,
-                Component.translatable("arcadia_prestige.gui.hud_settings.portrait").getString(), showPt);
+                Component.translatable("arcadia_pets.gui.hud_settings.portrait").getString(), showPt);
         drawToggleBtn(g, mouseX, mouseY, startX + BTN_W + BTN_GAP, btnY, BTN_W,
-                Component.translatable("arcadia_prestige.gui.hud_settings.hp_bar").getString(), showHp);
+                Component.translatable("arcadia_pets.gui.hud_settings.hp_bar").getString(), showHp);
         drawToggleBtn(g, mouseX, mouseY, startX + (BTN_W + BTN_GAP) * 2, btnY, BTN_W,
-                Component.translatable("arcadia_prestige.gui.hud_settings.aftershock").getString(), showAs);
+                Component.translatable("arcadia_pets.gui.hud_settings.aftershock").getString(), showAs);
 
         // Reduced motion
         drawToggleBtn(g, mouseX, mouseY, startX, btnY - BTN_H - BTN_GAP, totalW,
@@ -82,10 +82,10 @@ public final class PetHudSettingsScreen extends Screen {
         drawActionBtn(g, mouseX, mouseY, startX, actY, actW,
                 "\u00ab /pets", ArcadiaTheme.BORDER_IDLE);
         drawActionBtn(g, mouseX, mouseY, startX + actW + BTN_GAP, actY, actW,
-                Component.translatable("arcadia_prestige.gui.hud_settings.reset").getString(),
+                Component.translatable("arcadia_pets.gui.hud_settings.reset").getString(),
                 ArcadiaTheme.darken(ArcadiaTheme.COPPER, 40));
         drawActionBtn(g, mouseX, mouseY, startX + (actW + BTN_GAP) * 2, actY, actW,
-                Component.translatable("arcadia_prestige.gui.hud_settings.done").getString(),
+                Component.translatable("arcadia_pets.gui.hud_settings.done").getString(),
                 ArcadiaTheme.darken(ArcadiaTheme.PATINA, 60));
     }
 
@@ -119,7 +119,7 @@ public final class PetHudSettingsScreen extends Screen {
         g.pose().translate(x + PRT_W / 2f, y + PRT_H / 2f - 4, 0);
         g.pose().scale(0.7f, 0.7f, 1f);
         g.drawCenteredString(this.font,
-                Component.translatable("arcadia_prestige.gui.hud_settings.portrait_preview"),
+                Component.translatable("arcadia_pets.gui.hud_settings.portrait_preview"),
                 0, 0, ArcadiaTheme.withAlpha(ArcadiaTheme.TEXT_DIM, alpha));
         g.pose().popPose();
         y += PRT_H + 2;
@@ -143,7 +143,7 @@ public final class PetHudSettingsScreen extends Screen {
 
         if (hover || dragging) {
             g.drawString(this.font,
-                    Component.translatable("arcadia_prestige.gui.hud_settings.drag_hint"),
+                    Component.translatable("arcadia_pets.gui.hud_settings.drag_hint"),
                     ptX + PRT_W + 6, ptY + PRT_H / 2,
                     ArcadiaTheme.withAlpha(ArcadiaTheme.TEXT_SECONDARY, 0xAA), false);
         }

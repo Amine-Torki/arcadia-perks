@@ -182,11 +182,11 @@ public record PetData(
             mobName = mobName.substring(mobName.indexOf(':') + 1);
         }
         mobName = mobName.substring(0, 1).toUpperCase() + mobName.substring(1).replace('_', ' ');
-        lines.add(Component.translatable("arcadia_prestige.gui.pet.type_label", mobName).withStyle(ChatFormatting.GRAY));
+        lines.add(Component.translatable("arcadia_pets.gui.pet.type_label", mobName).withStyle(ChatFormatting.GRAY));
 
         // Custom name if present
         if (customName != null && !customName.isEmpty()) {
-            lines.add(Component.translatable("arcadia_prestige.gui.pet.name_tooltip", customName).withStyle(ChatFormatting.AQUA));
+            lines.add(Component.translatable("arcadia_pets.gui.pet.name_tooltip", customName).withStyle(ChatFormatting.AQUA));
         }
 
         // Gene bars: 2 compact lines (POW/END/AGI then WIT/CHM/LCK)
@@ -218,7 +218,7 @@ public record PetData(
         // Skills — one line each with a styled [Lv X] badge; locked skills show as "???"
         if (!skills.isEmpty()) {
             lines.add(Component.empty());
-            lines.add(Component.translatable("arcadia_prestige.gui.pet.skills_label")
+            lines.add(Component.translatable("arcadia_pets.gui.pet.skills_label")
                     .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
             for (SkillInstance instance : skills) {
                 MutableComponent skillLine;

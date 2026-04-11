@@ -32,7 +32,7 @@ public abstract class PetSkill {
 
     public PetSkill(String id) {
         this.id = id;
-        this.translationKey = "arcadia_prestige.skill." + id;
+        this.translationKey = "arcadia_pets.skill." + id;
     }
 
     public String getId() {
@@ -91,7 +91,7 @@ public abstract class PetSkill {
                     .map(t -> t.getDescription().getString())
                     .orElse(petData.mobType());
         }
-        sp.sendSystemMessage(Component.translatable("arcadia_prestige.msg.skill_used", petName, getDisplayName(), detail)
+        sp.sendSystemMessage(Component.translatable("arcadia_pets.msg.skill_used", petName, getDisplayName(), detail)
                 .withStyle(net.minecraft.ChatFormatting.AQUA));
     }
 

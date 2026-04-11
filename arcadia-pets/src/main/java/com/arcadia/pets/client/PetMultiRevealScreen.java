@@ -80,7 +80,7 @@ public class PetMultiRevealScreen extends Screen {
     // ── Constructor ───────────────────────────────────────────────────────────
 
     public PetMultiRevealScreen(List<PetData> results, PetRarity minimumRarity) {
-        super(Component.translatable("arcadia_prestige.gui.multi_reveal.title"));
+        super(Component.translatable("arcadia_pets.gui.multi_reveal.title"));
         this.results = results;
         this.minimumRarity = minimumRarity;
         this.count = results.size();
@@ -245,7 +245,7 @@ public class PetMultiRevealScreen extends Screen {
             if (ticksPhase1 > 30) {
                 int alpha = 120 + (int) (60 * Math.sin(ticksPhase1 * 0.15));
                 g.drawCenteredString(font,
-                        Component.translatable("arcadia_prestige.gui.multi_reveal.close"),
+                        Component.translatable("arcadia_pets.gui.multi_reveal.close"),
                         width / 2, height - 14, (alpha << 24) | 0xFFFFFF);
             }
         }
@@ -264,7 +264,7 @@ public class PetMultiRevealScreen extends Screen {
         float fontScale = count <= 3 ? 1.0f : 0.8f;
 
         g.drawCenteredString(font,
-                Component.translatable("arcadia_prestige.gui.multi_reveal.rolling", count)
+                Component.translatable("arcadia_pets.gui.multi_reveal.rolling", count)
                         .withStyle(s -> s.withBold(true)),
                 cx, areaTop - 22, 0xFFFFD700);
 
@@ -348,7 +348,7 @@ public class PetMultiRevealScreen extends Screen {
 
         if (!anyHovered && currentDetailCard < 0 && ticksPhase1 > 10) {
             g.drawCenteredString(font,
-                    Component.translatable("arcadia_prestige.gui.multi_reveal.hint"),
+                    Component.translatable("arcadia_pets.gui.multi_reveal.hint"),
                     width / 2, cardY - 14, 0x88FFFFFF);
         }
     }
@@ -383,7 +383,7 @@ public class PetMultiRevealScreen extends Screen {
                 x + MINI_W / 2, y + MINI_H - 22, special ? 0xFFD700 : 0xCCAA00);
         if (active) {
             g.drawCenteredString(font,
-                    Component.translatable("arcadia_prestige.gui.multi_reveal.inspect"),
+                    Component.translatable("arcadia_pets.gui.multi_reveal.inspect"),
                     x + MINI_W / 2, y + MINI_H - 10, 0x88FFFFFF);
         }
     }
@@ -443,7 +443,7 @@ public class PetMultiRevealScreen extends Screen {
         if (f2 > 0) g.drawString(font, "\u2605".repeat(f2), rowX, ty, 0xFFD700, false);
         ty += 10;
         g.drawCenteredString(font,
-                Component.translatable("arcadia_prestige.gui.reveal.total_stars", total),
+                Component.translatable("arcadia_pets.gui.reveal.total_stars", total),
                 cx, ty, 0xAAAAAA);
         ty += 14;
 
@@ -473,7 +473,7 @@ public class PetMultiRevealScreen extends Screen {
             g.fill(cardX + 10, sy, cardX + DETAIL_W - 10, sy + 1, 0x40FFFFFF);
             sy += 5;
             g.drawCenteredString(font,
-                    Component.translatable("arcadia_prestige.gui.pet.skills_label")
+                    Component.translatable("arcadia_pets.gui.pet.skills_label")
                             .withStyle(ChatFormatting.GOLD),
                     cx, sy, 0xFFAA00);
             sy += 9;

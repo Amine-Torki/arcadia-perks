@@ -78,7 +78,7 @@ public class AhSearchScreen extends Screen {
         int cy = this.height / 2;
         ArcadiaTheme.drawPanel(graphics, cx - 110, cy - 30, 220, 95, false, ArcadiaTheme.COPPER);
         ArcadiaTheme.drawCenteredText(graphics,
-                Component.translatable("arcadia_prestige.gui.tab.auction_house"),
+                Component.translatable("arcadia_ah.gui.tab.auction_house"),
                 cx, cy - 24, ArcadiaTheme.BRASS);
         super.render(graphics, mouseX, mouseY, partialTick);
     }
