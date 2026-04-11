@@ -23,7 +23,12 @@ It provides a complete, ready-to-use toolkit: **permissions**, **database**, **U
 12. [Cooldown System](#cooldown-system)
 13. [Task Scheduler](#task-scheduler)
 14. [Text Formatting](#text-formatting)
-15. [API Reference](#api-reference)
+15. [Staff System](#staff-system)
+16. [Item Builder](#item-builder)
+17. [Sound Helper](#sound-helper)
+18. [Message Helper](#message-helper)
+19. [Player Utilities](#player-utilities)
+20. [API Reference](#api-reference)
 
 ---
 
@@ -581,6 +586,154 @@ TextFormatter.formatPercent(0.756f);    // "76%"
 
 ---
 
+## Staff System
+
+Complete admin/moderator system with roles, staff chat, and moderation actions.
+
+### Roles
+
+| Role | Level | Permission Node | Color |
+|------|-------|-----------------|-------|
+| NONE | 0 | — | Gray |
+| HELPER | 1 | `arcadia.staff.helper` | Aqua |
+| MOD | 2 | `arcadia.staff.mod` | Green |
+| ADMIN | 3 | `arcadia.staff.admin` | Red |
+
+Configured in `config/arcadia/lib/staff.toml`.
+
+### Check staff roles
+
+```java
+import com.arcadia.lib.staff.StaffService;
+import com.arcadia.lib.staff.StaffRole;
+
+StaffRole role = StaffService.getRole(player);
+boolean isMod = role.atLeast(StaffRole.MOD);
+boolean isStaff = StaffService.isStaff(player);
+List<ServerPlayer> staff = StaffService.getStaffOnline();
+
+// Command guard (sends error if insufficient role)
+if (!StaffService.requireRole(source, StaffRole.MOD)) return 0;
+```
+
+### Staff chat
+
+```java
+import com.arcadia.lib.staff.StaffChatService;
+
+StaffChatService.broadcast(sender, "Watch player XYZ");
+StaffChatService.broadcastAlert("Player XYZ was banned");
+StaffChatService.toggle(uuid); // toggle staff chat mode
+```
+
+### Moderation actions
+
+```java
+import com.arcadia.lib.staff.StaffActions;
+
+StaffActions.kick(target, executor, "Spam");
+StaffActions.ban(target, executor, "Cheating", 60 * 60_000); // 1 hour
+StaffActions.mute(uuid, executor, "Toxicity", 30 * 60_000);  // 30 min
+StaffActions.unmute(uuid, executor);
+boolean muted = StaffActions.isMuted(uuid);
+```
+
+### Commands
+
+| Command | Role | Description |
+|---------|------|-------------|
+| `/staff` | — | Show help |
+| `/staff chat <msg>` | HELPER | Send to staff chat |
+| `/staff toggle` | HELPER | Toggle staff chat mode |
+| `/staff list` | HELPER | List online staff |
+| `/staff kick <player> [reason]` | MOD | Kick a player |
+| `/staff ban <player> <minutes> [reason]` | MOD | Ban a player |
+| `/staff mute <player> <minutes> [reason]` | MOD | Mute a player |
+| `/staff unmute <player>` | MOD | Unmute a player |
+
+---
+
+## Item Builder
+
+Fluent builder for constructing styled ItemStacks (menus, rewards, GUIs).
+
+```java
+import com.arcadia.lib.item.ItemBuilder;
+
+ItemStack icon = ItemBuilder.of(Items.DIAMOND_SWORD)
+    .name(Component.literal("Excalibur").withStyle(ChatFormatting.GOLD))
+    .addLore("A legendary blade")
+    .addLore(Component.literal("Damage: +10").withStyle(ChatFormatting.RED))
+    .enchanted()
+    .count(1)
+    .build();
+```
+
+---
+
+## Sound Helper
+
+Simplified server-side sound playback (replaces 7-argument calls).
+
+```java
+import com.arcadia.lib.util.SoundHelper;
+
+SoundHelper.playAt(player, SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP);
+SoundHelper.playAt(player, SoundEvents.BLOCK_ANVIL_USE, 0.5f, 1.2f);
+SoundHelper.playAt(level, position, SoundEvents.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
+
+// Predefined convenience sounds
+SoundHelper.success(player);  // level-up sound
+SoundHelper.error(player);    // villager "no" sound
+SoundHelper.reward(player);   // XP orb sound
+```
+
+---
+
+## Message Helper
+
+Action bar, title, and subtitle messaging.
+
+```java
+import com.arcadia.lib.text.MessageHelper;
+
+// Action bar (above hotbar)
+MessageHelper.sendActionBar(player, "Teleporting in 3...");
+
+// Full title + subtitle with custom timings
+MessageHelper.sendTitle(player,
+    Component.literal("VICTORY!").withStyle(ChatFormatting.GOLD),
+    Component.literal("You won the game"),
+    10, 60, 20); // fadeIn, stay, fadeOut (ticks)
+
+// Quick title with defaults
+MessageHelper.sendTitle(player, Component.literal("Welcome!"));
+```
+
+---
+
+## Player Utilities
+
+Common player operations that eliminate copy-paste patterns.
+
+```java
+import com.arcadia.lib.util.PlayerUtils;
+
+// Give item or drop at feet if inventory full (used 8+ times in codebase)
+PlayerUtils.giveOrDrop(player, itemStack);
+PlayerUtils.giveOrDrop(player, listOfStacks);
+
+// Find online players
+ServerPlayer p = PlayerUtils.findOnline(uuid);
+ServerPlayer p2 = PlayerUtils.findOnline("Steve");
+
+// Inventory checks
+boolean hasSpace = PlayerUtils.hasInventorySpace(player);
+int diamonds = PlayerUtils.countItem(player, Items.DIAMOND);
+```
+
+---
+
 ## API Reference
 
 ### Core Classes
@@ -621,6 +774,27 @@ TextFormatter.formatPercent(0.756f);    // "76%"
 | `TeleportManager`          | `com.arcadia.lib.teleport`       | Safe teleport with warmup/cooldown         |
 | `SchedulerService`         | `com.arcadia.lib.scheduler`      | Tick-based task scheduling                 |
 | `TextFormatter`            | `com.arcadia.lib.text`           | Placeholders, rich text, number formatting |
+
+### Staff Classes
+
+| Class                      | Package                          | Purpose                                    |
+|----------------------------|----------------------------------|--------------------------------------------|
+| `StaffRole`                | `com.arcadia.lib.staff`          | Role enum (NONE/HELPER/MOD/ADMIN)          |
+| `StaffService`             | `com.arcadia.lib.staff`          | Staff role checks + command guard           |
+| `StaffChatService`         | `com.arcadia.lib.staff`          | Staff-only chat channel                    |
+| `StaffActions`             | `com.arcadia.lib.staff`          | Kick/ban/mute wrappers with logging         |
+| `StaffCommands`            | `com.arcadia.lib.staff`          | /staff command tree                        |
+| `StaffEventHandler`        | `com.arcadia.lib.staff`          | Mute enforcement + chat toggle              |
+| `StaffConfig`              | `com.arcadia.lib.staff`          | Staff permission nodes config               |
+
+### Utility Classes
+
+| Class                      | Package                          | Purpose                                    |
+|----------------------------|----------------------------------|--------------------------------------------|
+| `ItemBuilder`              | `com.arcadia.lib.item`           | Fluent ItemStack builder                   |
+| `SoundHelper`              | `com.arcadia.lib.util`           | Simplified sound playback                  |
+| `MessageHelper`            | `com.arcadia.lib.text`           | Action bar / title / subtitle sending       |
+| `PlayerUtils`              | `com.arcadia.lib.util`           | giveOrDrop, findOnline, countItem           |
 
 ### Permission Classes
 
