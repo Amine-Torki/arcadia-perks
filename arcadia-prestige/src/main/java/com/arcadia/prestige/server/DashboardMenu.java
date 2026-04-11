@@ -72,13 +72,13 @@ public class DashboardMenu extends AbstractContainerMenu {
                 });
             }
         }
-        // Player inventory
+        // Player inventory — filtered slots that hide PetItem when not on the Pets tab
         for (int row = 0; row < 3; row++)
             for (int col = 0; col < 9; col++)
-                addSlot(new Slot(playerInv, col + row * 9 + 9, 8 + col * 18, 140 + row * 18));
+                addSlot(new FilteredInventorySlot(playerInv, col + row * 9 + 9, 8 + col * 18, 140 + row * 18));
         // Hotbar
         for (int col = 0; col < 9; col++)
-            addSlot(new Slot(playerInv, col, 8 + col * 18, 198));
+            addSlot(new FilteredInventorySlot(playerInv, col, 8 + col * 18, 198));
 
         addDataSlot(tabSlot);
 
@@ -554,6 +554,34 @@ public class DashboardMenu extends AbstractContainerMenu {
             DashboardMenu menu = new DashboardMenu(id, inv);
             menu.switchTab(initialTab, player);
             return menu;
+        }
+    }
+
+    // ── Filtered slot: hides PetItem when not on Pets tab ─────────────────
+
+    /**
+     * Custom inventory slot that hides pet items when the dashboard is not
+     * on the Pets tab (tab 1). Prevents pets from cluttering other tabs.
+     * Uses isActive() — when false, the slot is not rendered and not interactable.
+     */
+    private class FilteredInventorySlot extends Slot {
+        FilteredInventorySlot(net.minecraft.world.Container container, int index, int x, int y) {
+            super(container, index, x, y);
+        }
+
+        @Override
+        public boolean isActive() {
+            // On Pets tab → show everything (including pets)
+            if (currentTab == 1) return true;
+            // On other tabs → hide PetItem stacks
+            ItemStack stack = getItem();
+            if (!stack.isEmpty() && isPetItem(stack)) return false;
+            return true;
+        }
+
+        private static boolean isPetItem(ItemStack stack) {
+            // Check by item class name to avoid importing PetItem from arcadia-pets
+            return stack.getItem().getClass().getSimpleName().equals("PetItem");
         }
     }
 }
