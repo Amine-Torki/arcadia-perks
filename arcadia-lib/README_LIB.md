@@ -626,20 +626,22 @@ if (!StaffService.requireRole(source, StaffRole.MOD)) return 0;
 import com.arcadia.lib.staff.StaffChatService;
 
 StaffChatService.broadcast(sender, "Watch player XYZ");
-StaffChatService.broadcastAlert("Player XYZ was banned");
+StaffChatService.broadcastAlert("Suspicious activity detected");
 StaffChatService.toggle(uuid); // toggle staff chat mode
 ```
 
 ### Moderation actions
 
+Mute/unmute only — ban/kick is handled by external moderation mods.
+
 ```java
 import com.arcadia.lib.staff.StaffActions;
 
-StaffActions.kick(target, executor, "Spam");
-StaffActions.ban(target, executor, "Cheating", 60 * 60_000); // 1 hour
 StaffActions.mute(uuid, executor, "Toxicity", 30 * 60_000);  // 30 min
 StaffActions.unmute(uuid, executor);
 boolean muted = StaffActions.isMuted(uuid);
+long remaining = StaffActions.getMuteRemaining(uuid);
+String reason = StaffActions.getMuteReason(uuid);
 ```
 
 ### Commands
@@ -650,10 +652,10 @@ boolean muted = StaffActions.isMuted(uuid);
 | `/staff chat <msg>` | HELPER | Send to staff chat |
 | `/staff toggle` | HELPER | Toggle staff chat mode |
 | `/staff list` | HELPER | List online staff |
-| `/staff kick <player> [reason]` | MOD | Kick a player |
-| `/staff ban <player> <minutes> [reason]` | MOD | Ban a player |
 | `/staff mute <player> <minutes> [reason]` | MOD | Mute a player |
 | `/staff unmute <player>` | MOD | Unmute a player |
+
+> **Note:** Ban and kick are not included — use your server's moderation mod (e.g. YAWP, BanHammer, etc.).
 
 ---
 
@@ -889,7 +891,7 @@ Register it by modifying `EconomyService.init()` to recognize your provider name
 | `StaffRole`                | `com.arcadia.lib.staff`          | Role enum (NONE/HELPER/MOD/ADMIN)          |
 | `StaffService`             | `com.arcadia.lib.staff`          | Staff role checks + command guard           |
 | `StaffChatService`         | `com.arcadia.lib.staff`          | Staff-only chat channel                    |
-| `StaffActions`             | `com.arcadia.lib.staff`          | Kick/ban/mute wrappers with logging         |
+| `StaffActions`             | `com.arcadia.lib.staff`          | Mute/unmute with staff notifications        |
 | `StaffCommands`            | `com.arcadia.lib.staff`          | /staff command tree                        |
 | `StaffEventHandler`        | `com.arcadia.lib.staff`          | Mute enforcement + chat toggle              |
 | `StaffConfig`              | `com.arcadia.lib.staff`          | Staff permission nodes config               |
