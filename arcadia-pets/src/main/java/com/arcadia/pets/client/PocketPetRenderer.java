@@ -55,6 +55,10 @@ public final class PocketPetRenderer {
     /** ownerUuid → display name from the packet (bypasses getCustomName() which is unreliable for boss mobs). */
     private static final Map<UUID, Component> fakeNames = new ConcurrentHashMap<>();
 
+    /** Cached light values to avoid querying the light engine every frame. */
+    private static final Map<UUID, BlockPos> cachedLightPos = new ConcurrentHashMap<>();
+    private static final Map<UUID, Integer> cachedLight = new ConcurrentHashMap<>();
+
     private PocketPetRenderer() {}
 
     // ── Packet handler ────────────────────────────────────────────────────────
@@ -160,11 +164,19 @@ public final class PocketPetRenderer {
             double ry = wy - cam.y;
             double rz = wz - cam.z;
 
-            // Sample packed light from owner's block position
-            BlockPos lightPos = BlockPos.containing(wx, wy, wz);
-            int packedLight = LightTexture.pack(
-                    level.getBrightness(LightLayer.BLOCK, lightPos),
-                    level.getBrightness(LightLayer.SKY,   lightPos));
+            // Sample packed light — cached per owner, recomputed only when block position changes
+            BlockPos newLightPos = BlockPos.containing(wx, wy, wz);
+            BlockPos prevPos = cachedLightPos.get(ownerUuid);
+            int packedLight;
+            if (prevPos != null && prevPos.equals(newLightPos)) {
+                packedLight = cachedLight.getOrDefault(ownerUuid, LightTexture.FULL_BRIGHT);
+            } else {
+                packedLight = LightTexture.pack(
+                        level.getBrightness(LightLayer.BLOCK, newLightPos),
+                        level.getBrightness(LightLayer.SKY,   newLightPos));
+                cachedLightPos.put(ownerUuid, newLightPos);
+                cachedLight.put(ownerUuid, packedLight);
+            }
 
             // Sync world position so name-tag distance checks and bounding-box
             // positioning use the correct location, not the default 0,0,0.

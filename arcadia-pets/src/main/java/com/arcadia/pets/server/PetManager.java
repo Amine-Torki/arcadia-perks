@@ -89,6 +89,8 @@ public final class PetManager {
     // -- Equipped pet state (summoned — effects/modes apply) -
     private static final Map<UUID, Entity>  activePets    = new ConcurrentHashMap<>();
     private static final Map<UUID, PetData> activePetData = new ConcurrentHashMap<>();
+    /** Reverse lookup: entity network ID → owner UUID. O(1) isActivePetEntity. */
+    private static final Map<Integer, UUID> petEntityIdToOwner = new ConcurrentHashMap<>();
 
     // -- Death cooldown  - keyed by PET UUID so other pets stay summonable
     private static final Map<UUID, Long> deathCooldowns = new ConcurrentHashMap<>();
@@ -224,6 +226,7 @@ public final class PetManager {
 
         player.serverLevel().addFreshEntity(pet);
         activePets.put(player.getUUID(), pet);
+        petEntityIdToOwner.put(pet.getId(), player.getUUID());
         activePetData.put(player.getUUID(), data);
         designatedPetId.put(player.getUUID(), data.petId());
         SkillHandler.triggerSummon(player);
@@ -279,6 +282,7 @@ public final class PetManager {
         SkillHandler.triggerRecall(player);
         UUID playerUuid = player.getUUID();
         Entity pet = activePets.remove(playerUuid);
+        if (pet != null) petEntityIdToOwner.remove(pet.getId());
         PetData data = activePetData.remove(playerUuid);
         if (pet instanceof LivingEntity le && data != null) {
             storedPetHp.put(data.petId(), le.getHealth());
@@ -1319,8 +1323,9 @@ public final class PetManager {
     }
 
     /** Returns true if the given mob is currently an active summoned pet for any player. */
+    /** O(1) check via reverse entity ID lookup (was O(n) containsValue scan). */
     public static boolean isActivePetEntity(Mob mob) {
-        return activePets.containsValue(mob);
+        return petEntityIdToOwner.containsKey(mob.getId());
     }
 
     /**
@@ -1499,16 +1504,21 @@ public final class PetManager {
     }
 
     /** Converts "minecraft:iron_golem" -> "Iron Golem". */
+    /** Cache for formatted mob type names — avoids String.split + StringBuilder on every HP sync. */
+    private static final Map<String, String> mobTypeNameCache = new ConcurrentHashMap<>();
+
     private static String formatMobType(String mobType) {
-        String raw = mobType.contains(":") ? mobType.substring(mobType.indexOf(':') + 1) : mobType;
-        StringBuilder sb = new StringBuilder();
-        for (String word : raw.split("_")) {
-            if (!word.isEmpty()) {
-                if (!sb.isEmpty()) sb.append(' ');
-                sb.append(Character.toUpperCase(word.charAt(0))).append(word.substring(1));
+        return mobTypeNameCache.computeIfAbsent(mobType, mt -> {
+            String raw = mt.contains(":") ? mt.substring(mt.indexOf(':') + 1) : mt;
+            StringBuilder sb = new StringBuilder();
+            for (String word : raw.split("_")) {
+                if (!word.isEmpty()) {
+                    if (!sb.isEmpty()) sb.append(' ');
+                    sb.append(Character.toUpperCase(word.charAt(0))).append(word.substring(1));
+                }
             }
-        }
-        return sb.toString();
+            return sb.toString();
+        });
     }
 
     // =========================================================================
@@ -1527,6 +1537,9 @@ public final class PetManager {
         private final double startDist;
         private final double stopDist;
         private int tickDelay;
+        // Cached owner reference — avoids getPlayerByUUID every tick (was 60μs cause)
+        private Player cachedOwner;
+        private int ownerCacheTick;
 
         public PetFollowGoal(Mob mob, UUID ownerUuid, double speed, double startDist, double stopDist) {
             this.mob = mob; this.ownerUuid = ownerUuid;
@@ -1534,13 +1547,21 @@ public final class PetManager {
             setFlags(EnumSet.of(Flag.MOVE));
         }
 
+        private Player getOwner() {
+            if (cachedOwner == null || cachedOwner.isRemoved() || ++ownerCacheTick >= 20) {
+                ownerCacheTick = 0;
+                cachedOwner = ((ServerLevel) mob.level()).getPlayerByUUID(ownerUuid);
+            }
+            return cachedOwner;
+        }
+
         @Override public boolean canUse() {
-            Player owner = ((ServerLevel) mob.level()).getPlayerByUUID(ownerUuid);
+            Player owner = getOwner();
             return owner != null && mob.distanceToSqr(owner) > startDist * startDist;
         }
 
         @Override public boolean canContinueToUse() {
-            Player owner = ((ServerLevel) mob.level()).getPlayerByUUID(ownerUuid);
+            Player owner = getOwner();
             return owner != null && (!mob.getNavigation().isDone() || mob.distanceToSqr(owner) > stopDist * stopDist);
         }
 
@@ -1549,8 +1570,7 @@ public final class PetManager {
         @Override public void tick() {
             if (--tickDelay > 0) return;
             tickDelay = 10;
-            ServerLevel sl = (ServerLevel) mob.level();
-            Player owner = sl.getPlayerByUUID(ownerUuid);
+            Player owner = getOwner();
             if (owner == null) { mob.getNavigation().stop(); return; }
             if (mob.distanceToSqr(owner) > 1024.0) {
                 // If the owner is flying or high in the air, auto-pocket instead of

@@ -30,16 +30,14 @@ public class SkillHandler {
         Player player = event.getEntity();
         if (player.level().isClientSide) return;
 
+        // Skip every other tick entirely for skill processing (50% reduction)
+        if (player.tickCount % 2 != 0) return;
+
         PetData active = PetManager.getActivePetData(player.getUUID());
-        if (active != null) {
-            executeSkills(player, active, Trigger.TICK, null);
-        }
+        if (active != null) executeSkills(player, active, Trigger.TICK, null);
 
         PetData pocket = PetManager.getPocketPetData(player.getUUID());
-        if (pocket != null) {
-            executeSkills(player, pocket, Trigger.TICK, null);
-        }
-
+        if (pocket != null) executeSkills(player, pocket, Trigger.TICK, null);
     }
 
     @SubscribeEvent
@@ -177,12 +175,14 @@ public class SkillHandler {
         // Starving pets have all skills disabled
         if (data.hunger() <= 0) return;
         boolean anyActive = false;
-        boolean isThrottledTick = trigger == Trigger.TICK && player.tickCount % 20 != 0;
+        boolean isPerTickThrottle = trigger == Trigger.TICK && player.tickCount % 4 != 0;
+        boolean isSlowThrottle   = trigger == Trigger.TICK && player.tickCount % 20 != 0;
         for (SkillInstance instance : data.skills()) {
             if (instance.level() == 0) continue;
             if (PetManager.isSkillDisabled(player.getUUID(), instance.skill().getId())) continue;
-            // Throttle non-per-tick skills to every 20 ticks (95% reduction)
-            if (isThrottledTick && !instance.skill().isPerTick()) continue;
+            // Throttle per-tick skills to every 4 ticks (5x/s), others to every 20 ticks
+            if (instance.skill().isPerTick() && isPerTickThrottle) continue;
+            if (!instance.skill().isPerTick() && isSlowThrottle) continue;
             anyActive = true;
             // Gene bonus: +4% effectiveness per star of the skill's linked stat
             float eff = applyGeneBonus(instance.effectiveness(), instance.skill(), data);
