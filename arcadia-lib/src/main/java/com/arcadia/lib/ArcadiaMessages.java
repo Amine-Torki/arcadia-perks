@@ -61,4 +61,31 @@ public final class ArcadiaMessages {
     public static Component highlight(String value) {
         return Component.literal(value).withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD);
     }
+
+    // ── Broadcast utilities (from ArcadiaCore MessageUtil) ──────────────────
+
+    /** Sends a themed message to a player. Supports legacy &-color codes. */
+    public static void send(net.minecraft.server.level.ServerPlayer player, String message) {
+        if (player == null || message == null) return;
+        player.sendSystemMessage(com.arcadia.lib.text.LegacyColorFormatter.parse(message));
+    }
+
+    /** Broadcasts a message to all online players. */
+    public static void broadcastAll(net.minecraft.server.MinecraftServer server, String message) {
+        if (server == null || message == null) return;
+        for (net.minecraft.server.level.ServerPlayer player : server.getPlayerList().getPlayers()) {
+            send(player, message);
+        }
+    }
+
+    /** Broadcasts a message to specific players by UUID. */
+    public static void broadcast(net.minecraft.server.MinecraftServer server,
+                                 java.util.Collection<java.util.UUID> playerIds, String message) {
+        if (server == null || playerIds == null || message == null) return;
+        for (java.util.UUID id : playerIds) {
+            if (id == null) continue;
+            net.minecraft.server.level.ServerPlayer p = server.getPlayerList().getPlayer(id);
+            if (p != null) send(p, message);
+        }
+    }
 }
