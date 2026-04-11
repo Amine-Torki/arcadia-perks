@@ -113,6 +113,20 @@ public final class ArcadiaModRegistry {
         return serverActions.containsKey(actionId) || serverActionsWithPayload.containsKey(actionId);
     }
 
+    // ── Hub card click handlers (standalone actions, bypass tab system) ────
+
+    private static final Map<String, Runnable> cardClickHandlers = new ConcurrentHashMap<>();
+
+    /** Registers a click handler for a hub card by card ID. Bypasses the tab system. */
+    public static void registerCardClickHandler(String cardId, Runnable handler) {
+        cardClickHandlers.put(cardId, handler);
+    }
+
+    /** Returns the click handler for a card, or null if it should use the default tab system. */
+    public static Runnable getCardClickHandler(String cardId) {
+        return cardClickHandlers.get(cardId);
+    }
+
     // ── Client-side action callbacks ────────────────────────────────────────
 
     private static final Map<String, Runnable> clientActions = new ConcurrentHashMap<>();

@@ -187,8 +187,16 @@ public class ArcadiaHubScreen extends Screen {
         if (button == 0 && hoveredCard >= 0) {
             ArcadiaModCard card = cards.get(hoveredCard);
             if (card.available()) {
-                ArcadiaModRegistry.openTabClient(card.sortOrder());
-                this.onClose();
+                // Check for standalone click handler first (e.g. admin panel)
+                Runnable clickHandler = ArcadiaModRegistry.getCardClickHandler(card.id());
+                if (clickHandler != null) {
+                    this.onClose();
+                    clickHandler.run();
+                } else {
+                    // Default: open dashboard tab via prestige packet system
+                    ArcadiaModRegistry.openTabClient(card.sortOrder());
+                    this.onClose();
+                }
                 return true;
             }
         }
