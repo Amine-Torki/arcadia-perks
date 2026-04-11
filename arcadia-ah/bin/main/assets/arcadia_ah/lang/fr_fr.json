@@ -29,6 +29,9 @@
   "arcadia_ah.gui.nav.search": "Rechercher",
   "arcadia_ah.gui.nav.filter": "Filtre",
   "arcadia_ah.gui.nav.my_listings": "Mes Annonces",
-  "arcadia_ah.gui.nav.prev": "Page Précédente",
-  "arcadia_ah.gui.nav.next": "Page Suivante"
+  "arcadia_ah.gui.nav.prev": "◀ Précédent",
+  "arcadia_ah.gui.nav.next": "Suivant ▶",
+  "arcadia_ah.cmd.price_invalid": "Le prix doit être supérieur à 0.",
+  "arcadia_ah.cmd.blacklisted": "Cet objet ne peut pas être vendu à l'Hôtel des Ventes.",
+  "arcadia_ah.cmd.max_listings": "Tu as déjà %s annonces actives."
 }

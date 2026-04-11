@@ -51,17 +51,17 @@ public final class AhDashboardTab implements DashboardTabHandler {
                     setName(item, Component.literal("§cInvalid item"));
                 } else {
                     List<Component> lore = new ArrayList<>();
-                    lore.add(Component.literal("§7Seller: §f" + listing.sellerName()));
-                    lore.add(Component.literal("§6Price: §f" + com.arcadia.lib.economy.EconomyService.formatPrice(listing.price())));
-                    lore.add(Component.literal("§7Server: §f" + listing.serverId()));
+                    lore.add(Component.literal("§7").append(Component.translatable("arcadia_ah.gui.listing.seller")).append(Component.literal("§f" + listing.sellerName())));
+                    lore.add(Component.literal("§6").append(Component.translatable("arcadia_ah.gui.listing.price")).append(Component.literal("§f" + com.arcadia.lib.economy.EconomyService.formatPrice(listing.price()))));
+                    lore.add(Component.literal("§7").append(Component.translatable("arcadia_ah.gui.listing.server")).append(Component.literal("§f" + listing.serverId())));
                     net.minecraft.nbt.CompoundTag ahTag = item.getOrDefault(DataComponents.CUSTOM_DATA,
                             net.minecraft.world.item.component.CustomData.EMPTY).copyTag();
                     ahTag.putLong("arcadia_ah_expires", listing.expiresAt());
                     item.set(DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(ahTag));
                     if (ahMyListings) {
-                        lore.add(Component.literal("§c[Click to cancel]").withStyle(ChatFormatting.RED));
+                        lore.add(Component.translatable("arcadia_ah.gui.listing.click_cancel").withStyle(ChatFormatting.RED));
                     } else {
-                        lore.add(Component.literal("§a[Click to buy]").withStyle(ChatFormatting.GREEN));
+                        lore.add(Component.translatable("arcadia_ah.gui.listing.click_buy").withStyle(ChatFormatting.GREEN));
                     }
                     net.minecraft.world.item.component.ItemLore existingLore = item.get(DataComponents.LORE);
                     if (existingLore != null) {
@@ -76,7 +76,7 @@ public final class AhDashboardTab implements DashboardTabHandler {
                 container.setItem(slot, item);
             } else {
                 ItemStack empty = new ItemStack(Items.LIGHT_GRAY_STAINED_GLASS_PANE);
-                setName(empty, Component.literal("§8No listing"));
+                setName(empty, Component.translatable("arcadia_ah.gui.listing.no_listing").withStyle(ChatFormatting.DARK_GRAY));
                 container.setItem(slot, empty);
             }
         }
@@ -85,21 +85,18 @@ public final class AhDashboardTab implements DashboardTabHandler {
 
         String curSearch = AuctionManager.getSearch(player.getUUID());
         ItemStack search = new ItemStack(Items.SPYGLASS);
-        setName(search, Component.literal("§bSearch").withStyle(ChatFormatting.AQUA));
+        setName(search, Component.translatable("arcadia_ah.gui.nav.search").withStyle(ChatFormatting.AQUA));
         setLore(search, List.of(
-                Component.literal(curSearch.isEmpty() ? "§7Click to search..." : "§fQuery: §e" + curSearch),
-                Component.literal("§7Click to open search").withStyle(ChatFormatting.GRAY)));
+                Component.literal(curSearch.isEmpty() ? "" : "§fQuery: §e" + curSearch)));
         container.setItem(46, search);
 
         String catDisplay = ahCategory.isEmpty() ? "All" : (ahCategory.equals("pet") ? "Pets" : "Misc");
         ItemStack filter = new ItemStack(Items.HOPPER);
-        setName(filter, Component.literal("§dFilter: §f" + catDisplay));
-        setLore(filter, List.of(Component.literal("§7Click to cycle: All → Pets → Misc").withStyle(ChatFormatting.GRAY)));
+        setName(filter, Component.literal("§d").append(Component.translatable("arcadia_ah.gui.nav.filter")).append(Component.literal(": §f" + catDisplay)));
         container.setItem(47, filter);
 
         ItemStack lb = new ItemStack(Items.NETHER_STAR);
-        setName(lb, Component.literal("⭐ Top Business").withStyle(ChatFormatting.GOLD));
-        setLore(lb, List.of(Component.literal("View top sellers by unique clients").withStyle(ChatFormatting.GRAY)));
+        setName(lb, Component.translatable("arcadia_ah.gui.leaderboard.title").withStyle(ChatFormatting.GOLD));
         container.setItem(48, lb);
 
         ItemStack pageInfo = new ItemStack(Items.PAPER);
@@ -108,8 +105,7 @@ public final class AhDashboardTab implements DashboardTabHandler {
         container.setItem(49, pageInfo);
 
         ItemStack myBtn = new ItemStack(ahMyListings ? Items.LIME_DYE : Items.GRAY_DYE);
-        setName(myBtn, Component.literal(ahMyListings ? "§a◉ My Listings" : "§7◎ My Listings"));
-        setLore(myBtn, List.of(Component.literal(ahMyListings ? "§7Click to browse all" : "§7Click to see yours").withStyle(ChatFormatting.GRAY)));
+        setName(myBtn, Component.literal(ahMyListings ? "§a◉ " : "§7◎ ").append(Component.translatable("arcadia_ah.gui.nav.my_listings")));
         container.setItem(51, myBtn);
     }
 
@@ -200,11 +196,11 @@ public final class AhDashboardTab implements DashboardTabHandler {
             setName(g, Component.literal(" "));
             container.setItem(i, g);
         }
-        container.setItem(45, arrowItem("◀ Previous"));
+        container.setItem(45, arrowItem(Component.translatable("arcadia_ah.gui.nav.prev").getString()));
         ItemStack pi = new ItemStack(Items.PAPER);
         setName(pi, Component.literal("§fPage " + (page + 1) + " / " + (maxPage + 1)));
         container.setItem(49, pi);
-        container.setItem(53, arrowItem("Next ▶"));
+        container.setItem(53, arrowItem(Component.translatable("arcadia_ah.gui.nav.next").getString()));
     }
 
     private ItemStack arrowItem(String label) {

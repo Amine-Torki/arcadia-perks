@@ -106,14 +106,23 @@ public final class AuctionManager {
     public static boolean listItem(ServerPlayer seller, ItemStack stack, long price, MinecraftServer server) {
         if (stack.isEmpty()) return false;
         if (price <= 0) {
-            seller.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.error("Price must be greater than 0."));
+            seller.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.error(
+                    Component.translatable("arcadia_ah.cmd.price_invalid").getString()));
+            return false;
+        }
+
+        // Check blacklist
+        String itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+        if (com.arcadia.ah.config.AhConfig.isBlacklisted(itemId)) {
+            seller.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.error(
+                    Component.translatable("arcadia_ah.cmd.blacklisted").getString()));
             return false;
         }
 
         List<AuctionListing> myListings = getByPlayer(seller.getUUID());
         if (myListings.size() >= maxListingsPerPlayer()) {
-            seller.sendSystemMessage(Component.literal(
-                    "§cYou already have " + maxListingsPerPlayer() + " active listings."));
+            seller.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.error(
+                    Component.translatable("arcadia_ah.cmd.max_listings", maxListingsPerPlayer()).getString()));
             return false;
         }
 

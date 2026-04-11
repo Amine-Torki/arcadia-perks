@@ -29,6 +29,9 @@
   "arcadia_ah.gui.nav.search": "Search",
   "arcadia_ah.gui.nav.filter": "Filter",
   "arcadia_ah.gui.nav.my_listings": "My Listings",
-  "arcadia_ah.gui.nav.prev": "Previous Page",
-  "arcadia_ah.gui.nav.next": "Next Page"
+  "arcadia_ah.gui.nav.prev": "◀ Previous",
+  "arcadia_ah.gui.nav.next": "Next ▶",
+  "arcadia_ah.cmd.price_invalid": "Price must be greater than 0.",
+  "arcadia_ah.cmd.blacklisted": "This item cannot be sold on the Auction House.",
+  "arcadia_ah.cmd.max_listings": "You already have %s active listings."
 }

@@ -565,37 +565,37 @@ public class DashboardMenu extends AbstractContainerMenu {
      * on the Pets tab (tab 1). Prevents pets from cluttering other tabs.
      * Uses isActive() — when false, the slot is not rendered and not interactable.
      */
+    /**
+     * Inventory slot that hides arcadia_pets items when not on the Pets tab.
+     * Uses isActive() for safe rendering control — never overrides getItem()
+     * to avoid inventory sync corruption.
+     */
     private class FilteredInventorySlot extends Slot {
         FilteredInventorySlot(net.minecraft.world.Container container, int index, int x, int y) {
             super(container, index, x, y);
         }
 
         @Override
-        public ItemStack getItem() {
-            ItemStack real = super.getItem();
-            // On Pets tab → show everything
-            if (currentTab == 1) return real;
-            // On other tabs → hide arcadia_pets items by returning EMPTY
-            if (!real.isEmpty() && isPetsModItem(real)) return ItemStack.EMPTY;
-            return real;
-        }
-
-        @Override
-        public boolean allowModification(Player player) {
-            // Block interaction with hidden pet items
-            if (currentTab != 1 && !super.getItem().isEmpty() && isPetsModItem(super.getItem())) return false;
-            return super.allowModification(player);
+        public boolean isActive() {
+            if (currentTab == 1) return true; // Pets tab shows everything
+            ItemStack stack = super.getItem();
+            if (!stack.isEmpty()) {
+                var key = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
+                if (key.getNamespace().equals("arcadia_pets")) return false;
+            }
+            return true;
         }
 
         @Override
         public boolean mayPickup(Player player) {
-            if (currentTab != 1 && !super.getItem().isEmpty() && isPetsModItem(super.getItem())) return false;
+            if (!isActive()) return false;
             return super.mayPickup(player);
         }
 
-        private static boolean isPetsModItem(ItemStack stack) {
-            var key = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
-            return key.getNamespace().equals("arcadia_pets");
+        @Override
+        public boolean mayPlace(ItemStack stack) {
+            if (!isActive()) return false;
+            return super.mayPlace(stack);
         }
     }
 }
