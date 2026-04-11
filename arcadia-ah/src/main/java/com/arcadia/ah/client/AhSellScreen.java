@@ -33,9 +33,9 @@ public class AhSellScreen extends Screen {
     @Override
     protected void init() {
         int cx = this.width / 2;
-        int cy = this.height / 2;
+        int panelTop = this.height / 2 - 65;
 
-        priceInput = new EditBox(this.font, cx - 60, cy - 5, 120, 18, Component.literal("Price"));
+        priceInput = new EditBox(this.font, cx - 60, panelTop + 82, 120, 16, Component.literal("Price"));
         priceInput.setMaxLength(15);
         priceInput.setValue("");
         priceInput.setFocused(true);
@@ -48,40 +48,53 @@ public class AhSellScreen extends Screen {
         g.fill(0, 0, this.width, this.height, ArcadiaTheme.OVERLAY_BG);
 
         int cx = this.width / 2;
-        int cy = this.height / 2;
+        int panelW = 200;
+        int panelH = 130;
+        int panelX = cx - panelW / 2;
+        int panelY = this.height / 2 - 65;
 
         // Panel
-        ArcadiaTheme.drawPanel(g, cx - 90, cy - 50, 180, 100, false, ArcadiaTheme.COPPER);
+        ArcadiaTheme.drawPanel(g, panelX, panelY, panelW, panelH, false, ArcadiaTheme.COPPER);
+
+        int y = panelY + 8;
 
         // Title
-        ArcadiaTheme.drawCenteredText(g, Component.literal("Sell on Auction House"), cx, cy - 42, ArcadiaTheme.BRASS);
+        ArcadiaTheme.drawCenteredText(g, Component.literal("Sell on Auction House"), cx, y, ArcadiaTheme.BRASS);
+        y += 14;
 
-        // Item preview
-        g.renderItem(itemToSell, cx - 8, cy - 30);
-        g.renderItemDecorations(this.font, itemToSell, cx - 8, cy - 30);
+        // Separator
+        ArcadiaTheme.drawSeparator(g, panelX, y, panelW, ArcadiaTheme.withAlpha(ArcadiaTheme.COPPER, 0x44));
+        y += 6;
 
-        // Item name
-        Component itemName = itemToSell.getHoverName();
-        g.drawCenteredString(this.font, itemName, cx, cy - 18, ArcadiaTheme.TEXT_PRIMARY);
+        // Item icon (centered)
+        g.renderItem(itemToSell, cx - 8, y);
+        y += 20;
 
-        // Quantity
+        // Item name + quantity on same line
+        String nameStr = itemToSell.getHoverName().getString();
         if (itemToSell.getCount() > 1) {
-            g.drawCenteredString(this.font, "x" + itemToSell.getCount(), cx + 20, cy - 26, ArcadiaTheme.TEXT_SECONDARY);
+            nameStr += " x" + itemToSell.getCount();
         }
+        g.drawCenteredString(this.font, nameStr, cx, y, ArcadiaTheme.TEXT_PRIMARY);
+        y += 14;
 
-        super.render(g, mouseX, mouseY, partialTick);
+        // "Price:" label
+        g.drawCenteredString(this.font, "Price:", cx, y, ArcadiaTheme.TEXT_SECONDARY);
+        y += 12;
 
-        // Buttons
-        int btnY = cy + 20;
+        // Input field is rendered by widget system (positioned in init)
+
+        // Buttons below input
+        int btnY = panelY + panelH - 24;
         int btnW = 80;
         int btnH = 16;
 
-        // Confirm button
-        boolean hovConfirm = mouseX >= cx - btnW - 4 && mouseX < cx - 4 && mouseY >= btnY && mouseY < btnY + btnH;
-        int confirmBg = hovConfirm ? ArcadiaTheme.brighten(0xFF1A3A1A, 25) : 0xFF1A3A1A;
-        g.fill(cx - btnW - 4, btnY, cx - 4, btnY + btnH, confirmBg);
+        // Sell button
+        boolean hovSell = mouseX >= cx - btnW - 4 && mouseX < cx - 4 && mouseY >= btnY && mouseY < btnY + btnH;
+        int sellBg = hovSell ? ArcadiaTheme.brighten(0xFF1A3A1A, 25) : 0xFF1A3A1A;
+        g.fill(cx - btnW - 4, btnY, cx - 4, btnY + btnH, sellBg);
         ArcadiaTheme.drawBorder(g, cx - btnW - 4, btnY, btnW, btnH,
-                hovConfirm ? ArcadiaTheme.COPPER : ArcadiaTheme.BORDER_IDLE);
+                hovSell ? ArcadiaTheme.COPPER : ArcadiaTheme.BORDER_IDLE);
         g.drawCenteredString(this.font, "Sell", cx - btnW / 2 - 4, btnY + 4, ArcadiaTheme.TEXT_PRIMARY);
 
         // Cancel button
@@ -91,6 +104,8 @@ public class AhSellScreen extends Screen {
         ArcadiaTheme.drawBorder(g, cx + 4, btnY, btnW, btnH,
                 hovCancel ? ArcadiaTheme.COPPER : ArcadiaTheme.BORDER_IDLE);
         g.drawCenteredString(this.font, "Cancel", cx + btnW / 2 + 4, btnY + 4, ArcadiaTheme.TEXT_PRIMARY);
+
+        super.render(g, mouseX, mouseY, partialTick);
     }
 
     @Override
