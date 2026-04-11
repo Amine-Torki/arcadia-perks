@@ -3,7 +3,7 @@ package com.arcadia.ah.server;
 import com.arcadia.ah.auction.AuctionItemSerializer;
 import com.arcadia.ah.auction.AuctionListing;
 import com.arcadia.ah.auction.AuctionManager;
-import com.arcadia.ah.auction.NumismaticsCompat;
+// NumismaticsCompat replaced by EconomyService in lib
 import com.arcadia.ah.network.S2COpenAhSearch;
 import com.arcadia.lib.dashboard.DashboardTabHandler;
 import net.minecraft.ChatFormatting;
@@ -52,7 +52,7 @@ public final class AhDashboardTab implements DashboardTabHandler {
                 } else {
                     List<Component> lore = new ArrayList<>();
                     lore.add(Component.literal("§7Seller: §f" + listing.sellerName()));
-                    lore.add(Component.literal("§6Price: §f" + NumismaticsCompat.formatPrice(listing.price())));
+                    lore.add(Component.literal("§6Price: §f" + com.arcadia.lib.economy.EconomyService.formatPrice(listing.price())));
                     lore.add(Component.literal("§7Server: §f" + listing.serverId()));
                     net.minecraft.nbt.CompoundTag ahTag = item.getOrDefault(DataComponents.CUSTOM_DATA,
                             net.minecraft.world.item.component.CustomData.EMPTY).copyTag();

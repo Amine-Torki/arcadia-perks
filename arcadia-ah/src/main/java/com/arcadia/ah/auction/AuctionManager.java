@@ -149,11 +149,11 @@ public final class AuctionManager {
         if (qty > 1) {
             seller.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.success(
                     "Listed " + qty + "×" + itemName
-                    + " for " + NumismaticsCompat.formatPrice(price) + " total ("
-                    + NumismaticsCompat.formatPrice(price / qty) + "/unit)."));
+                    + " for " + com.arcadia.lib.economy.EconomyService.formatPrice(price) + " total ("
+                    + com.arcadia.lib.economy.EconomyService.formatPrice(price / qty) + "/unit)."));
         } else {
             seller.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.success(
-                    "Listed " + itemName + " for " + NumismaticsCompat.formatPrice(price) + "."));
+                    "Listed " + itemName + " for " + com.arcadia.lib.economy.EconomyService.formatPrice(price) + "."));
         }
         return true;
     }
@@ -176,9 +176,9 @@ public final class AuctionManager {
             return;
         }
 
-        if (!NumismaticsCompat.deductBalance(buyer, listing.price())) {
+        if (!com.arcadia.lib.economy.EconomyService.deduct(buyer, listing.price())) {
             buyer.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.error(
-                    "Not enough funds. Need " + NumismaticsCompat.formatPrice(listing.price()) + "."));
+                    "Not enough funds. Need " + com.arcadia.lib.economy.EconomyService.formatPrice(listing.price()) + "."));
             return;
         }
 
@@ -218,17 +218,17 @@ public final class AuctionManager {
         // If seller is online on THIS server, pay them directly
         ServerPlayer sellerOnline = server.getPlayerList().getPlayer(listing.sellerUuid());
         if (sellerOnline != null) {
-            NumismaticsCompat.addBalance(sellerOnline, listing.price());
+            com.arcadia.lib.economy.EconomyService.add(sellerOnline, listing.price());
             AuctionDatabase.deleteMailboxEntry(payment.entryId());
             sellerOnline.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.success(
                     buyer.getGameProfile().getName() + " bought your "
                     + listing.itemDisplayName() + " for "
-                    + NumismaticsCompat.formatPrice(listing.price()) + "."));
+                    + com.arcadia.lib.economy.EconomyService.formatPrice(listing.price()) + "."));
         }
 
         buyer.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.success(
                 "Bought " + listing.itemDisplayName()
-                + " for " + NumismaticsCompat.formatPrice(listing.price()) + "."));
+                + " for " + com.arcadia.lib.economy.EconomyService.formatPrice(listing.price()) + "."));
     }
 
     // -------------------------------------------------------------------------
@@ -307,10 +307,10 @@ public final class AuctionManager {
                 net.minecraft.core.HolderLookup.Provider reg = server.registryAccess();
                 for (MailboxEntry entry : entries) {
                     if ("coins".equals(entry.type())) {
-                        NumismaticsCompat.addBalance(player, entry.coins());
+                        com.arcadia.lib.economy.EconomyService.add(player, entry.coins());
                         String reason = entry.reason() != null ? entry.reason() : "Auction sale";
                         player.sendSystemMessage(Component.literal(
-                                "§6⚙ Arcadia §8▸ §a" + NumismaticsCompat.formatPrice(entry.coins())
+                                "§6⚙ Arcadia §8▸ §a" + com.arcadia.lib.economy.EconomyService.formatPrice(entry.coins())
                                 + " §6received: §7" + reason));
                     } else if ("item".equals(entry.type()) && entry.itemNbt() != null) {
                         ItemStack item = AuctionItemSerializer.fromBase64(entry.itemNbt(), reg);

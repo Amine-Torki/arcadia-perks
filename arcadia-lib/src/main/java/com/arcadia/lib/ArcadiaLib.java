@@ -1,5 +1,6 @@
 package com.arcadia.lib;
 
+import com.arcadia.lib.economy.EconomyConfig;
 import com.arcadia.lib.permissions.PermissionConfig;
 import com.arcadia.lib.staff.StaffConfig;
 import net.neoforged.bus.api.IEventBus;
@@ -18,6 +19,7 @@ public final class ArcadiaLib {
         // Register configs
         container.registerConfig(ModConfig.Type.SERVER, PermissionConfig.SPEC, "arcadia/lib/permissions.toml");
         container.registerConfig(ModConfig.Type.SERVER, StaffConfig.SPEC, "arcadia/lib/staff.toml");
+        container.registerConfig(ModConfig.Type.SERVER, EconomyConfig.SPEC, "arcadia/lib/economy.toml");
         modBus.addListener(this::onConfigLoad);
     }
 
@@ -28,6 +30,9 @@ public final class ArcadiaLib {
         }
         if (event.getConfig().getSpec() == StaffConfig.SPEC) {
             StaffConfig.apply();
+        }
+        if (event.getConfig().getSpec() == EconomyConfig.SPEC) {
+            EconomyConfig.apply();
         }
     }
 }

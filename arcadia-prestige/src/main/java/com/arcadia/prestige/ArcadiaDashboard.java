@@ -94,6 +94,7 @@ public class ArcadiaDashboard {
         com.arcadia.lib.data.PlayerDataHandler.setServer(event.getServer());
         com.arcadia.lib.permissions.PermissionService.init(
                 com.arcadia.lib.permissions.LuckPermsBackend.createOrFallback());
+        com.arcadia.lib.economy.EconomyService.init();
         CosmeticPermissionScanner.init();
         LOGGER.info("[ArcadiaPrestige] Server initialized. Dedicated: {}, DB active: {}, Debug: {}",
                 isDedicated, DatabaseManager.isDatabaseActive(), DebugMode.ENABLED);
@@ -102,6 +103,7 @@ public class ArcadiaDashboard {
     private void onServerStopping(ServerStoppingEvent event) {
         DatabaseManager.shutdown();
         com.arcadia.lib.permissions.PermissionService.shutdown();
+        com.arcadia.lib.economy.EconomyService.shutdown();
     }
 
     private void onConfigLoad(ModConfigEvent event) {
