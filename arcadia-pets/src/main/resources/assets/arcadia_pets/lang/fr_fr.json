@@ -266,5 +266,11 @@
   "arcadia_pets.gui.pet_bag.sent_to_collection": "★ Familier envoyé dans ta collection ! Utilise /arcadia_prestige → Familiers pour le gérer.",
   "arcadia_pets.gui.pet_bag.collection_full_to_inv": "⚠ Collection pleine (108/108) — familier ajouté dans ton inventaire.",
   "key.arcadia_pets.open_pet_panel": "Ouvrir le panneau du familier",
-  "key.categories.arcadia_pets": "Arcadia Familiers"
+  "key.categories.arcadia_pets": "Arcadia Familiers",
+  "arcadia_pets.item.star_essence.desc1": "Combiner avec un familier dans une enclume",
+  "arcadia_pets.item.star_essence.desc2": "Améliore un gène de +1★ (max 5★)",
+  "arcadia_pets.item.star_essence.desc3": "Ne peut être appliqué qu'une fois par familier",
+  "arcadia_pets.pet.recalled": "Rappelé ▶",
+  "arcadia_pets.gui.hud_settings.epilepsy": "Mode anti-épilepsie",
+  "arcadia_pets.gui.hud_settings.pet_name_preview": "Nom du familier"
 }

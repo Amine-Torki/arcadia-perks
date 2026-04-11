@@ -29,21 +29,22 @@ public class AhSearchScreen extends Screen {
         int cx = this.width / 2;
         int cy = this.height / 2;
 
-        searchBox = new EditBox(this.font, cx - 100, cy - 10, 200, 20, Component.literal("Search..."));
+        searchBox = new EditBox(this.font, cx - 100, cy - 10, 200, 20,
+                Component.translatable("arcadia_ah.gui.search.hint"));
         searchBox.setMaxLength(64);
         searchBox.setValue(initialQuery);
         searchBox.setFocused(true);
         addRenderableWidget(searchBox);
 
-        addRenderableWidget(Button.builder(Component.literal("Search"), btn -> confirm())
+        addRenderableWidget(Button.builder(Component.translatable("arcadia_ah.gui.search.confirm"), btn -> confirm())
                 .bounds(cx - 51, cy + 16, 50, 20).build());
 
-        addRenderableWidget(Button.builder(Component.literal("Clear"), btn -> {
+        addRenderableWidget(Button.builder(Component.translatable("arcadia_ah.gui.search.clear"), btn -> {
             searchBox.setValue("");
             confirm();
         }).bounds(cx + 1, cy + 16, 50, 20).build());
 
-        addRenderableWidget(Button.builder(Component.literal("Cancel"), btn -> cancel())
+        addRenderableWidget(Button.builder(Component.translatable("arcadia_ah.gui.search.cancel"), btn -> cancel())
                 .bounds(cx - 25, cy + 40, 50, 20).build());
     }
 

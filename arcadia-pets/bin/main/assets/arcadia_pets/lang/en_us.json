@@ -265,5 +265,11 @@
   "arcadia_pets.hub.pets.label": "Pets",
   "arcadia_pets.hub.pets.sub": "Collection & skills",
   "key.arcadia_pets.open_pet_panel": "Open Pet Panel",
-  "key.categories.arcadia_pets": "Arcadia Pets"
+  "key.categories.arcadia_pets": "Arcadia Pets",
+  "arcadia_pets.item.star_essence.desc1": "Combine with a pet in an anvil",
+  "arcadia_pets.item.star_essence.desc2": "Upgrades one stat by +1★ (max 5★)",
+  "arcadia_pets.item.star_essence.desc3": "Can only be applied once per pet",
+  "arcadia_pets.pet.recalled": "Recalled ▶",
+  "arcadia_pets.gui.hud_settings.epilepsy": "Epilepsy-safe mode",
+  "arcadia_pets.gui.hud_settings.pet_name_preview": "Pet Name"
 }

@@ -613,7 +613,7 @@ public class PetScreen extends Screen {
         int bg; Component lbl;
         if (!petActive) {
             bg  = hov ? 0xFF4A3A28 : 0xFF2A2018;
-            lbl = Component.literal("Recalled \u25B6");
+            lbl = Component.translatable("arcadia_pets.pet.recalled");
         } else {
             int[] movBgs = {0xFF1A4A60, 0xFF1A4A30}; // follow=blue-steel, pocket=green-steel
             bg  = hov ? ArcadiaTheme.brighten(movBgs[selectedMovement.ordinal()], 25) : movBgs[selectedMovement.ordinal()];

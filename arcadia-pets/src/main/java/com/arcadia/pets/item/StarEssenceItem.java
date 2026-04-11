@@ -33,9 +33,9 @@ public class StarEssenceItem extends Item {
 
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltipComponents, TooltipFlag tooltipFlag) {
-        tooltipComponents.add(Component.literal("Combine with a pet in an anvil").withStyle(ChatFormatting.LIGHT_PURPLE));
-        tooltipComponents.add(Component.literal("Upgrades one stat by +1\u2605 (max 5\u2605)").withStyle(ChatFormatting.GRAY));
-        tooltipComponents.add(Component.literal("Can only be applied once per pet").withStyle(ChatFormatting.DARK_GRAY));
+        tooltipComponents.add(Component.translatable("arcadia_pets.item.star_essence.desc1").withStyle(ChatFormatting.LIGHT_PURPLE));
+        tooltipComponents.add(Component.translatable("arcadia_pets.item.star_essence.desc2").withStyle(ChatFormatting.GRAY));
+        tooltipComponents.add(Component.translatable("arcadia_pets.item.star_essence.desc3").withStyle(ChatFormatting.DARK_GRAY));
     }
 
     @Override

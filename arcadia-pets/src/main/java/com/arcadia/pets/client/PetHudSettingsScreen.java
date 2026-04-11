@@ -74,7 +74,7 @@ public final class PetHudSettingsScreen extends Screen {
 
         // Reduced motion
         drawToggleBtn(g, mouseX, mouseY, startX, btnY - BTN_H - BTN_GAP, totalW,
-                "Epilepsy-safe mode", reducedMotion);
+                Component.translatable("arcadia_pets.gui.hud_settings.epilepsy").getString(), reducedMotion);
 
         // Action buttons
         int actY = btnY + BTN_H + BTN_GAP;
@@ -108,7 +108,7 @@ public final class PetHudSettingsScreen extends Screen {
         g.pose().pushPose();
         g.pose().translate(x, y, 0);
         g.pose().scale(0.8f, 0.8f, 1f);
-        g.drawString(this.font, "Pet Name", 0, 0, ArcadiaTheme.withAlpha(ArcadiaTheme.BRASS, alpha), false);
+        g.drawString(this.font, Component.translatable("arcadia_pets.gui.hud_settings.pet_name_preview").getString(), 0, 0, ArcadiaTheme.withAlpha(ArcadiaTheme.BRASS, alpha), false);
         g.pose().popPose();
         y += 10;
 

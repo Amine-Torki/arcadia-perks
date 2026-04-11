@@ -39,7 +39,7 @@ public class AhSellScreen extends Screen {
         priceInput.setMaxLength(15);
         priceInput.setValue("");
         priceInput.setFocused(true);
-        priceInput.setHint(Component.literal("Enter price..."));
+        priceInput.setHint(Component.translatable("arcadia_ah.gui.sell.price_hint"));
         addRenderableWidget(priceInput);
     }
 
@@ -59,7 +59,7 @@ public class AhSellScreen extends Screen {
         int y = panelY + 8;
 
         // Title
-        ArcadiaTheme.drawCenteredText(g, Component.literal("Sell on Auction House"), cx, y, ArcadiaTheme.BRASS);
+        ArcadiaTheme.drawCenteredText(g, Component.translatable("arcadia_ah.gui.sell.title"), cx, y, ArcadiaTheme.BRASS);
         y += 14;
 
         // Separator
@@ -79,7 +79,7 @@ public class AhSellScreen extends Screen {
         y += 14;
 
         // "Price:" label
-        g.drawCenteredString(this.font, "Price:", cx, y, ArcadiaTheme.TEXT_SECONDARY);
+        g.drawCenteredString(this.font, Component.translatable("arcadia_ah.gui.sell.price_label"), cx, y, ArcadiaTheme.TEXT_SECONDARY);
         y += 12;
 
         // Input field is rendered by widget system (positioned in init)
@@ -95,7 +95,7 @@ public class AhSellScreen extends Screen {
         g.fill(cx - btnW - 4, btnY, cx - 4, btnY + btnH, sellBg);
         ArcadiaTheme.drawBorder(g, cx - btnW - 4, btnY, btnW, btnH,
                 hovSell ? ArcadiaTheme.COPPER : ArcadiaTheme.BORDER_IDLE);
-        g.drawCenteredString(this.font, "Sell", cx - btnW / 2 - 4, btnY + 4, ArcadiaTheme.TEXT_PRIMARY);
+        g.drawCenteredString(this.font, Component.translatable("arcadia_ah.gui.sell.confirm"), cx - btnW / 2 - 4, btnY + 4, ArcadiaTheme.TEXT_PRIMARY);
 
         // Cancel button
         boolean hovCancel = mouseX >= cx + 4 && mouseX < cx + btnW + 4 && mouseY >= btnY && mouseY < btnY + btnH;
@@ -103,7 +103,7 @@ public class AhSellScreen extends Screen {
         g.fill(cx + 4, btnY, cx + btnW + 4, btnY + btnH, cancelBg);
         ArcadiaTheme.drawBorder(g, cx + 4, btnY, btnW, btnH,
                 hovCancel ? ArcadiaTheme.COPPER : ArcadiaTheme.BORDER_IDLE);
-        g.drawCenteredString(this.font, "Cancel", cx + btnW / 2 + 4, btnY + 4, ArcadiaTheme.TEXT_PRIMARY);
+        g.drawCenteredString(this.font, Component.translatable("arcadia_ah.gui.sell.cancel"), cx + btnW / 2 + 4, btnY + 4, ArcadiaTheme.TEXT_PRIMARY);
 
         super.render(g, mouseX, mouseY, partialTick);
     }
@@ -113,8 +113,10 @@ public class AhSellScreen extends Screen {
         if (button != 0) return super.mouseClicked(mouseX, mouseY, button);
 
         int cx = this.width / 2;
-        int cy = this.height / 2;
-        int btnY = cy + 20;
+        int panelW = 200;
+        int panelH = 130;
+        int panelY = this.height / 2 - 65;
+        int btnY = panelY + panelH - 24;
         int btnW = 80;
         int btnH = 16;
 
