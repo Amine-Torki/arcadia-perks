@@ -2,7 +2,6 @@ package com.arcadia.lib.staff;
 
 import com.arcadia.lib.ArcadiaLib;
 import com.arcadia.lib.ArcadiaMessages;
-import com.arcadia.lib.text.TextFormatter;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.LongArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -15,7 +14,8 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
 /**
- * Registers the /staff command tree for moderation actions.
+ * Staff commands: /staff chat, toggle, list, mute, unmute, info.
+ * Ban/kick removed — handled by external moderation mods.
  */
 @EventBusSubscriber(modid = ArcadiaLib.MOD_ID)
 public final class StaffCommands {
@@ -28,7 +28,7 @@ public final class StaffCommands {
             Commands.literal("staff")
                 .executes(ctx -> {
                     ctx.getSource().sendSuccess(() -> ArcadiaMessages.info(
-                            "Staff commands: /staff chat, /staff toggle, /staff list, /staff kick, /staff ban, /staff mute, /staff unmute"), false);
+                            Component.translatable("arcadia_lib.staff.help").getString()), false);
                     return Command.SINGLE_SUCCESS;
                 })
                 .then(Commands.literal("chat")
@@ -47,8 +47,9 @@ public final class StaffCommands {
                         if (!StaffService.requireRole(ctx.getSource(), StaffRole.HELPER)) return 0;
                         boolean on = StaffChatService.toggle(sp.getUUID());
                         sp.sendSystemMessage(ArcadiaMessages.info(
-                                "Staff chat " + (on ? "enabled" : "disabled") + ". " +
-                                (on ? "All your messages will go to staff chat." : "Normal chat restored.")));
+                                Component.translatable(on
+                                        ? "arcadia_lib.staff.chat_enabled"
+                                        : "arcadia_lib.staff.chat_disabled").getString()));
                         return Command.SINGLE_SUCCESS;
                     })
                 )
@@ -57,9 +58,11 @@ public final class StaffCommands {
                         if (!StaffService.requireRole(ctx.getSource(), StaffRole.HELPER)) return 0;
                         var staff = StaffService.getStaffOnline();
                         if (staff.isEmpty()) {
-                            ctx.getSource().sendSuccess(() -> ArcadiaMessages.info("No staff online."), false);
+                            ctx.getSource().sendSuccess(() -> ArcadiaMessages.info(
+                                    Component.translatable("arcadia_lib.staff.no_staff").getString()), false);
                         } else {
-                            StringBuilder sb = new StringBuilder("Staff online (" + staff.size() + "): ");
+                            StringBuilder sb = new StringBuilder();
+                            sb.append(Component.translatable("arcadia_lib.staff.online", staff.size()).getString());
                             for (int i = 0; i < staff.size(); i++) {
                                 if (i > 0) sb.append(", ");
                                 ServerPlayer s = staff.get(i);
@@ -70,50 +73,6 @@ public final class StaffCommands {
                         }
                         return Command.SINGLE_SUCCESS;
                     })
-                )
-                .then(Commands.literal("kick")
-                    .then(Commands.argument("target", EntityArgument.player())
-                        .executes(ctx -> {
-                            if (!(ctx.getSource().getEntity() instanceof ServerPlayer sp)) return 0;
-                            if (!StaffService.requireRole(ctx.getSource(), StaffRole.MOD)) return 0;
-                            ServerPlayer target = EntityArgument.getPlayer(ctx, "target");
-                            StaffActions.kick(target, sp, null);
-                            return Command.SINGLE_SUCCESS;
-                        })
-                        .then(Commands.argument("reason", StringArgumentType.greedyString())
-                            .executes(ctx -> {
-                                if (!(ctx.getSource().getEntity() instanceof ServerPlayer sp)) return 0;
-                                if (!StaffService.requireRole(ctx.getSource(), StaffRole.MOD)) return 0;
-                                ServerPlayer target = EntityArgument.getPlayer(ctx, "target");
-                                StaffActions.kick(target, sp, StringArgumentType.getString(ctx, "reason"));
-                                return Command.SINGLE_SUCCESS;
-                            })
-                        )
-                    )
-                )
-                .then(Commands.literal("ban")
-                    .then(Commands.argument("target", EntityArgument.player())
-                        .then(Commands.argument("duration_minutes", LongArgumentType.longArg(0))
-                            .executes(ctx -> {
-                                if (!(ctx.getSource().getEntity() instanceof ServerPlayer sp)) return 0;
-                                if (!StaffService.requireRole(ctx.getSource(), StaffRole.MOD)) return 0;
-                                ServerPlayer target = EntityArgument.getPlayer(ctx, "target");
-                                long mins = LongArgumentType.getLong(ctx, "duration_minutes");
-                                StaffActions.ban(target, sp, null, mins * 60_000);
-                                return Command.SINGLE_SUCCESS;
-                            })
-                            .then(Commands.argument("reason", StringArgumentType.greedyString())
-                                .executes(ctx -> {
-                                    if (!(ctx.getSource().getEntity() instanceof ServerPlayer sp)) return 0;
-                                    if (!StaffService.requireRole(ctx.getSource(), StaffRole.MOD)) return 0;
-                                    ServerPlayer target = EntityArgument.getPlayer(ctx, "target");
-                                    long mins = LongArgumentType.getLong(ctx, "duration_minutes");
-                                    StaffActions.ban(target, sp, StringArgumentType.getString(ctx, "reason"), mins * 60_000);
-                                    return Command.SINGLE_SUCCESS;
-                                })
-                            )
-                        )
-                    )
                 )
                 .then(Commands.literal("mute")
                     .then(Commands.argument("target", EntityArgument.player())

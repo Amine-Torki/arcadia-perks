@@ -4,68 +4,31 @@ import com.arcadia.lib.ArcadiaMessages;
 import com.arcadia.lib.text.TextFormatter;
 import com.mojang.logging.LogUtils;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.players.UserBanList;
-import net.minecraft.server.players.UserBanListEntry;
 import org.slf4j.Logger;
 
-import java.util.Date;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Standardized moderation actions with staff notifications and logging.
+ * Moderation actions: mute/unmute with staff notifications and logging.
+ * Ban/kick handled by external moderation mods.
  */
 public final class StaffActions {
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    /** Active mutes: UUID → expiry timestamp (System.currentTimeMillis). */
+    /** Active mutes: UUID → expiry timestamp. */
     private static final Map<UUID, Long> mutes = new ConcurrentHashMap<>();
     private static final Map<UUID, String> muteReasons = new ConcurrentHashMap<>();
 
     private StaffActions() {}
 
-    // ── Kick ────────────────────────────────────────────────────────────────
-
-    public static void kick(ServerPlayer target, ServerPlayer executor, String reason) {
-        String r = reason != null && !reason.isEmpty() ? reason : "No reason specified";
-        String targetName = target.getName().getString();
-        String execName = executor.getName().getString();
-
-        target.connection.disconnect(Component.literal("Kicked: " + r));
-
-        StaffChatService.broadcastAlert(execName + " kicked " + targetName + " (" + r + ")");
-        LOGGER.info("[ArcadiaStaff] {} kicked {} ({})", execName, targetName, r);
-    }
-
-    // ── Ban ─────────────────────────────────────────────────────────────────
-
-    public static void ban(ServerPlayer target, ServerPlayer executor, String reason, long durationMs) {
-        String r = reason != null && !reason.isEmpty() ? reason : "No reason specified";
-        String targetName = target.getName().getString();
-        String execName = executor.getName().getString();
-        MinecraftServer server = executor.getServer();
-        if (server == null) return;
-
-        Date expires = durationMs > 0 ? new Date(System.currentTimeMillis() + durationMs) : null;
-        UserBanList banList = server.getPlayerList().getBans();
-        banList.add(new UserBanListEntry(target.getGameProfile(), null, execName, expires, r));
-
-        String durStr = durationMs > 0 ? TextFormatter.formatMs(durationMs) : "permanent";
-        target.connection.disconnect(Component.literal("Banned: " + r + " (" + durStr + ")"));
-
-        StaffChatService.broadcastAlert(execName + " banned " + targetName
-                + " for " + durStr + " (" + r + ")");
-        LOGGER.info("[ArcadiaStaff] {} banned {} for {} ({})", execName, targetName, durStr, r);
-    }
-
     // ── Mute ────────────────────────────────────────────────────────────────
 
     public static void mute(UUID target, ServerPlayer executor, String reason, long durationMs) {
-        String r = reason != null && !reason.isEmpty() ? reason : "No reason specified";
+        String r = reason != null && !reason.isEmpty() ? reason : Component.translatable("arcadia_lib.staff.no_reason").getString();
         mutes.put(target, System.currentTimeMillis() + durationMs);
         muteReasons.put(target, r);
 
@@ -74,12 +37,16 @@ public final class StaffActions {
         if (online != null) {
             targetName = online.getName().getString();
             online.sendSystemMessage(ArcadiaMessages.error(
-                    "You have been muted for " + TextFormatter.formatMs(durationMs) + ": " + r));
+                    Component.translatable("arcadia_lib.staff.muted_notify",
+                            TextFormatter.formatMs(durationMs), r).getString()));
         }
-        StaffChatService.broadcastAlert(executor.getName().getString()
-                + " muted " + targetName + " for " + TextFormatter.formatMs(durationMs) + " (" + r + ")");
+        String finalName = targetName;
+        StaffChatService.broadcastAlert(
+                Component.translatable("arcadia_lib.staff.muted_alert",
+                        executor.getName().getString(), finalName,
+                        TextFormatter.formatMs(durationMs), r).getString());
         LOGGER.info("[ArcadiaStaff] {} muted {} for {}ms ({})",
-                executor.getName().getString(), targetName, durationMs, r);
+                executor.getName().getString(), finalName, durationMs, r);
     }
 
     public static void unmute(UUID target, ServerPlayer executor) {
@@ -87,12 +54,15 @@ public final class StaffActions {
         muteReasons.remove(target);
         ServerPlayer online = com.arcadia.lib.player.PlayerManager.getPlayer(target);
         if (online != null) {
-            online.sendSystemMessage(ArcadiaMessages.success("You have been unmuted."));
+            online.sendSystemMessage(ArcadiaMessages.success(
+                    Component.translatable("arcadia_lib.staff.unmuted_notify").getString()));
         }
-        StaffChatService.broadcastAlert(executor.getName().getString() + " unmuted " + target);
+        StaffChatService.broadcastAlert(
+                Component.translatable("arcadia_lib.staff.unmuted_alert",
+                        executor.getName().getString(), target).getString());
     }
 
-    /** Returns true if the player is currently muted. Auto-clears expired mutes. */
+    /** Returns true if the player is currently muted. */
     public static boolean isMuted(UUID uuid) {
         Long expiry = mutes.get(uuid);
         if (expiry == null) return false;
@@ -104,20 +74,13 @@ public final class StaffActions {
         return true;
     }
 
-    /** Returns remaining mute time in ms, or 0 if not muted. */
     public static long getMuteRemaining(UUID uuid) {
         Long expiry = mutes.get(uuid);
         if (expiry == null) return 0;
         return Math.max(0, expiry - System.currentTimeMillis());
     }
 
-    /** Returns the mute reason, or null. */
     public static String getMuteReason(UUID uuid) {
         return muteReasons.get(uuid);
-    }
-
-    /** Cleanup on disconnect. */
-    public static void onDisconnect(UUID uuid) {
-        // Keep mutes active across reconnects — don't clear here
     }
 }

@@ -44,7 +44,8 @@ public final class StaffService {
         }
         if (getRole(sp).atLeast(required)) return true;
         source.sendFailure(com.arcadia.lib.ArcadiaMessages.error(
-                "You need " + required.getDisplayName() + " role or higher."));
+                net.minecraft.network.chat.Component.translatable("arcadia_lib.staff.role_required",
+                        required.getDisplayName()).getString()));
         return false;
     }
 

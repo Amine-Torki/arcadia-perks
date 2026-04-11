@@ -26,8 +26,9 @@ public final class StaffEventHandler {
             long remaining = StaffActions.getMuteRemaining(player.getUUID());
             String reason = StaffActions.getMuteReason(player.getUUID());
             player.sendSystemMessage(ArcadiaMessages.error(
-                    "You are muted (" + com.arcadia.lib.text.TextFormatter.formatMs(remaining)
-                    + " remaining)" + (reason != null ? ": " + reason : "")));
+                    net.minecraft.network.chat.Component.translatable("arcadia_lib.staff.muted_feedback",
+                            com.arcadia.lib.text.TextFormatter.formatMs(remaining),
+                            reason != null ? reason : "").getString()));
             event.setCanceled(true);
             return;
         }
