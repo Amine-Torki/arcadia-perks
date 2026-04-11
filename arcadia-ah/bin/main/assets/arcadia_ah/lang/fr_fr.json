@@ -1,0 +1,6 @@
+{
+  "arcadia_ah.cmd.enabled":   "§a[Arcadia] Hôtel des Ventes activé pour tous les joueurs.",
+  "arcadia_ah.cmd.disabled":  "§c[Arcadia] Hôtel des Ventes désactivé. Les opérateurs ne sont pas affectés.",
+  "arcadia_ah.cmd.disabled_msg": "§c[Arcadia] L'Hôtel des Ventes est actuellement désactivé sur ce serveur.",
+  "arcadia_ah.cmd.hold_item": "Tiens l'objet que tu veux vendre en main."
+}

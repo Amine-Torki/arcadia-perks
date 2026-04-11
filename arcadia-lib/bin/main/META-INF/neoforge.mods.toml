@@ -1,0 +1,20 @@
+modLoader="javafml"
+loaderVersion="[1,)"
+license="All Rights Reserved"
+[[mods]]
+modId="arcadia_lib"
+version="${file.jarVersion}"
+displayName="Arcadia Lib"
+description="Shared library for Arcadia mods."
+[[dependencies.arcadia_lib]]
+    modId="neoforge"
+    type="required"
+    versionRange="[21.1.219,)"
+    ordering="NONE"
+    side="BOTH"
+[[dependencies.arcadia_lib]]
+    modId="minecraft"
+    type="required"
+    versionRange="[1.21.1]"
+    ordering="NONE"
+    side="BOTH"

@@ -1,0 +1,14 @@
+{
+  "item.arcadia_pets.pet_item":                 "Familier",
+  "item.arcadia_pets.common_pet_bag":           "Caisse de Familier Commun",
+  "item.arcadia_pets.uncommon_pet_bag":         "Caisse de Familier Peu Commun",
+  "item.arcadia_pets.rare_pet_bag":             "Caisse de Familier Rare",
+  "item.arcadia_pets.epic_pet_bag":             "Caisse de Familier Épique",
+  "item.arcadia_pets.legendary_pet_bag":        "Caisse de Familier Légendaire",
+  "item.arcadia_pets.legendary_guaranteed_bag": "Caisse de Fusion Légendaire",
+  "item.arcadia_pets.star_essence":             "Essence Étoilée",
+  "item.arcadia_pets.pet_treat":                "Friandise",
+  "item.arcadia_pets.pet_snack":                "Collation Premium",
+  "item.arcadia_pets.pet_collection_book":      "Collection de Familiers",
+  "itemGroup.arcadia_pets.main":                "Arcadia Familiers"
+}

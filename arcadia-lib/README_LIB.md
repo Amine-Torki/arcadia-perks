@@ -1,7 +1,7 @@
 # Arcadia Lib — Developer Guide
 
 Arcadia Lib is the shared foundation library for all Arcadia Minecraft mods (NeoForge 1.21.1).
-It provides a complete, ready-to-use toolkit: **permissions**, **database**, **UI theme**, **hub integration**, **chat messages**, and more.
+It provides a complete, ready-to-use toolkit: **permissions**, **database**, **UI theme**, **hub integration**, **chat messages**, **teleportation**, **player management**, **cooldowns**, **task scheduling**, and more.
 
 **Any new Arcadia mod only needs to depend on arcadia-lib** — no dependency on other mods is required.
 
@@ -18,7 +18,12 @@ It provides a complete, ready-to-use toolkit: **permissions**, **database**, **U
 7. [Chat Messages](#chat-messages)
 8. [NBT Serialization](#nbt-serialization)
 9. [Configuration Files](#configuration-files)
-10. [API Reference](#api-reference)
+10. [Teleport System](#teleport-system)
+11. [Player Management](#player-management)
+12. [Cooldown System](#cooldown-system)
+13. [Task Scheduler](#task-scheduler)
+14. [Text Formatting](#text-formatting)
+15. [API Reference](#api-reference)
 
 ---
 
@@ -411,6 +416,171 @@ container.registerConfig(ModConfig.Type.SERVER, YourConfig.SPEC, "arcadia/yourmo
 
 ---
 
+## Teleport System
+
+`TeleportManager` provides safe teleportation with warmup, cooldown, and movement cancellation.
+
+```java
+import com.arcadia.lib.teleport.TeleportManager;
+
+// Instant teleport
+TeleportManager.teleportNow(player, new Vec3(100, 64, 200));
+
+// Teleport with 3-second warmup + 30-second cooldown
+TeleportManager.teleportWithWarmup(player, targetPos, level, 60, 30_000);
+
+// Teleport with named action (for separate cooldown tracking)
+TeleportManager.teleportWithWarmup(player, pos, level, 40, 10_000, "home");
+
+// Check cooldown
+long remaining = TeleportManager.getCooldownRemaining(uuid, "home");
+
+// Cancel warmup
+TeleportManager.cancelWarmup(uuid);
+```
+
+Features:
+- **Warmup delay** — configurable in ticks (movement cancels)
+- **Per-action cooldowns** — separate cooldowns for "home", "spawn", etc.
+- **Movement detection** — cancels if player moves > 0.3 blocks
+- **Cross-dimension** — supports different ServerLevel targets
+- **Sound effects** — enderman teleport sound on arrival
+- **Auto-cleanup** — warmups/cooldowns cleared on disconnect
+
+---
+
+## Player Management
+
+`PlayerManager` tracks online players and provides join/quit callbacks.
+
+```java
+import com.arcadia.lib.player.PlayerManager;
+
+// Register callbacks (call during mod setup)
+PlayerManager.onJoin(player -> {
+    LOGGER.info("{} joined!", player.getName().getString());
+    loadPlayerData(player);
+});
+
+PlayerManager.onQuit(player -> {
+    savePlayerData(player);
+});
+
+// Query online players
+ServerPlayer player = PlayerManager.getPlayer(uuid);
+boolean online = PlayerManager.isOnline(uuid);
+int count = PlayerManager.getOnlineCount();
+Collection<ServerPlayer> all = PlayerManager.getOnlinePlayers();
+```
+
+Features:
+- **Centralized join/quit hooks** — no need to subscribe to raw events
+- **Safe callbacks** — one failing callback doesn't break others
+- **Auto-cleanup** — clears teleport warmups and cooldowns on quit
+- **Online player cache** — O(1) UUID → ServerPlayer lookup
+
+---
+
+## Cooldown System
+
+`CooldownManager` provides generic per-player cooldowns for any action.
+
+```java
+import com.arcadia.lib.player.CooldownManager;
+
+// Check and set cooldown
+if (CooldownManager.isReady(uuid, "fishing.cast")) {
+    CooldownManager.set(uuid, "fishing.cast", 5000); // 5 seconds
+    performFishing(player);
+} else {
+    String remaining = CooldownManager.getRemainingFormatted(uuid, "fishing.cast");
+    player.sendSystemMessage(ArcadiaMessages.error("On cooldown: " + remaining));
+}
+
+// Get raw remaining time
+long ms = CooldownManager.getRemaining(uuid, "fishing.cast");
+
+// Clear specific cooldown
+CooldownManager.clear(uuid, "fishing.cast");
+```
+
+Features:
+- **Any action ID** — "fishing.cast", "teleport.home", "shop.buy", etc.
+- **Millisecond precision** — accurate cooldown tracking
+- **Formatted output** — `getRemainingFormatted()` returns "2m 30s"
+- **Auto-cleanup** — cleared on player disconnect
+
+---
+
+## Task Scheduler
+
+`SchedulerService` replaces raw tick counters with a centralized task system.
+
+```java
+import com.arcadia.lib.scheduler.SchedulerService;
+
+// Run once after 3 seconds (60 ticks)
+SchedulerService.delayed(60, () -> player.sendSystemMessage(...));
+
+// Run every 1 second forever
+int taskId = SchedulerService.repeating(20, () -> checkPlayerStatus());
+
+// Run every 5 seconds with initial 2-second delay
+int id = SchedulerService.repeatingDelayed(40, 100, () -> syncData());
+
+// Schedule from async thread back to main thread
+DatabaseManager.executeAsync(() -> {
+    List<Data> results = fetchFromDB();
+    SchedulerService.runNextTick(() -> deliverResults(player, results));
+});
+
+// Cancel a task
+SchedulerService.cancel(taskId);
+
+// Get current server tick
+long tick = SchedulerService.getCurrentTick();
+```
+
+Features:
+- **Main thread execution** — all tasks run during ServerTickEvent
+- **One-shot or repeating** — delayed() vs repeating()
+- **Async→main bridge** — runNextTick() for safe main-thread scheduling from async callbacks
+- **Error isolation** — one failing task doesn't crash the server
+- **Auto-cleanup** — all tasks cancelled on server shutdown
+
+---
+
+## Text Formatting
+
+`TextFormatter` provides advanced text formatting for chat and UI.
+
+```java
+import com.arcadia.lib.text.TextFormatter;
+
+// Placeholder replacement
+Component msg = TextFormatter.format(
+    "Welcome {player}! You have {coins} coins.",
+    Map.of("player", name, "coins", "1,500")
+);
+
+// Rich text builder
+Component rich = TextFormatter.rich()
+    .gold().bold().text("⚙ Arcadia")
+    .gray().text(" ▸ ")
+    .green().text("Fish caught! ")
+    .white().text("+50 XP")
+    .build();
+
+// Number formatting
+TextFormatter.formatNumber(1234567);   // "1,234,567"
+TextFormatter.formatTicks(600);         // "30s"
+TextFormatter.formatTicks(2400);        // "2m 0s"
+TextFormatter.formatMs(150000);         // "2m 30s"
+TextFormatter.formatPercent(0.756f);    // "76%"
+```
+
+---
+
 ## API Reference
 
 ### Core Classes
@@ -441,6 +611,16 @@ container.registerConfig(ModConfig.Type.SERVER, YourConfig.SPEC, "arcadia/yourmo
 | `NbtSerializer`            | `com.arcadia.lib.data`           | ItemStack/NBT ↔ Base64                     |
 | `PlayerDataHandler`        | `com.arcadia.lib.data`           | Player data CRUD                           |
 | `PlayerDataSavedData`      | `com.arcadia.lib.data`           | Singleplayer persistence                   |
+
+### Player & Gameplay Classes
+
+| Class                      | Package                          | Purpose                                    |
+|----------------------------|----------------------------------|--------------------------------------------|
+| `PlayerManager`            | `com.arcadia.lib.player`         | Online player tracking + join/quit hooks   |
+| `CooldownManager`          | `com.arcadia.lib.player`         | Per-player action cooldowns                |
+| `TeleportManager`          | `com.arcadia.lib.teleport`       | Safe teleport with warmup/cooldown         |
+| `SchedulerService`         | `com.arcadia.lib.scheduler`      | Tick-based task scheduling                 |
+| `TextFormatter`            | `com.arcadia.lib.text`           | Placeholders, rich text, number formatting |
 
 ### Permission Classes
 

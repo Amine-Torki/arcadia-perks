@@ -1,0 +1,26 @@
+modLoader="javafml"
+loaderVersion="[1,)"
+license="All Rights Reserved"
+[[mods]]
+modId="arcadia_ah"
+version="${file.jarVersion}"
+displayName="Arcadia Auction House"
+description="Cross-server player auction house with mailbox and Numismatics support."
+[[dependencies.arcadia_ah]]
+    modId="neoforge"
+    type="required"
+    versionRange="[21.1.219,)"
+    ordering="NONE"
+    side="BOTH"
+[[dependencies.arcadia_ah]]
+    modId="minecraft"
+    type="required"
+    versionRange="[1.21.1]"
+    ordering="NONE"
+    side="BOTH"
+[[dependencies.arcadia_ah]]
+    modId="arcadia_lib"
+    type="required"
+    versionRange="[1.0.0,)"
+    ordering="AFTER"
+    side="BOTH"
