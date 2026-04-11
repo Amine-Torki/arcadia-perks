@@ -165,6 +165,22 @@ public final class AhDashboardTab implements DashboardTabHandler {
     }
 
     @Override
+    public boolean handleInventoryShiftClick(Slot slot, ServerPlayer player, Runnable refreshTab) {
+        ItemStack stack = slot.getItem();
+        if (stack.isEmpty()) return false;
+
+        // Send packet to client to open the sell price input screen
+        String itemName = stack.getHoverName().getString();
+        int slotIndex = slot.getSlotIndex();
+        // The slot index in the container is offset — we need the raw inventory slot
+        // For player inventory slots in a 54-slot chest menu: slot 54-89 = inv 9-44, 90-98 = hotbar 0-8
+        int invSlot = slot.getContainerSlot();
+        PacketDistributor.sendToPlayer(player,
+                new com.arcadia.ah.network.S2COpenAhSell(itemName, stack.getCount(), invSlot));
+        return true;
+    }
+
+    @Override
     public void onClose(ServerPlayer player) {
         // Search cleared on tab switch (DashboardMenu.switchTab), not here,
         // so it survives the search-screen → dashboard reopen cycle.
