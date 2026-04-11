@@ -34,6 +34,15 @@ public final class ArcadiaModRegistry {
 
     private ArcadiaModRegistry() {}
 
+    // ── Client staff level (synced from server on login) ─────────────────
+    private static volatile int clientStaffLevel = 0;
+
+    /** Set by network sync when player logs in. */
+    public static void setClientStaffLevel(int level) { clientStaffLevel = level; }
+
+    /** Returns the client's cached staff level (0=none, 1=helper, 2=mod, 3=admin). */
+    public static int getClientStaffLevel() { return clientStaffLevel; }
+
     // ── Hub cards (displayed in ArcadiaHubScreen) ───────────────────────────
 
     private static final Map<String, ArcadiaModCard> cards = new ConcurrentHashMap<>();

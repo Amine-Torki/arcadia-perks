@@ -37,7 +37,19 @@ public class ArcadiaHubScreen extends Screen {
     @Override
     protected void init() {
         super.init();
-        cards = ArcadiaModRegistry.getCards();
+        // Filter cards by permission — hide cards requiring staff if client isn't staff
+        int staffLevel = ArcadiaModRegistry.getClientStaffLevel();
+        cards = ArcadiaModRegistry.getCards().stream()
+                .filter(card -> {
+                    if (card.permissionNode() == null) return true; // No permission required
+                    // Map permission nodes to staff levels
+                    String node = card.permissionNode();
+                    if (node.contains("admin")) return staffLevel >= 3;
+                    if (node.contains("mod")) return staffLevel >= 2;
+                    if (node.contains("helper") || node.contains("staff")) return staffLevel >= 1;
+                    return staffLevel >= 1; // Default: any staff can see
+                })
+                .toList();
     }
 
     @Override
