@@ -12,7 +12,6 @@ out/
 *.ipr
 *.iws
 .DS_Store
-CHANGELOG.md
 
 # Claude Code
 .claude/
