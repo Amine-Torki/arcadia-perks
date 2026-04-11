@@ -246,14 +246,15 @@ public class DashboardMenu extends AbstractContainerMenu {
         dashboardContainer.setItem(0, glassPane());
         dashboardContainer.setItem(8, glassPane());
 
-        // Slot 4: active pet display — delegated to petsTab if present
+        // Slot 4: delegate to active tab handler, or show empty filler
         ServerPlayer sp = (player instanceof ServerPlayer s) ? s : null;
-        ItemStack navItem = (petsTab != null && sp != null) ? petsTab.getNavBarItem(sp) : ItemStack.EMPTY;
+        DashboardTabHandler activeHandler = handlerForTab(currentTab);
+        ItemStack navItem = (activeHandler != null && sp != null) ? activeHandler.getNavBarItem(sp) : ItemStack.EMPTY;
         if (!navItem.isEmpty()) {
             dashboardContainer.setItem(4, navItem);
         } else {
             ItemStack empty = new ItemStack(Items.GRAY_STAINED_GLASS_PANE);
-            setName(empty, Component.translatable("arcadia_prestige.gui.pets.no_active").withStyle(ChatFormatting.DARK_GRAY));
+            setName(empty, Component.literal(" "));
             dashboardContainer.setItem(4, empty);
         }
 
