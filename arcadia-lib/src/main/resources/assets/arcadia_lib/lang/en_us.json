@@ -19,5 +19,8 @@
   "arcadia_lib.staff.unmuted_alert": "%s unmuted %s",
   "arcadia_lib.staff.muted_feedback": "You are muted (%s remaining): %s",
   "arcadia_lib.staff.role_required": "You need %s role or higher.",
-  "arcadia_lib.staff.not_enough_role": "Insufficient permissions."
+  "arcadia_lib.staff.not_enough_role": "Insufficient permissions.",
+
+  "key.arcadia_lib.open_hub": "Open Arcadia Hub",
+  "key.categories.arcadia_lib": "Arcadia"
 }

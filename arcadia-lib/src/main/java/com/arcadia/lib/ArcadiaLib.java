@@ -21,6 +21,7 @@ public final class ArcadiaLib {
         container.registerConfig(ModConfig.Type.SERVER, StaffConfig.SPEC, "arcadia/lib/staff.toml");
         container.registerConfig(ModConfig.Type.SERVER, EconomyConfig.SPEC, "arcadia/lib/economy.toml");
         modBus.addListener(this::onConfigLoad);
+        modBus.addListener(com.arcadia.lib.network.ArcadiaLibNet::registerPayloads);
     }
 
     private void onConfigLoad(ModConfigEvent event) {

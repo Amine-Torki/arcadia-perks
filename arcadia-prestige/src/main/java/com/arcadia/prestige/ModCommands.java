@@ -2,7 +2,6 @@ package com.arcadia.prestige;
 
 import com.arcadia.lib.data.PlayerDataHandler;
 import com.arcadia.prestige.network.PacketHandler;
-import com.arcadia.prestige.network.S2COpenHub;
 import com.arcadia.prestige.server.DashboardMenu;
 import com.mojang.brigadier.Command;
 import net.minecraft.commands.CommandSourceStack;
@@ -32,7 +31,7 @@ public final class ModCommands {
                 .executes(ctx -> {
                     if (!checkEnabled(ctx.getSource())) return 0;
                     if (ctx.getSource().getEntity() instanceof ServerPlayer player) {
-                        PacketHandler.sendToPlayer(player, new S2COpenHub());
+                        com.arcadia.lib.network.ArcadiaLibNet.sendOpenHub(player);
                     }
                     return Command.SINGLE_SUCCESS;
                 })

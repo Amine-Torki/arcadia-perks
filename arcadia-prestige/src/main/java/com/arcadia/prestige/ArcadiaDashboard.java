@@ -47,7 +47,7 @@ public class ArcadiaDashboard {
 
         // Register hub opener so /arcadia and other mods can open the hub
         com.arcadia.lib.ArcadiaModRegistry.registerHubOpener(p -> {
-            PacketHandler.sendToPlayer(p, new com.arcadia.prestige.network.S2COpenHub());
+            com.arcadia.lib.network.ArcadiaLibNet.sendOpenHub(p);
         });
 
         // Register tab openers for cosmetics and daily (always available)
