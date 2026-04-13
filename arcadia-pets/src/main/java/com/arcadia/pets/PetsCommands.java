@@ -252,6 +252,16 @@ public final class PetsCommands {
                 .then(Commands.literal("forfeit")
                     .executes(ctx -> duelForfeit(ctx.getSource()))
                 )
+                .then(Commands.literal("bot")
+                    .requires(src -> src.hasPermission(2))
+                    .executes(ctx -> duelBot(ctx.getSource(), com.arcadia.pets.duel.BotDifficulty.EASY))
+                    .then(Commands.literal("easy")
+                        .executes(ctx -> duelBot(ctx.getSource(), com.arcadia.pets.duel.BotDifficulty.EASY)))
+                    .then(Commands.literal("medium")
+                        .executes(ctx -> duelBot(ctx.getSource(), com.arcadia.pets.duel.BotDifficulty.MEDIUM)))
+                    .then(Commands.literal("hard")
+                        .executes(ctx -> duelBot(ctx.getSource(), com.arcadia.pets.duel.BotDifficulty.HARD)))
+                )
         );
     }
 
@@ -413,6 +423,24 @@ public final class PetsCommands {
         ServerPlayer p2 = src.getServer().getPlayerList().getPlayer(session.p2);
         if (p1 != null) PacketDistributor.sendToPlayer(p1, finalState);
         if (p2 != null) PacketDistributor.sendToPlayer(p2, finalState);
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int duelBot(CommandSourceStack src, com.arcadia.pets.duel.BotDifficulty difficulty) {
+        if (!(src.getEntity() instanceof ServerPlayer player)) return 0;
+        if (DuelManager.isInDuel(player.getUUID())) {
+            src.sendFailure(Component.literal("§cYou are already in a duel."));
+            return 0;
+        }
+        DuelSession session = DuelManager.startBotDuel(player, difficulty);
+        if (session == null) {
+            src.sendFailure(Component.literal("§cYou need at least one pet in your collection to practice."));
+            return 0;
+        }
+        src.sendSuccess(() -> Component.literal("§6[Duel] §fStarting practice duel vs §e"
+                + difficulty.name().toLowerCase() + " §fbot. Good luck!"), false);
+        com.arcadia.pets.network.S2CDuelState state = com.arcadia.pets.network.S2CDuelState.from(session);
+        PacketDistributor.sendToPlayer(player, state);
         return Command.SINGLE_SUCCESS;
     }
 

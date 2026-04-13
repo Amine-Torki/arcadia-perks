@@ -99,6 +99,9 @@ public final class DuelSession {
     /** Epoch-ms deadline for the current turn. 0 = not started yet. */
     public long actionDeadline = 0L;
 
+    /** Epoch-ms at which the bot should act. 0 = not a bot turn. */
+    public long botActAt = 0L;
+
     // ── Result ────────────────────────────────────────────────────────────────
 
     /** Null until the duel finishes. */
@@ -229,6 +232,7 @@ public final class DuelSession {
             int stored   = petSP.getOrDefault(spKey, 0);
             currentSP    = Math.min(SP_MAX, stored + SP_PER_TURN);
             actionDeadline = System.currentTimeMillis() + TURN_TIMEOUT_MS;
+            botActAt = 0L; // reset per-turn so tick handler reschedules it
             return;
         }
     }

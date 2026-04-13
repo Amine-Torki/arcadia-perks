@@ -48,6 +48,12 @@ public final class DuelManager {
 
     private static final long CHALLENGE_TTL_MS = 60_000L; // 60 seconds to respond
 
+    /** Fixed UUID representing the bot opponent — no real player can have this UUID. */
+    public static final UUID BOT_UUID = UUID.fromString("00000000-0000-0000-0000-000000000B07");
+
+    /** How long the bot "thinks" before acting (ms). Feels natural, not instant. */
+    private static final long BOT_THINK_MS = 1_500L;
+
     // ── Reward scaling ─────────────────────────────────────────────────────────
     /** Maps average rarity ordinal (0–5) to a 1–5 Star Essence reward. */
     private static final float ESSENCE_AVG_SCALE = 0.8f;
@@ -340,6 +346,102 @@ public final class DuelManager {
         PLAYER_TO_DUEL.remove(session.p1);
         PLAYER_TO_DUEL.remove(session.p2);
         LOGGER.info("[DuelManager] Duel {} ended. Winner: {}", session.duelId, winner);
+    }
+
+    // =========================================================================
+    // Bot duel
+    // =========================================================================
+
+    /**
+     * Starts a practice duel against a bot opponent for the given player.
+     * The player's roster is taken from their collection (first 3 pets).
+     * Bot ELO is never updated; rewards are halved.
+     *
+     * @return the created session, or null if the player has no pets
+     */
+    public static DuelSession startBotDuel(ServerPlayer player, BotDifficulty difficulty) {
+        if (isInDuel(player.getUUID())) return null;
+
+        // Load player roster (first 3 pets from collection)
+        PetCollectionSavedData col = PetCollectionSavedData.getOrCreate(player.getServer());
+        List<ItemStack> stacks = col.getCollection(player.getUUID());
+        PetData[] playerRoster = new PetData[3];
+        int filled = 0;
+        for (ItemStack stack : stacks) {
+            if (filled >= 3) break;
+            PetData pd = PetData.fromStack(stack);
+            if (pd != null) playerRoster[filled++] = pd;
+        }
+        if (filled == 0) return null;
+        while (filled < 3) { playerRoster[filled] = playerRoster[0]; filled++; }
+
+        // Create session: player is p1, bot is p2
+        DuelSession session = new DuelSession(player.getUUID(), BOT_UUID);
+        System.arraycopy(playerRoster, 0, session.p1Roster, 0, 3);
+        PetData[] botRoster = BotRoster.generate(difficulty);
+        System.arraycopy(botRoster, 0, session.p2Roster, 0, 3);
+        ACTIVE_DUELS.put(session.duelId, session);
+        PLAYER_TO_DUEL.put(player.getUUID(), session.duelId);
+        // BOT_UUID intentionally NOT added to PLAYER_TO_DUEL (no real player)
+
+        session.p1Confirmed = true;
+        session.p2Confirmed = true;
+        session.startCombat();
+
+        return session;
+    }
+
+    /**
+     * Executes the bot's turn: picks a random available skill or falls back to a basic attack.
+     * Called by {@link com.arcadia.pets.duel.DuelTickHandler} when {@code session.botActAt} has passed.
+     */
+    public static void executeBotTurn(DuelSession session) {
+        TurnSlot slot = session.currentSlot();
+        if (slot == null || !slot.ownerUuid().equals(BOT_UUID)) return;
+
+        int actorPet = slot.petIndex();
+        UUID player  = session.opponentOf(BOT_UUID); // the human player
+        int targetPet = session.firstAlivePet(player);
+        if (targetPet < 0) return; // no valid target — shouldn't happen
+
+        // Collect usable skills (not on cooldown, enough SP)
+        List<String> usable = new ArrayList<>();
+        PetData pd = session.rosterFor(BOT_UUID)[actorPet];
+        if (pd != null) {
+            for (SkillInstance si : pd.skills()) {
+                if (si.level() <= 0) continue; // locked
+                int cd = session.getSkillCooldown(BOT_UUID, actorPet, si.skill().getId());
+                if (cd > 0) continue;
+                DuelSkillDef def = DuelSkillAdapter.get(si.skill().getId());
+                if (def == null) continue;
+                if (session.currentSP < def.spCost) continue;
+                usable.add(si.skill().getId());
+            }
+        }
+
+        if (!usable.isEmpty()) {
+            // Pick a random usable skill
+            String skillId = usable.get(new Random().nextInt(usable.size()));
+            handleSkillForBot(session, actorPet, skillId, player, targetPet);
+        } else {
+            // Fallback: basic attack
+            handleAttack(session, BOT_UUID, actorPet, player, targetPet);
+        }
+
+        session.botActAt = 0L;
+    }
+
+    private static void handleSkillForBot(DuelSession session, int actorPet,
+                                           String skillId, UUID opponent, int targetPet) {
+        DuelSkillDef def = DuelSkillAdapter.get(skillId);
+        if (def == null) { handleAttack(session, BOT_UUID, actorPet, opponent, targetPet); return; }
+
+        // For SELF/ALL skills the target doesn't matter — reuse actorPet as target
+        int resolvedTarget = switch (def.targetType) {
+            case SELF, ALL_ALLIES -> actorPet;
+            default -> targetPet;
+        };
+        handleSkill(session, BOT_UUID, actorPet, skillId, opponent, resolvedTarget);
     }
 
     /** Called when a player disconnects — opponent wins automatically. */

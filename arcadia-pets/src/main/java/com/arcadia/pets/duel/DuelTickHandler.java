@@ -24,6 +24,14 @@ public final class DuelTickHandler {
 
     private DuelTickHandler() {}
 
+    private static void broadcastState(MinecraftServer server, DuelSession session) {
+        S2CDuelState state = S2CDuelState.from(session);
+        ServerPlayer p1 = server.getPlayerList().getPlayer(session.p1);
+        ServerPlayer p2 = server.getPlayerList().getPlayer(session.p2);
+        if (p1 != null) PacketDistributor.sendToPlayer(p1, state);
+        if (p2 != null) PacketDistributor.sendToPlayer(p2, state);
+    }
+
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
         if (++tick % 20 != 0) return;
@@ -32,26 +40,44 @@ public final class DuelTickHandler {
 
         for (DuelSession session : DuelManager.getActiveSessions()) {
             if (session.phase != DuelPhase.ACTIVE) continue;
-            if (session.actionDeadline <= 0 || now < session.actionDeadline) continue;
 
             TurnSlot slot = session.currentSlot();
             if (slot == null) continue;
+
+            boolean isBotTurn = slot.ownerUuid().equals(DuelManager.BOT_UUID);
+
+            if (isBotTurn) {
+                // Schedule bot think delay on first tick of bot's turn
+                if (session.botActAt == 0L) {
+                    session.botActAt = now + 1_500L;
+                    continue;
+                }
+                // Execute bot action once delay has passed
+                if (now >= session.botActAt) {
+                    DuelManager.executeBotTurn(session);
+                    if (session.checkWinCondition()) {
+                        DuelManager.endDuel(session, session.winner);
+                    }
+                    broadcastState(server, session);
+                }
+                continue;
+            }
+
+            // Human turn timeout
+            if (session.actionDeadline <= 0 || now < session.actionDeadline) continue;
 
             String petName = session.petName(slot.ownerUuid(), slot.petIndex());
             session.addLog("⏰ " + petName + " timed out! Turn auto-passed, SP saved.");
             session.endTurn();
 
-            // Win condition can trigger if a DoT killed the last pet on turn-end
+            // Reset bot timer if bot's turn is next
+            session.botActAt = 0L;
+
             if (session.checkWinCondition()) {
                 DuelManager.endDuel(session, session.winner);
             }
 
-            // Broadcast updated state
-            S2CDuelState state = S2CDuelState.from(session);
-            ServerPlayer p1 = server.getPlayerList().getPlayer(session.p1);
-            ServerPlayer p2 = server.getPlayerList().getPlayer(session.p2);
-            if (p1 != null) PacketDistributor.sendToPlayer(p1, state);
-            if (p2 != null) PacketDistributor.sendToPlayer(p2, state);
+            broadcastState(server, session);
         }
     }
 }

@@ -29,6 +29,9 @@ public final class EloEventHandler {
 
     @SubscribeEvent
     public static void onDuelResult(DuelResultEvent event) {
+        // Skip ELO updates for bot practice duels
+        UUID botUuid = UUID.fromString("00000000-0000-0000-0000-000000000B07");
+        if (event.getWinnerUuid().equals(botUuid) || event.getLoserUuid().equals(botUuid)) return;
         // Update ELO and capture deltas for feedback messages
         EloManager.EloResult elo = EloManager.updateAfterDuel(
                 event.getWinnerUuid(),
