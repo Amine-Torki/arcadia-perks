@@ -2,6 +2,7 @@ package com.arcadia.prestige.server;
 
 import com.arcadia.lib.dashboard.DashboardTabHandler;
 import com.arcadia.lib.data.PlayerDataHandler;
+import java.util.UUID;
 import com.arcadia.prestige.ModMenus;
 import com.arcadia.prestige.elo.EloManager;
 import com.arcadia.prestige.elo.PlayerEloData;
@@ -592,7 +593,7 @@ public class DashboardMenu extends AbstractContainerMenu {
             boolean claimed = q.claimed();
             net.minecraft.world.item.Item icon = switch (q.def().difficulty()) {
                 case EASY   -> Items.IRON_SWORD;
-                case MEDIUM -> Items.GOLD_SWORD;
+                case MEDIUM -> Items.GOLDEN_SWORD;
                 case HARD   -> Items.DIAMOND_SWORD;
             };
 
@@ -730,17 +731,8 @@ public class DashboardMenu extends AbstractContainerMenu {
      */
     private ItemStack petItemFor(UUID playerUuid, String mobType) {
         if (mobType == null || mobType.isEmpty()) return ItemStack.EMPTY;
-        if (player.getServer() == null) return ItemStack.EMPTY;
-        try {
-            var col = com.arcadia.pets.server.PetCollectionSavedData
-                    .getOrCreate(player.getServer())
-                    .getCollection(playerUuid);
-            for (ItemStack stack : col) {
-                com.arcadia.pets.item.PetData pd = com.arcadia.pets.item.PetData.fromStack(stack);
-                if (pd != null && mobType.equals(pd.mobType())) return stack.copy();
-            }
-        } catch (Exception ignored) {}
-        return ItemStack.EMPTY;
+        // Cross-module pet data access via ArcadiaModRegistry to respect decoupling
+        return com.arcadia.lib.ArcadiaModRegistry.getPetItemForDisplay(playerUuid, mobType);
     }
 
     /** Returns the online player's name, or a shortened UUID fragment if offline. */
@@ -751,8 +743,8 @@ public class DashboardMenu extends AbstractContainerMenu {
                         .getPlayerList().getPlayer(uuid);
         if (sp != null) return sp.getName().getString();
         // Try game profile cache
-        com.mojang.authlib.GameProfile gp = player.getServer().getProfileCache()
-                .map(c -> c.get(uuid).orElse(null)).orElse(null);
+        var cache = player.getServer().getProfileCache();
+        com.mojang.authlib.GameProfile gp = cache != null ? cache.get(uuid).orElse(null) : null;
         return gp != null ? gp.getName() : uuid.toString().substring(0, 8) + "…";
     }
 

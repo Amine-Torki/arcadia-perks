@@ -530,7 +530,7 @@ public class DuelScreen extends Screen {
 
     private void handleSkillClick(com.arcadia.pets.duel.DuelSkillDef def,
                                    String skillId, int actorPet) {
-        switch (def.targetType()) {
+        switch (def.targetType) {
             case SELF, ALL_ENEMIES, ALL_ALLIES, RANDOM_ENEMY ->
                     sendSkillAction(actorPet, skillId, 0);
             case ALLY_SINGLE -> {

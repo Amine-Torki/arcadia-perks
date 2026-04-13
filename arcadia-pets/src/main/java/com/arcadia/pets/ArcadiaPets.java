@@ -42,6 +42,20 @@ public final class ArcadiaPets {
                         0x4ECCA3, 1, true));
 
         // Register server-side actions (so prestige can call them without importing us)
+        com.arcadia.lib.ArcadiaModRegistry.registerPetItemProvider((uuid, mobType) -> {
+            if (mobType == null || mobType.isEmpty()) return net.minecraft.world.item.ItemStack.EMPTY;
+            try {
+                var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+                if (server == null) return net.minecraft.world.item.ItemStack.EMPTY;
+                var col = com.arcadia.pets.server.PetCollectionSavedData.getOrCreate(server).getCollection(uuid);
+                for (var stack : col) {
+                    com.arcadia.pets.item.PetData pd = com.arcadia.pets.item.PetData.fromStack(stack);
+                    if (pd != null && mobType.equals(pd.mobType())) return stack.copy();
+                }
+            } catch (Exception ignored) {}
+            return net.minecraft.world.item.ItemStack.EMPTY;
+        });
+
         com.arcadia.lib.ArcadiaModRegistry.registerServerAction("pets.despawn",
                 p -> com.arcadia.pets.server.PetManager.despawn(p));
         com.arcadia.lib.ArcadiaModRegistry.registerServerActionWithPayload("pets.summon",
@@ -53,6 +67,16 @@ public final class ArcadiaPets {
                 (p, slot) -> {
                     try { com.arcadia.pets.server.PetManager.applyStarEssence(p, Integer.parseInt(slot)); }
                     catch (NumberFormatException ignored) {}
+                });
+        com.arcadia.lib.ArcadiaModRegistry.registerServerActionWithPayload("pets.add_skill_xp_pet",
+                (p, payload) -> {
+                    // payload format: "petUuid:xpAmount"
+                    try {
+                        String[] parts = payload.split(":", 2);
+                        java.util.UUID petId = java.util.UUID.fromString(parts[0]);
+                        int xp = Integer.parseInt(parts[1]);
+                        com.arcadia.pets.server.PetManager.addSkillXpToPet(p, petId, xp);
+                    } catch (Exception ignored) {}
                 });
 
         // Register client-side actions (so prestige's DashboardScreen can open our screens)

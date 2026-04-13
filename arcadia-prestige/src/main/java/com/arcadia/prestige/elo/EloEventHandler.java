@@ -47,14 +47,14 @@ public final class EloEventHandler {
         ServerPlayer winner = (ServerPlayer) server.getPlayerList().getPlayer(event.getWinnerUuid());
         if (winner != null && PermissionService.hasPermission(winner, "arcadia.pass")) {
             for (UUID petId : event.getWinnerPetIds()) {
-                com.arcadia.pets.server.PetManager.addSkillXpToPet(winner, petId, 1);
+                com.arcadia.lib.ArcadiaModRegistry.executeServerAction("pets.add_skill_xp_pet:" + petId + ":1", winner);
             }
         }
 
         ServerPlayer loser = (ServerPlayer) server.getPlayerList().getPlayer(event.getLoserUuid());
         if (loser != null && PermissionService.hasPermission(loser, "arcadia.pass")) {
             for (UUID petId : event.getLoserPetIds()) {
-                com.arcadia.pets.server.PetManager.addSkillXpToPet(loser, petId, 1);
+                com.arcadia.lib.ArcadiaModRegistry.executeServerAction("pets.add_skill_xp_pet:" + petId + ":1", loser);
             }
         }
     }

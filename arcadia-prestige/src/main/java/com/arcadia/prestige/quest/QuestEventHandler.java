@@ -42,9 +42,9 @@ public final class QuestEventHandler {
         if (!(event.getSource().getEntity() instanceof ServerPlayer player)) return;
         if (event.getEntity() instanceof ServerPlayer) return; // skip player kills
 
-        String mobType = ResourceLocation.defaultNamespace(
-                net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE
-                        .getKey(event.getEntity().getType()).toString()).toString();
+        var entityKey = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE
+                .getKey(event.getEntity().getType());
+        String mobType = entityKey != null ? entityKey.toString() : "";
 
         // Track generic kill-any progress
         QuestManager.trackProgress(player.getUUID(), QuestType.KILL_ANY.name(), "", 1);

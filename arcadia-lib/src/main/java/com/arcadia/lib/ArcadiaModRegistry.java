@@ -228,4 +228,19 @@ public final class ArcadiaModRegistry {
     public static void notifySearchUpdated(ServerPlayer player) {
         if (searchRefresher != null) searchRefresher.accept(player);
     }
+
+    // ── Pet item display (for ELO leaderboard — avoids cross-module imports) ─
+
+    private static java.util.function.BiFunction<java.util.UUID, String, net.minecraft.world.item.ItemStack> petItemProvider;
+
+    /** Registered by arcadia-pets to allow other mods to get a pet item for display. */
+    public static void registerPetItemProvider(java.util.function.BiFunction<java.util.UUID, String, net.minecraft.world.item.ItemStack> provider) {
+        petItemProvider = provider;
+    }
+
+    /** Returns a copy of the pet item matching mobType from the player's collection, or EMPTY. */
+    public static net.minecraft.world.item.ItemStack getPetItemForDisplay(java.util.UUID playerUuid, String mobType) {
+        if (petItemProvider == null) return net.minecraft.world.item.ItemStack.EMPTY;
+        return petItemProvider.apply(playerUuid, mobType);
+    }
 }
