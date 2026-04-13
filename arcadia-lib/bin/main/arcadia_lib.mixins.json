@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "package": "com.arcadia.lib.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "minVersion": "0.8",
+  "client": [
+    "CreativeSearchMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
