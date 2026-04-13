@@ -3,8 +3,10 @@ build/
 run/
 runs/
 out/
+bin/
 *.class
 *.jar
+*.zip
 !gradle/wrapper/gradle-wrapper.jar
 !jars/*.jar
 .idea/
