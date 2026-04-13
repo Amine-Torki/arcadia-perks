@@ -390,12 +390,14 @@ public final class PetManager {
         UUID playerUuid = player.getUUID();
         UUID prev = designatedPetId.get(playerUuid);
         designatedPetId.put(playerUuid, petId);
-        // If changing to a different pet, unsummon whatever is currently equipped
+        // If changing to a different pet, unsummon old and auto-summon new
         if (prev != null && !prev.equals(petId)) {
             PetData activeDat = activePetData.get(playerUuid);
             PetData pocket = pocketPets.get(playerUuid);
             if (activeDat != null || pocket != null) {
                 despawn(player);
+                // Auto-summon the new pet so HUD updates immediately
+                summonByPetId(player, petId);
             }
         }
     }

@@ -84,8 +84,9 @@ public final class ArcadiaPets {
         com.arcadia.lib.ArcadiaModRegistry.registerRewardItem("pet_snack",
                 () -> new net.minecraft.world.item.ItemStack(PetsModItems.PET_SNACK.get()));
 
-        // Register server-side player logout action for pet cleanup
-        com.arcadia.lib.ArcadiaModRegistry.registerServerAction("pets.player_logout",
+        // Register player logout callback — CRITICAL: despawns the pet entity on disconnect
+        // Without this, the pet stays alive in the world and attacks players after relog
+        com.arcadia.lib.player.PlayerManager.onQuit(
                 p -> com.arcadia.pets.server.PetManager.handlePlayerLogout(p));
 
         LOGGER.info("[ArcadiaPets] Registered in ArcadiaModRegistry (tab, cards, actions, items).");
