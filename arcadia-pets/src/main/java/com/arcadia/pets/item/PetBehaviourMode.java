@@ -1,9 +1,9 @@
 package com.arcadia.pets.item;
 
 public enum PetBehaviourMode {
-    IDLE("arcadia_prestige.pet.mode.idle"),
-    DEFEND("arcadia_prestige.pet.mode.defend"),
-    ATTACK("arcadia_prestige.pet.mode.attack");
+    IDLE("arcadia_pets.pet.mode.idle"),
+    DEFEND("arcadia_pets.pet.mode.defend"),
+    ATTACK("arcadia_pets.pet.mode.attack");
 
     private final String label;
 

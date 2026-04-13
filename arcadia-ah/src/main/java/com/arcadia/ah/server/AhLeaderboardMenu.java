@@ -3,7 +3,7 @@ package com.arcadia.ah.server;
 import com.arcadia.ah.AhModMenus;
 import com.arcadia.ah.auction.AhLeaderboardEntry;
 import com.arcadia.ah.auction.AuctionDatabase;
-import com.arcadia.ah.auction.NumismaticsCompat;
+// NumismaticsCompat replaced by EconomyService in lib
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
@@ -97,9 +97,9 @@ public class AhLeaderboardMenu extends AbstractContainerMenu {
 
             List<Component> lore = new ArrayList<>();
             lore.add(Component.literal("§6Unique clients: §f" + e.uniqueBuyers()));
-            lore.add(Component.literal("§6Median deal:    §f" + NumismaticsCompat.formatPrice(e.medianAmountPerBuyer())));
+            lore.add(Component.literal("§6Median deal:    §f" + com.arcadia.lib.economy.EconomyService.formatPrice(e.medianAmountPerBuyer())));
             lore.add(Component.literal("§7Total sales:    §f" + e.totalSales()));
-            lore.add(Component.literal("§7Total revenue:  §8" + NumismaticsCompat.formatPrice(e.totalRevenue())));
+            lore.add(Component.literal("§7Total revenue:  §8" + com.arcadia.lib.economy.EconomyService.formatPrice(e.totalRevenue())));
             setLore(icon, lore);
 
             if (rank == 1) icon.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
@@ -120,7 +120,7 @@ public class AhLeaderboardMenu extends AbstractContainerMenu {
     @Override
     public void clicked(int slotId, int button, net.minecraft.world.inventory.ClickType clickType, Player player) {
         if (slotId == BACK_SLOT && player instanceof net.minecraft.server.level.ServerPlayer sp) {
-            AhDashboardBridge.openAhTab(sp);
+            com.arcadia.lib.ArcadiaModRegistry.openTab(sp, 3);
             return;
         }
         broadcastChanges();

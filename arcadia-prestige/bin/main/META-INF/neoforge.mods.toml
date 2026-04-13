@@ -1,0 +1,38 @@
+modLoader="javafml"
+loaderVersion="[1,)"
+license="All Rights Reserved"
+[[mods]]
+modId="arcadia_prestige"
+version="${file.jarVersion}"
+displayName="Arcadia Prestige"
+description="VIP cosmetics, daily rewards and hub — arcadia-pets and arcadia-ah are optional."
+[[dependencies.arcadia_prestige]]
+    modId="neoforge"
+    type="required"
+    versionRange="[21.1.219,)"
+    ordering="NONE"
+    side="BOTH"
+[[dependencies.arcadia_prestige]]
+    modId="minecraft"
+    type="required"
+    versionRange="[1.21.1]"
+    ordering="NONE"
+    side="BOTH"
+[[dependencies.arcadia_prestige]]
+    modId="arcadia_lib"
+    type="required"
+    versionRange="[1.0.0,)"
+    ordering="AFTER"
+    side="BOTH"
+[[dependencies.arcadia_prestige]]
+    modId="arcadia_pets"
+    type="optional"
+    versionRange="[1.0.0,)"
+    ordering="AFTER"
+    side="BOTH"
+[[dependencies.arcadia_prestige]]
+    modId="arcadia_ah"
+    type="optional"
+    versionRange="[1.0.0,)"
+    ordering="AFTER"
+    side="BOTH"

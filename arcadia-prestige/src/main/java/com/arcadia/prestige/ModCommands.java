@@ -2,7 +2,6 @@ package com.arcadia.prestige;
 
 import com.arcadia.lib.data.PlayerDataHandler;
 import com.arcadia.prestige.network.PacketHandler;
-import com.arcadia.prestige.network.S2COpenHub;
 import com.arcadia.prestige.server.DashboardMenu;
 import com.mojang.brigadier.Command;
 import net.minecraft.commands.CommandSourceStack;
@@ -28,11 +27,11 @@ public final class ModCommands {
     public static void onRegisterCommands(RegisterCommandsEvent event) {
 
         event.getDispatcher().register(
-            Commands.literal("prestige")
+            Commands.literal("arcadia_prestige")
                 .executes(ctx -> {
                     if (!checkEnabled(ctx.getSource())) return 0;
                     if (ctx.getSource().getEntity() instanceof ServerPlayer player) {
-                        PacketHandler.sendToPlayer(player, new S2COpenHub());
+                        com.arcadia.lib.network.ArcadiaLibNet.sendOpenHub(player);
                     }
                     return Command.SINGLE_SUCCESS;
                 })
@@ -40,8 +39,8 @@ public final class ModCommands {
                     .requires(src -> src.hasPermission(2))
                     .executes(ctx -> {
                         PrestigeGlobalFlags.PRESTIGE_ENABLED = true;
-                        ctx.getSource().sendSuccess(() -> Component.literal(
-                                "§a[Arcadia] Prestige features enabled for all players."), true);
+                        ctx.getSource().sendSuccess(() -> Component.translatable(
+                                "arcadia_prestige.cmd.enabled"), true);
                         return Command.SINGLE_SUCCESS;
                     })
                 )
@@ -49,50 +48,46 @@ public final class ModCommands {
                     .requires(src -> src.hasPermission(2))
                     .executes(ctx -> {
                         PrestigeGlobalFlags.PRESTIGE_ENABLED = false;
-                        ctx.getSource().sendSuccess(() -> Component.literal(
-                                "§c[Arcadia] Prestige features disabled. Operators are unaffected."), true);
+                        ctx.getSource().sendSuccess(() -> Component.translatable(
+                                "arcadia_prestige.cmd.disabled"), true);
                         return Command.SINGLE_SUCCESS;
                     })
                 )
-        );
-
-        event.getDispatcher().register(
-            Commands.literal("cosmetics")
-                .executes(ctx -> {
-                    if (!checkEnabled(ctx.getSource())) return 0;
-                    if (ctx.getSource().getEntity() instanceof ServerPlayer player) {
-                        DashboardMenu.openFor(player, 0);
-                    }
-                    return Command.SINGLE_SUCCESS;
-                })
-        );
-
-        event.getDispatcher().register(
-            Commands.literal("daily")
-                .executes(ctx -> {
-                    if (!checkEnabled(ctx.getSource())) return 0;
-                    if (ctx.getSource().getEntity() instanceof ServerPlayer player) {
-                        DashboardMenu.openFor(player, 2);
-                    }
-                    return Command.SINGLE_SUCCESS;
-                })
-                .then(Commands.literal("simday")
-                    .requires(src -> src.hasPermission(2))
+                .then(Commands.literal("cosmetics")
                     .executes(ctx -> {
-                        if (!(ctx.getSource().getEntity() instanceof ServerPlayer self)) return 0;
-                        PlayerDataHandler.advanceDay(self.getUUID());
-                        ctx.getSource().sendSuccess(() -> Component.literal(
-                                "[Debug] +24h applied to your daily timer."), false);
+                        if (!checkEnabled(ctx.getSource())) return 0;
+                        if (ctx.getSource().getEntity() instanceof ServerPlayer player) {
+                            DashboardMenu.openFor(player, 0);
+                        }
                         return Command.SINGLE_SUCCESS;
                     })
-                    .then(Commands.argument("target", EntityArgument.player())
+                )
+                .then(Commands.literal("daily")
+                    .executes(ctx -> {
+                        if (!checkEnabled(ctx.getSource())) return 0;
+                        if (ctx.getSource().getEntity() instanceof ServerPlayer player) {
+                            DashboardMenu.openFor(player, 2);
+                        }
+                        return Command.SINGLE_SUCCESS;
+                    })
+                    .then(Commands.literal("simday")
+                        .requires(src -> src.hasPermission(2))
                         .executes(ctx -> {
-                            ServerPlayer target = EntityArgument.getPlayer(ctx, "target");
-                            PlayerDataHandler.advanceDay(target.getUUID());
-                            ctx.getSource().sendSuccess(() -> Component.literal(
-                                    "[Debug] +24h applied to " + target.getName().getString() + "'s daily timer."), false);
+                            if (!(ctx.getSource().getEntity() instanceof ServerPlayer self)) return 0;
+                            PlayerDataHandler.advanceDay(self.getUUID());
+                            ctx.getSource().sendSuccess(() -> Component.translatable(
+                                    "arcadia_prestige.cmd.simday_self"), false);
                             return Command.SINGLE_SUCCESS;
                         })
+                        .then(Commands.argument("target", EntityArgument.player())
+                            .executes(ctx -> {
+                                ServerPlayer target = EntityArgument.getPlayer(ctx, "target");
+                                PlayerDataHandler.advanceDay(target.getUUID());
+                                ctx.getSource().sendSuccess(() -> Component.literal(
+                                        "[Debug] +24h applied to " + target.getName().getString() + "'s daily timer."), false);
+                                return Command.SINGLE_SUCCESS;
+                            })
+                        )
                     )
                 )
         );
@@ -102,8 +97,8 @@ public final class ModCommands {
         if (!PrestigeGlobalFlags.PRESTIGE_ENABLED
                 && src.getEntity() instanceof ServerPlayer p
                 && !p.hasPermissions(2)) {
-            src.sendFailure(Component.literal(
-                    "§c[Arcadia] Prestige features are currently disabled on this server."));
+            src.sendFailure(Component.translatable(
+                    "arcadia_prestige.cmd.disabled_msg"));
             return false;
         }
         return true;

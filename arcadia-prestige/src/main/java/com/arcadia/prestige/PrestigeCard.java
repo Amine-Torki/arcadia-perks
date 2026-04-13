@@ -38,10 +38,10 @@ public record PrestigeCard(
         boolean hasPets = ModList.get().isLoaded("arcadia_pets");
         boolean hasAh   = ModList.get().isLoaded("arcadia_ah");
         List<PrestigeCard> list = new ArrayList<>();
-        list.add(new PrestigeCard("✨", "arcadia_prestige.hub.cosmetics.label", "arcadia_prestige.hub.cosmetics.sub", 0x5EAAFF, 0, Items.NETHER_STAR));
-        list.add(new PrestigeCard("♦",  "arcadia_prestige.hub.pets.label",      "arcadia_prestige.hub.pets.sub",      0x44DD88, 1, Items.BONE,        hasPets));
-        list.add(new PrestigeCard("⭐", "arcadia_prestige.hub.daily.label",      "arcadia_prestige.hub.daily.sub",     0xFFCC33, 2, Items.CLOCK));
-        list.add(new PrestigeCard("★",  "arcadia_prestige.hub.auction.label",    "arcadia_prestige.hub.auction.sub",   0xFFAA00, 3, Items.EMERALD,     hasAh));
+        list.add(new PrestigeCard("✨", "arcadia_prestige.hub.cosmetics.label", "arcadia_prestige.hub.cosmetics.sub", 0x6BB8D4, 0, Items.NETHER_STAR));
+        list.add(new PrestigeCard("♦",  "arcadia_prestige.hub.pets.label",      "arcadia_prestige.hub.pets.sub",      0x4ECCA3, 1, Items.BONE,        hasPets));
+        list.add(new PrestigeCard("⭐", "arcadia_prestige.hub.daily.label",      "arcadia_prestige.hub.daily.sub",     0xD4A847, 2, Items.CLOCK));
+        list.add(new PrestigeCard("★",  "arcadia_prestige.hub.auction.label",    "arcadia_prestige.hub.auction.sub",   0xB87333, 3, Items.EMERALD,     hasAh));
         return Collections.unmodifiableList(list);
     }
 }

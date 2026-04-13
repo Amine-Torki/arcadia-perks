@@ -34,9 +34,9 @@ public enum PetRarity {
         return displayName;
     }
 
-    /** Translation key for this rarity's display name, e.g. {@code arcadia_prestige.rarity.common}. */
+    /** Translation key for this rarity's display name, e.g. {@code arcadia_pets.rarity.common}. */
     public String getTranslationKey() {
-        return "arcadia_prestige.rarity." + name().toLowerCase();
+        return "arcadia_pets.rarity." + name().toLowerCase();
     }
 
     /** Translatable {@link Component} with the rarity's colour applied. */

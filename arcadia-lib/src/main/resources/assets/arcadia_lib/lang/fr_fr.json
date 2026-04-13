@@ -1,0 +1,26 @@
+{
+  "item.arcadia_lib.arcadia_token": "Jeton Arcadia",
+  "arcadia_lib.msg.hub_not_available": "§c[Arcadia] Le hub n'est pas disponible. Installe Arcadia Prestige.",
+  "arcadia_lib.hub.title": "⚙ Arcadia Hub ⚙",
+  "arcadia_lib.hub.subtitle": "Choisis un module",
+  "arcadia_lib.hub.close": "Appuie sur Échap pour fermer",
+  "arcadia_lib.hub.not_installed": "Non installé",
+  "arcadia_lib.hub.no_modules": "Aucun module enregistré.",
+
+  "arcadia_lib.staff.help": "Commandes staff : /staff chat, /staff toggle, /staff list, /staff mute, /staff unmute",
+  "arcadia_lib.staff.chat_enabled": "Chat staff activé. Tous tes messages iront dans le chat staff.",
+  "arcadia_lib.staff.chat_disabled": "Chat staff désactivé. Chat normal restauré.",
+  "arcadia_lib.staff.no_staff": "Aucun staff en ligne.",
+  "arcadia_lib.staff.online": "Staff en ligne (%s) : ",
+  "arcadia_lib.staff.no_reason": "Aucune raison spécifiée",
+  "arcadia_lib.staff.muted_notify": "Tu as été muté pour %s : %s",
+  "arcadia_lib.staff.muted_alert": "%s a muté %s pour %s (%s)",
+  "arcadia_lib.staff.unmuted_notify": "Tu as été démuté.",
+  "arcadia_lib.staff.unmuted_alert": "%s a démuté %s",
+  "arcadia_lib.staff.muted_feedback": "Tu es muté (%s restant) : %s",
+  "arcadia_lib.staff.role_required": "Tu as besoin du rôle %s ou supérieur.",
+  "arcadia_lib.staff.not_enough_role": "Permissions insuffisantes.",
+
+  "key.arcadia_lib.open_hub": "Ouvrir le Hub Arcadia",
+  "key.categories.arcadia_lib": "Arcadia"
+}

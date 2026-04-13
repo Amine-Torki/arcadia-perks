@@ -31,7 +31,7 @@ public class PetTreatItem extends Item {
                     && PetManager.getPocketPetData(sp.getUUID()) == null
                     && PetManager.getDesignatedPetId(sp.getUUID()) == null) {
                 player.sendSystemMessage(net.minecraft.network.chat.Component
-                        .translatable("arcadia_prestige.msg.no_active_pet")
+                        .translatable("arcadia_pets.msg.no_active_pet")
                         .withStyle(net.minecraft.ChatFormatting.RED));
                 return InteractionResultHolder.fail(stack);
             }

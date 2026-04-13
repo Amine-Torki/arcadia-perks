@@ -1,5 +1,6 @@
 package com.arcadia.pets.client;
 
+import com.arcadia.lib.client.ArcadiaTheme;
 import com.arcadia.pets.item.DerivedPetStats;
 import com.arcadia.pets.item.PetBehaviourMode;
 import com.arcadia.pets.item.PetData;
@@ -103,7 +104,7 @@ public class PetScreen extends Screen {
                      float currentHp, float maxHp,
                      java.util.Map<String, Long> cdEnds,
                      java.util.Map<String, Boolean> toggles) {
-        super(Component.translatable("arcadia_prestige.gui.pet_panel.title"));
+        super(Component.translatable("arcadia_pets.gui.pet_panel.title"));
         this.petData = petData;
         this.cooldownTicks = cooldownTicks;
         this.petActive = petActive;
@@ -147,10 +148,10 @@ public class PetScreen extends Screen {
         int nameFieldY = cardTop + 32;
         int nameFieldW = CARD_W - 16 - RENAME_BTN_W - 4;
         nameInput = new EditBox(this.font, nameFieldX, nameFieldY, nameFieldW, 12,
-                Component.translatable("arcadia_prestige.gui.pet_panel.name_label"));
+                Component.translatable("arcadia_pets.gui.pet_panel.name_label"));
         nameInput.setMaxLength(20);
         nameInput.setValue(petData.customName() != null ? petData.customName() : "");
-        nameInput.setHint(Component.translatable("arcadia_prestige.gui.pet_panel.name_hint").withStyle(ChatFormatting.DARK_GRAY));
+        nameInput.setHint(Component.translatable("arcadia_pets.gui.pet_panel.name_hint").withStyle(ChatFormatting.DARK_GRAY));
         this.addRenderableWidget(nameInput);
         renameBtnX = nameFieldX + nameFieldW + 4;
         renameBtnY = nameFieldY;
@@ -186,19 +187,15 @@ public class PetScreen extends Screen {
         int chatColor   = petData.rarity().getColor().getColor() != null
                 ? petData.rarity().getColor().getColor() : 0xFFFFFF;
 
-        // ── Background & border ───────────────────────────────────────────────
-        g.fill(cardLeft, cardTop, cardLeft + CARD_W, cardTop + CARD_H, 0xE8101020);
-        g.fill(cardLeft,              cardTop,              cardLeft + CARD_W, cardTop + 3,              rarityColor);
-        g.fill(cardLeft,              cardTop + CARD_H - 3, cardLeft + CARD_W, cardTop + CARD_H,          rarityColor);
-        g.fill(cardLeft,              cardTop,              cardLeft + 3,       cardTop + CARD_H,          rarityColor);
-        g.fill(cardLeft + CARD_W - 3, cardTop,              cardLeft + CARD_W,  cardTop + CARD_H,          rarityColor);
+        // ── Background & border (steampunk themed) ─────────────────────────
+        ArcadiaTheme.drawPanel(g, cardLeft, cardTop, CARD_W, CARD_H, false, rarityColor);
 
         // ── Gear button ───────────────────────────────────────────────────────
         boolean hovGear = mouseX >= gearBtnX && mouseX < gearBtnX + GEAR_BTN_SIZE
                 && mouseY >= gearBtnY && mouseY < gearBtnY + GEAR_BTN_SIZE;
         g.fill(gearBtnX, gearBtnY, gearBtnX + GEAR_BTN_SIZE, gearBtnY + GEAR_BTN_SIZE,
-                hovGear ? 0xFF556688 : 0xFF334455);
-        g.drawString(this.font, "\u2699", gearBtnX + 1, gearBtnY + 1, 0xCCCCCC, false);
+                hovGear ? 0xFF6A5A3A : 0xFF4A3A28);
+        g.drawString(this.font, "\u2699", gearBtnX + 1, gearBtnY + 1, ArcadiaTheme.BRASS, false);
 
         int y      = cardTop + 8;
         int centerX = cardLeft + CARD_W / 2;
@@ -212,6 +209,9 @@ public class PetScreen extends Screen {
             if (mob.contains(":")) mob = mob.substring(mob.indexOf(':') + 1);
             petName = mob.substring(0, 1).toUpperCase() + mob.substring(1).replace('_', ' ');
         }
+        // Name with shadow
+        g.drawString(this.font, Component.literal(petName).withStyle(s -> s.withBold(true)),
+                cardLeft + 9, y + 1, 0x22000000, false);
         g.drawString(this.font, Component.literal(petName).withStyle(s -> s.withBold(true)),
                 cardLeft + 8, y, chatColor, false);
         y += 12;
@@ -221,22 +221,22 @@ public class PetScreen extends Screen {
         if (mobType.contains(":")) mobType = mobType.substring(mobType.indexOf(':') + 1);
         mobType = mobType.substring(0, 1).toUpperCase() + mobType.substring(1).replace('_', ' ');
         String typeRarityLabel = mobType + " \u2014 " + petData.rarity().getTranslatableName().getString();
-        g.drawString(this.font, typeRarityLabel, cardLeft + 8, y, 0xAAAAAA, false);
+        g.drawString(this.font, typeRarityLabel, cardLeft + 8, y, ArcadiaTheme.TEXT_SECONDARY, false);
         y += 12;
 
         // ── Rename row: EditBox rendered by widget system; just draw "Set" button ──
         boolean hovRename = mouseX >= renameBtnX && mouseX < renameBtnX + RENAME_BTN_W
                 && mouseY >= renameBtnY && mouseY < renameBtnY + 12;
         g.fill(renameBtnX, renameBtnY, renameBtnX + RENAME_BTN_W, renameBtnY + 12,
-                hovRename ? 0xFF336633 : 0xFF224422);
-        Component setComp = Component.translatable("arcadia_prestige.gui.pets.set_name");
+                hovRename ? 0xFF5A4A2A : 0xFF3A3020);
+        Component setComp = Component.translatable("arcadia_pets.gui.pets.set_name");
         g.drawString(this.font, setComp,
                 renameBtnX + (RENAME_BTN_W - this.font.width(setComp)) / 2, renameBtnY + 2,
-                0xFFFFFF, false);
+                ArcadiaTheme.TEXT_PRIMARY, false);
         y += 18; // 12px EditBox + 6px gap
 
-        // ── Divider ───────────────────────────────────────────────────────────
-        g.fill(cardLeft + 4, y, cardLeft + CARD_W - 4, y + 1, 0x55FFFFFF);
+        // ── Divider (copper themed) ──────────────────────────────────────────
+        ArcadiaTheme.drawSeparator(g, cardLeft, y, CARD_W, ArcadiaTheme.withAlpha(ArcadiaTheme.COPPER, 0x55));
         y += 6;
 
         // ── Sub-panel anchors ─────────────────────────────────────────────────
@@ -287,7 +287,7 @@ public class PetScreen extends Screen {
         g.pose().pushPose();
         g.pose().translate(statsX, statsY, 0);
         g.pose().scale(sf, sf, 1f);
-        g.drawString(this.font, Component.translatable("arcadia_prestige.hud.combat_label"), 0, 0, 0x777777, false);
+        g.drawString(this.font, Component.translatable("arcadia_pets.hud.combat_label"), 0, 0, ArcadiaTheme.TEXT_DIM, false);
         g.pose().popPose();
         statsY += 9;
 
@@ -332,13 +332,10 @@ public class PetScreen extends Screen {
         // ── Right sub-panel: Pet portrait (with HP bar) + Hunger + Happiness ──
         // rightY was set to the same y as statsY (start of genes)
 
-        // ── Entity portrait box (no HP strip) ────────────────────────────────
-        // Box background + border
-        g.fill(rightX, rightY, rightX + PORTRAIT_W, rightY + PORTRAIT_H, 0xFF080812);
-        g.fill(rightX,               rightY,                 rightX + PORTRAIT_W, rightY + 1,               0x66FFFFFF);
-        g.fill(rightX,               rightY + PORTRAIT_H - 1, rightX + PORTRAIT_W, rightY + PORTRAIT_H,      0x66FFFFFF);
-        g.fill(rightX,               rightY,                 rightX + 1,          rightY + PORTRAIT_H,       0x66FFFFFF);
-        g.fill(rightX + PORTRAIT_W - 1, rightY,              rightX + PORTRAIT_W, rightY + PORTRAIT_H,       0x66FFFFFF);
+        // ── Entity portrait box (themed) ─────────────────────────────────────
+        g.fill(rightX, rightY, rightX + PORTRAIT_W, rightY + PORTRAIT_H, 0xFF0E0B14);
+        ArcadiaTheme.drawBorder(g, rightX, rightY, PORTRAIT_W, PORTRAIT_H,
+                ArcadiaTheme.withAlpha(ArcadiaTheme.COPPER, 0x66));
 
         // Entity render (uses ClientPetCache to avoid creating entities every frame)
         LivingEntity previewEntity = ClientPetCache.getEntity(petData.mobType());
@@ -355,11 +352,12 @@ public class PetScreen extends Screen {
         // Hunger — read live from ClientPetState when pet is active
         int hungerVal      = ClientPetState.isActive() ? ClientPetState.getHunger() : petData.hunger();
         int hungerBarColor = hungerVal >= 70 ? 0xFF55FF55 : hungerVal >= 30 ? 0xFFFFFF55 : 0xFFFF5555;
-        g.drawString(this.font, Component.translatable("arcadia_prestige.gui.pets.hunger"), rightX, rightY, 0xCCCCCC, false);
+        g.drawString(this.font, Component.translatable("arcadia_pets.gui.pets.hunger"), rightX, rightY, ArcadiaTheme.TEXT_PRIMARY, false);
         rightY += BAR_LABEL_GAP;
-        g.fill(rightX, rightY, rightX + BAR_W, rightY + BAR_H, 0x55000000);
+        g.fill(rightX, rightY, rightX + BAR_W, rightY + BAR_H, 0x44000000);
         g.fill(rightX, rightY, rightX + (int)(BAR_W * hungerVal / 100.0f), rightY + BAR_H, hungerBarColor);
-        g.drawString(this.font, String.valueOf(hungerVal), rightX + BAR_W + 2, rightY, 0xAAAAAA, false);
+        ArcadiaTheme.drawBorder(g, rightX - 1, rightY - 1, BAR_W + 2, BAR_H + 2, 0x33FFFFFF);
+        g.drawString(this.font, String.valueOf(hungerVal), rightX + BAR_W + 4, rightY - 1, ArcadiaTheme.TEXT_SECONDARY, false);
         rightY += BAR_H + BAR_SECTION_GAP;
 
         // HP bar — read live from ClientPetState when pet is active
@@ -367,12 +365,13 @@ public class PetScreen extends Screen {
         float liveMax = ClientPetState.isActive() ? ClientPetState.getMaxHp()     : maxHp;
         float hpPct       = liveMax > 0 ? Math.max(0f, Math.min(1f, liveHp / liveMax)) : 0f;
         int   hpFillColor = hpPct > 0.60f ? 0xFF44AA44 : hpPct > 0.30f ? 0xFFCC8822 : 0xFFCC3333;
-        g.drawString(this.font, Component.translatable("arcadia_prestige.gui.pets.hp_label"), rightX, rightY, 0xCCCCCC, false);
+        g.drawString(this.font, Component.translatable("arcadia_pets.gui.pets.hp_label"), rightX, rightY, ArcadiaTheme.TEXT_PRIMARY, false);
         rightY += BAR_LABEL_GAP;
-        g.fill(rightX, rightY, rightX + BAR_W, rightY + BAR_H, 0x55000000);
+        g.fill(rightX, rightY, rightX + BAR_W, rightY + BAR_H, 0x44000000);
         g.fill(rightX, rightY, rightX + (int)(BAR_W * hpPct), rightY + BAR_H, hpFillColor);
+        ArcadiaTheme.drawBorder(g, rightX - 1, rightY - 1, BAR_W + 2, BAR_H + 2, 0x33FFFFFF);
         String hpText = (int) liveHp + "/" + (int) liveMax;
-        g.drawString(this.font, hpText, rightX + BAR_W + 2, rightY, 0xAAAAAA, false);
+        g.drawString(this.font, hpText, rightX + BAR_W + 4, rightY - 1, ArcadiaTheme.TEXT_SECONDARY, false);
         rightY += BAR_H;
 
         // ── Skills section — left column, directly below combat stats ─────────
@@ -551,10 +550,10 @@ public class PetScreen extends Screen {
 
         // ── Second divider + vertical sub-panel divider ───────────────────────
         int div2Y = statusBtnY - 6;
-        g.fill(cardLeft + 4, div2Y, cardLeft + CARD_W - 4, div2Y + 1, 0x55FFFFFF);
+        ArcadiaTheme.drawSeparator(g, cardLeft, div2Y, CARD_W, ArcadiaTheme.withAlpha(ArcadiaTheme.COPPER, 0x55));
         // Vertical divider separating the stats (left) and bars (right) sub-panels
         int panelDivX = cardLeft + 8 + LEFT_PANEL_W + PANEL_GAP / 2;
-        g.fill(panelDivX, cardTop + 56, panelDivX + 1, div2Y, 0x33FFFFFF);
+        g.fill(panelDivX, cardTop + 56, panelDivX + 1, div2Y, ArcadiaTheme.withAlpha(ArcadiaTheme.COPPER, 0x33));
 
         // ── Status cycling button (Recall ↔ Follow ↔ Pocket ↔ Sit) ─────────
         renderStatusBtn(g, mouseX, mouseY);
@@ -613,18 +612,19 @@ public class PetScreen extends Screen {
 
         int bg; Component lbl;
         if (!petActive) {
-            // Recalled / inactive state
-            bg  = hov ? 0xFF4A4A5A : 0xFF2A2A3A;
-            lbl = Component.literal("Recalled \u25B6");
+            bg  = hov ? 0xFF4A3A28 : 0xFF2A2018;
+            lbl = Component.translatable("arcadia_pets.pet.recalled");
         } else {
-            int[] movBgs = {0xFF1A5276, 0xFF145A32}; // follow=blue, pocket=green
-            bg  = hov ? brightenColor(movBgs[selectedMovement.ordinal()]) : movBgs[selectedMovement.ordinal()];
+            int[] movBgs = {0xFF1A4A60, 0xFF1A4A30}; // follow=blue-steel, pocket=green-steel
+            bg  = hov ? ArcadiaTheme.brighten(movBgs[selectedMovement.ordinal()], 25) : movBgs[selectedMovement.ordinal()];
             String modeName = Component.translatable(selectedMovement.getTranslationKey()).getString();
             lbl = Component.literal(modeName + " \u25B6");
         }
         g.fill(statusBtnX, statusBtnY, statusBtnX + CYCLE_BTN_W, statusBtnY + BTN_H, bg);
+        ArcadiaTheme.drawBorder(g, statusBtnX, statusBtnY, CYCLE_BTN_W, BTN_H,
+                hov ? ArcadiaTheme.COPPER : ArcadiaTheme.BORDER_IDLE);
         g.drawString(this.font, lbl,
-                statusBtnX + (CYCLE_BTN_W - this.font.width(lbl)) / 2, statusBtnY + 3, 0xFFFFFF, false);
+                statusBtnX + (CYCLE_BTN_W - this.font.width(lbl)) / 2, statusBtnY + 3, ArcadiaTheme.TEXT_PRIMARY, false);
     }
 
     /** Returns the next movement mode in the cycle, or null to recall (deactivate). */
@@ -646,21 +646,20 @@ public class PetScreen extends Screen {
     private void renderBehaviourBtn(GuiGraphics g, int mouseX, int mouseY) {
         boolean hov = mouseX >= behavBtnX && mouseX < behavBtnX + CYCLE_BTN_W
                    && mouseY >= behavBtnY && mouseY < behavBtnY + BTN_H;
-        int[] colors = {0xFF4A235A, 0xFF1B4F20, 0xFF641E16};
+        int[] colors = {0xFF3A2840, 0xFF1A4020, 0xFF4A1A14};
         int idx = selectedBehaviour.ordinal();
-        int bg  = hov ? brightenColor(colors[idx]) : colors[idx];
+        int bg  = hov ? ArcadiaTheme.brighten(colors[idx], 25) : colors[idx];
         g.fill(behavBtnX, behavBtnY, behavBtnX + CYCLE_BTN_W, behavBtnY + BTN_H, bg);
+        ArcadiaTheme.drawBorder(g, behavBtnX, behavBtnY, CYCLE_BTN_W, BTN_H,
+                hov ? ArcadiaTheme.COPPER : ArcadiaTheme.BORDER_IDLE);
         String name = Component.translatable(selectedBehaviour.getTranslationKey()).getString();
         Component lbl = Component.literal(name + " \u25B6");
         g.drawString(this.font, lbl,
-                behavBtnX + (CYCLE_BTN_W - this.font.width(lbl)) / 2, behavBtnY + 3, 0xFFFFFF, false);
+                behavBtnX + (CYCLE_BTN_W - this.font.width(lbl)) / 2, behavBtnY + 3, ArcadiaTheme.TEXT_PRIMARY, false);
     }
 
     private static int brightenColor(int color) {
-        int r = Math.min(255, ((color >> 16) & 0xFF) + 30);
-        int g = Math.min(255, ((color >> 8)  & 0xFF) + 30);
-        int b = Math.min(255, ( color        & 0xFF) + 30);
-        return (color & 0xFF000000) | (r << 16) | (g << 8) | b;
+        return ArcadiaTheme.brighten(color, 30);
     }
 
     private static void playClick() {

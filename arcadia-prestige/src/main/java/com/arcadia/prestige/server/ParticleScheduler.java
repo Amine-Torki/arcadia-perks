@@ -1,7 +1,7 @@
 package com.arcadia.prestige.server;
 
 import com.arcadia.prestige.ArcadiaDashboard;
-import com.arcadia.pets.server.PetManager;
+// PetManager.onPlayerLogout is now called via PlayerManager.onQuit callback in arcadia-pets
 import com.arcadia.lib.data.DatabaseManager;
 import com.arcadia.lib.data.PlayerDataHandler;
 import com.arcadia.prestige.network.PacketHandler;
@@ -112,7 +112,7 @@ public final class ParticleScheduler {
             PacketHandler.sendToAll(server, new S2CParticleSync(uuid, ""));
         }
 
-        PetManager.onPlayerLogout(event);
+        // Pet logout handled by arcadia-pets via PlayerManager.onQuit callback
     }
 
     // -------------------------------------------------------------------------

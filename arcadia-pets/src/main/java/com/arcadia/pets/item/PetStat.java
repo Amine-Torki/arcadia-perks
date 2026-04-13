@@ -38,9 +38,9 @@ public enum PetStat {
     /** Raw English name — use {@link #getTranslatableName()} for player-facing text. */
     public String getDisplayName() { return displayName; }
 
-    /** Translation key, e.g. {@code arcadia_prestige.stat.power}. */
+    /** Translation key, e.g. {@code arcadia_pets.stat.power}. */
     public String getTranslationKey() {
-        return "arcadia_prestige.stat." + name().toLowerCase();
+        return "arcadia_pets.stat." + name().toLowerCase();
     }
 
     /** Translatable {@link Component} for this stat's full name. */

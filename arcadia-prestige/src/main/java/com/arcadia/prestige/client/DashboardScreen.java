@@ -1,10 +1,11 @@
 package com.arcadia.prestige.client;
 
-import com.arcadia.prestige.PrestigeCard;
+import com.arcadia.lib.ArcadiaModRegistry;
+import com.arcadia.lib.client.ArcadiaHubScreen;
+import com.arcadia.lib.client.ArcadiaModCard;
+import com.arcadia.lib.client.ArcadiaTheme;
 import com.arcadia.prestige.network.C2SDashboardAction;
 import com.arcadia.prestige.server.DashboardMenu;
-import com.arcadia.pets.client.PetGuideScreen;
-import com.arcadia.pets.client.PetHudSettingsScreen;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -34,12 +35,8 @@ public class DashboardScreen extends AbstractContainerScreen<DashboardMenu> {
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        int x = this.leftPos;
-        int y = this.topPos;
-        // Top section: 6 rows of slots + header
-        graphics.blit(TEXTURE, x, y, 0, 0, this.imageWidth, 6 * 18 + 17);
-        // Bottom section: player inventory
-        graphics.blit(TEXTURE, x, y + 6 * 18 + 17, 0, 126, this.imageWidth, 96);
+        // Custom steampunk container — no chest texture
+        ArcadiaTheme.drawContainerBg(graphics, this.leftPos, this.topPos, this.imageWidth, 6);
     }
 
     @Override
@@ -52,10 +49,13 @@ public class DashboardScreen extends AbstractContainerScreen<DashboardMenu> {
             case 3 -> Component.translatable("arcadia_prestige.gui.tab.auction_house");
             default -> this.title;
         };
-        graphics.drawString(this.font, displayTitle,
-                (this.imageWidth - this.font.width(displayTitle)) / 2, 6, 0xFFD700, false);
+        // Centered title with copper theme + shadow
+        int titleX = (this.imageWidth - this.font.width(displayTitle)) / 2;
+        graphics.drawString(this.font, displayTitle, titleX + 1, 7, 0x22000000, false);
+        graphics.drawString(this.font, displayTitle, titleX, 6, ArcadiaTheme.BRASS, false);
+        // Player inventory label in warm tone
         graphics.drawString(this.font, this.playerInventoryTitle,
-                this.inventoryLabelX, this.inventoryLabelY, 0x404040, false);
+                this.inventoryLabelX, this.inventoryLabelY, ArcadiaTheme.TEXT_DIM, false);
     }
 
     @Override
@@ -77,11 +77,20 @@ public class DashboardScreen extends AbstractContainerScreen<DashboardMenu> {
     // -------------------------------------------------------------------------
 
     private void renderTabCards(GuiGraphics g, int mouseX, int mouseY) {
-        int currentTab = menu.getCurrentTab();
-        int prevTab = (currentTab + 3) % 4;
-        int nextTab = (currentTab + 1) % 4;
+        java.util.List<ArcadiaModCard> allCards = ArcadiaModRegistry.getCards();
+        if (allCards.size() < 2) return; // no navigation needed with < 2 cards
 
-        // Center the card vertically at 30% of the total inventory height from the top
+        int currentTab = menu.getCurrentTab();
+        // Find current card index in the sorted list
+        int currentIdx = -1;
+        for (int i = 0; i < allCards.size(); i++) {
+            if (allCards.get(i).sortOrder() == currentTab) { currentIdx = i; break; }
+        }
+        if (currentIdx < 0) return;
+
+        int prevIdx = (currentIdx + allCards.size() - 1) % allCards.size();
+        int nextIdx = (currentIdx + 1) % allCards.size();
+
         int cardY = this.topPos + (int)(this.imageHeight * 0.30f) - MINI_H / 2;
         int leftX  = this.leftPos - MINI_GAP - MINI_W;
         int rightX = this.leftPos + this.imageWidth + MINI_GAP;
@@ -89,12 +98,12 @@ public class DashboardScreen extends AbstractContainerScreen<DashboardMenu> {
         if (leftX >= 0) {
             boolean hovered = mouseX >= leftX && mouseX < leftX + MINI_W
                     && mouseY >= cardY && mouseY < cardY + MINI_H;
-            PrestigeHubScreen.drawCard(g, PrestigeCard.ALL.get(prevTab), leftX, cardY, MINI_W, MINI_H, hovered, 0.8f);
+            ArcadiaHubScreen.drawCard(g, allCards.get(prevIdx), leftX, cardY, MINI_W, MINI_H, hovered, 0.8f);
         }
         if (rightX + MINI_W <= this.width) {
             boolean hovered = mouseX >= rightX && mouseX < rightX + MINI_W
                     && mouseY >= cardY && mouseY < cardY + MINI_H;
-            PrestigeHubScreen.drawCard(g, PrestigeCard.ALL.get(nextTab), rightX, cardY, MINI_W, MINI_H, hovered, 0.8f);
+            ArcadiaHubScreen.drawCard(g, allCards.get(nextIdx), rightX, cardY, MINI_W, MINI_H, hovered, 0.8f);
         }
     }
 
@@ -104,13 +113,41 @@ public class DashboardScreen extends AbstractContainerScreen<DashboardMenu> {
 
     private void renderFirstPersonToggle(GuiGraphics graphics, int mouseX, int mouseY) {
         boolean hidden = PlayerEffectCache.isHideOwnEffectsFirstPerson();
-        Component label = Component.translatable(hidden ? "arcadia_prestige.gui.cosmetics.hide_effects_on" : "arcadia_prestige.gui.cosmetics.hide_effects_off");
-        int bx = this.leftPos + 4;
+        // Compact icon button: eye icon with toggle state
+        int btnSize = 12;
+        int bx = this.leftPos + this.imageWidth - btnSize - 4;
         int by = this.topPos + this.imageHeight + 3;
-        int bw = this.imageWidth - 8;
-        boolean hovered = mouseX >= bx && mouseX <= bx + bw && mouseY >= by && mouseY <= by + 10;
-        graphics.fill(bx - 1, by - 1, bx + bw + 1, by + 11, hovered ? 0x90303030 : 0x70101010);
-        graphics.drawString(this.font, label, bx + 2, by + 1, 0xFFFFFF, false);
+        boolean hovered = mouseX >= bx && mouseX <= bx + btnSize && mouseY >= by && mouseY <= by + btnSize;
+
+        // Background
+        graphics.fill(bx, by, bx + btnSize, by + btnSize, hovered ? 0xDD1E1A24 : 0xAA141018);
+        ArcadiaTheme.drawBorder(graphics, bx, by, btnSize, btnSize,
+                hovered ? ArcadiaTheme.COPPER : ArcadiaTheme.BORDER_IDLE);
+
+        // Eye icon (crossed out when hidden)
+        String icon = hidden ? "\uD83D\uDC41" : "\uD83D\uDC41";
+        graphics.pose().pushPose();
+        graphics.pose().translate(bx + 2, by + 2, 0);
+        graphics.pose().scale(0.7f, 0.7f, 1f);
+        graphics.drawString(this.font, icon, 0, 0,
+                hidden ? 0xFF55CC55 : ArcadiaTheme.TEXT_DIM, false);
+        graphics.pose().popPose();
+
+        // Strikethrough line when NOT hidden (effects visible = eye open, no line)
+        if (!hidden) {
+            // no line needed — eye open = effects visible
+        } else {
+            // small green dot to indicate "hidden" state
+            graphics.fill(bx + btnSize - 4, by + btnSize - 4, bx + btnSize - 1, by + btnSize - 1, 0xFF55CC55);
+        }
+
+        // Tooltip on hover
+        if (hovered) {
+            Component tooltip = Component.translatable(hidden
+                    ? "arcadia_prestige.gui.cosmetics.toggle_on"
+                    : "arcadia_prestige.gui.cosmetics.toggle_off");
+            graphics.renderTooltip(this.font, tooltip, (int) mouseX, (int) mouseY);
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -126,37 +163,44 @@ public class DashboardScreen extends AbstractContainerScreen<DashboardMenu> {
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button == 0) {
             int currentTab = menu.getCurrentTab();
-            // Center the card vertically at 30% of the total inventory height from the top
-        int cardY = this.topPos + (int)(this.imageHeight * 0.30f) - MINI_H / 2;
+            java.util.List<ArcadiaModCard> allCards = ArcadiaModRegistry.getCards();
+            int currentIdx = -1;
+            for (int i = 0; i < allCards.size(); i++) {
+                if (allCards.get(i).sortOrder() == currentTab) { currentIdx = i; break; }
+            }
+
+            int cardY = this.topPos + (int)(this.imageHeight * 0.30f) - MINI_H / 2;
             int leftX  = this.leftPos - MINI_GAP - MINI_W;
             int rightX = this.leftPos + this.imageWidth + MINI_GAP;
 
-            // Left mini card — navigate to prev tab (in-place refresh, no container reopen)
-            if (leftX >= 0
+            // Left mini card
+            if (currentIdx >= 0 && leftX >= 0
                     && mouseX >= leftX && mouseX < leftX + MINI_W
                     && mouseY >= cardY && mouseY < cardY + MINI_H) {
                 playClick();
-                int prevTab = (currentTab + 3) % 4;
+                int prevIdx = (currentIdx + allCards.size() - 1) % allCards.size();
+                int prevTab = allCards.get(prevIdx).sortOrder();
                 PacketDistributor.sendToServer(new C2SDashboardAction(C2SDashboardAction.SWITCH_TAB, String.valueOf(prevTab)));
                 return true;
             }
 
-            // Right mini card — navigate to next tab (in-place refresh, no container reopen)
-            if (rightX + MINI_W <= this.width
+            // Right mini card
+            if (currentIdx >= 0 && rightX + MINI_W <= this.width
                     && mouseX >= rightX && mouseX < rightX + MINI_W
                     && mouseY >= cardY && mouseY < cardY + MINI_H) {
                 playClick();
-                int nextTab = (currentTab + 1) % 4;
+                int nextIdx = (currentIdx + 1) % allCards.size();
+                int nextTab = allCards.get(nextIdx).sortOrder();
                 PacketDistributor.sendToServer(new C2SDashboardAction(C2SDashboardAction.SWITCH_TAB, String.valueOf(nextTab)));
                 return true;
             }
 
-            // First-person toggle
+            // First-person toggle (compact icon button, bottom-right)
             if (currentTab == 0 || currentTab == 1) {
-                int bx = this.leftPos + 4;
+                int btnSize = 12;
+                int bx = this.leftPos + this.imageWidth - btnSize - 4;
                 int by = this.topPos + this.imageHeight + 3;
-                int bw = this.imageWidth - 8;
-                if (mouseX >= bx && mouseX <= bx + bw && mouseY >= by && mouseY <= by + 10) {
+                if (mouseX >= bx && mouseX <= bx + btnSize && mouseY >= by && mouseY <= by + btnSize) {
                     playClick();
                     PlayerEffectCache.toggleHideOwnEffectsFirstPerson();
                     return true;
@@ -186,7 +230,7 @@ public class DashboardScreen extends AbstractContainerScreen<DashboardMenu> {
                 int sy = this.topPos + slot47.y;
                 if (mouseX >= sx && mouseX < sx + 16 && mouseY >= sy && mouseY < sy + 16) {
                     playClick();
-                    net.minecraft.client.Minecraft.getInstance().setScreen(new PetGuideScreen());
+                    com.arcadia.lib.ArcadiaModRegistry.executeClientAction("pets.open_guide");
                     return true;
                 }
             }
@@ -198,7 +242,7 @@ public class DashboardScreen extends AbstractContainerScreen<DashboardMenu> {
                 int sy = this.topPos + slot48.y;
                 if (mouseX >= sx && mouseX < sx + 16 && mouseY >= sy && mouseY < sy + 16) {
                     playClick();
-                    net.minecraft.client.Minecraft.getInstance().setScreen(new PetHudSettingsScreen());
+                    com.arcadia.lib.ArcadiaModRegistry.executeClientAction("pets.open_hud_settings");
                     return true;
                 }
             }

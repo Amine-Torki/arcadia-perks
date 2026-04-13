@@ -72,13 +72,13 @@ public class DashboardMenu extends AbstractContainerMenu {
                 });
             }
         }
-        // Player inventory
+        // Player inventory — filtered slots that hide PetItem when not on the Pets tab
         for (int row = 0; row < 3; row++)
             for (int col = 0; col < 9; col++)
-                addSlot(new Slot(playerInv, col + row * 9 + 9, 8 + col * 18, 140 + row * 18));
+                addSlot(new FilteredInventorySlot(playerInv, col + row * 9 + 9, 8 + col * 18, 140 + row * 18));
         // Hotbar
         for (int col = 0; col < 9; col++)
-            addSlot(new Slot(playerInv, col, 8 + col * 18, 198));
+            addSlot(new FilteredInventorySlot(playerInv, col, 8 + col * 18, 198));
 
         addDataSlot(tabSlot);
 
@@ -122,7 +122,7 @@ public class DashboardMenu extends AbstractContainerMenu {
     public void switchTab(int tab, Player player) {
         // Clear AH search when navigating away from the AH tab
         if (this.currentTab == 3 && tab != 3 && player instanceof net.minecraft.server.level.ServerPlayer sp) {
-            com.arcadia.ah.auction.AuctionManager.clearSearch(sp.getUUID());
+            com.arcadia.lib.ArcadiaModRegistry.executeServerAction("ah.clear_search", sp);
         }
         this.currentTab = tab;
         this.tabSlot.set(tab);
@@ -144,7 +144,7 @@ public class DashboardMenu extends AbstractContainerMenu {
                 for (int ri = 0; ri < 3; ri++) {
                     if (slotId == DailyRewardHandler.MILESTONE_GIFT_SLOTS[mi][ri]) {
                         if (pathPos > DailyRewardHandler.MILESTONE_PATH_INDICES[mi]
-                                && LuckPermsHook.hasMinimumGrade(sp, DailyRewardHandler.RANK_GRADES[ri])) {
+                                && com.arcadia.lib.permissions.PermissionService.hasMinimumGrade(sp, DailyRewardHandler.RANK_GRADES[ri])) {
                             DailyRewardHandler.claimMilestoneGift(sp, cycle, mi, ri);
                             refreshTab();
                         }
@@ -246,14 +246,15 @@ public class DashboardMenu extends AbstractContainerMenu {
         dashboardContainer.setItem(0, glassPane());
         dashboardContainer.setItem(8, glassPane());
 
-        // Slot 4: active pet display — delegated to petsTab if present
+        // Slot 4: delegate to active tab handler, or show empty filler
         ServerPlayer sp = (player instanceof ServerPlayer s) ? s : null;
-        ItemStack navItem = (petsTab != null && sp != null) ? petsTab.getNavBarItem(sp) : ItemStack.EMPTY;
+        DashboardTabHandler activeHandler = handlerForTab(currentTab);
+        ItemStack navItem = (activeHandler != null && sp != null) ? activeHandler.getNavBarItem(sp) : ItemStack.EMPTY;
         if (!navItem.isEmpty()) {
             dashboardContainer.setItem(4, navItem);
         } else {
             ItemStack empty = new ItemStack(Items.GRAY_STAINED_GLASS_PANE);
-            setName(empty, Component.translatable("arcadia_prestige.gui.pets.no_active").withStyle(ChatFormatting.DARK_GRAY));
+            setName(empty, Component.literal(" "));
             dashboardContainer.setItem(4, empty);
         }
 
@@ -293,7 +294,7 @@ public class DashboardMenu extends AbstractContainerMenu {
                     int idx = r * 5 + col;
                     if (idx >= ids.length) return;
                     String pid = ids[idx];
-                    if (LuckPermsHook.canUseParticle(sp, pid)) {
+                    if (com.arcadia.lib.permissions.PermissionService.canUseCosmetic(sp, pid)) {
                         com.arcadia.lib.data.DatabaseManager.executeAsync(
                                 () -> PlayerDataHandler.saveParticle(sp.getUUID(), pid));
                         ParticleScheduler.broadcastParticleChange(sp, pid);
@@ -397,7 +398,7 @@ public class DashboardMenu extends AbstractContainerMenu {
     }
 
     private ItemStack buildParticleIcon(String id, String name, net.minecraft.world.item.Item icon, String currentParticle) {
-        boolean unlocked = LuckPermsHook.canUseParticle(player, id);
+        boolean unlocked = com.arcadia.lib.permissions.PermissionService.canUseCosmetic(player, id);
         boolean selected  = id.equals(currentParticle);
         String  tierLabel = CosmeticPermissionScanner.getTierLabel(id); // null = individually sold
 
@@ -476,7 +477,7 @@ public class DashboardMenu extends AbstractContainerMenu {
                 int giftSlot         = DailyRewardHandler.MILESTONE_GIFT_SLOTS[mi][ri];
                 String requiredGrade = DailyRewardHandler.RANK_GRADES[ri];
                 String displayRank   = DailyRewardHandler.RANK_DISPLAY[ri];
-                boolean hasGrade = LuckPermsHook.hasMinimumGrade(player, requiredGrade);
+                boolean hasGrade = com.arcadia.lib.permissions.PermissionService.hasMinimumGrade(player, requiredGrade);
                 boolean claimed  = (milestoneClaims & DailyRewardHandler.claimBit(mi, ri)) != 0;
                 ChatFormatting rankColor = ri == 0 ? ChatFormatting.GOLD : ri == 1 ? ChatFormatting.LIGHT_PURPLE : ChatFormatting.AQUA;
                 net.minecraft.world.item.Item rankIcon = ri == 0 ? Items.GOLD_INGOT : ri == 1 ? Items.AMETHYST_SHARD : Items.NETHER_STAR;
@@ -554,6 +555,47 @@ public class DashboardMenu extends AbstractContainerMenu {
             DashboardMenu menu = new DashboardMenu(id, inv);
             menu.switchTab(initialTab, player);
             return menu;
+        }
+    }
+
+    // ── Filtered slot: hides PetItem when not on Pets tab ─────────────────
+
+    /**
+     * Custom inventory slot that hides pet items when the dashboard is not
+     * on the Pets tab (tab 1). Prevents pets from cluttering other tabs.
+     * Uses isActive() — when false, the slot is not rendered and not interactable.
+     */
+    /**
+     * Inventory slot that hides arcadia_pets items when not on the Pets tab.
+     * Uses isActive() for safe rendering control — never overrides getItem()
+     * to avoid inventory sync corruption.
+     */
+    private class FilteredInventorySlot extends Slot {
+        FilteredInventorySlot(net.minecraft.world.Container container, int index, int x, int y) {
+            super(container, index, x, y);
+        }
+
+        @Override
+        public boolean isActive() {
+            if (currentTab == 1) return true; // Pets tab shows everything
+            ItemStack stack = super.getItem();
+            if (!stack.isEmpty()) {
+                var key = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
+                if (key.getNamespace().equals("arcadia_pets")) return false;
+            }
+            return true;
+        }
+
+        @Override
+        public boolean mayPickup(Player player) {
+            if (!isActive()) return false;
+            return super.mayPickup(player);
+        }
+
+        @Override
+        public boolean mayPlace(ItemStack stack) {
+            if (!isActive()) return false;
+            return super.mayPlace(stack);
         }
     }
 }

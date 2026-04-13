@@ -2,7 +2,7 @@ package com.arcadia.ah.auction;
 
 
 import com.arcadia.ah.config.AhConfig;
-import com.arcadia.pets.item.PetItem;
+// PetItem check via item registry name to avoid depending on arcadia-pets
 import com.mojang.logging.LogUtils;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
@@ -12,6 +12,7 @@ import net.minecraft.world.item.ItemStack;
 import org.slf4j.Logger;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -31,11 +32,14 @@ public final class AuctionManager {
     /** In-memory cache — refreshed from DB periodically. */
     private static volatile List<AuctionListing> cache = new CopyOnWriteArrayList<>();
 
+    /** Listings currently being processed (bought/cancelled) — excluded from cache refresh. */
+    private static final Set<UUID> pendingSales = ConcurrentHashMap.newKeySet();
+
     /** Server-side search state per player UUID. */
-    private static final Map<UUID, String> playerSearch = new HashMap<>();
+    private static final Map<UUID, String> playerSearch = new ConcurrentHashMap<>();
 
     /** Timestamp of last search per player — throttled to 1 query/sec. */
-    private static final Map<UUID, Long> lastSearchTime = new HashMap<>();
+    private static final Map<UUID, Long> lastSearchTime = new ConcurrentHashMap<>();
 
     private static final long SEARCH_COOLDOWN_MS = 1_000L;
 
@@ -48,6 +52,8 @@ public final class AuctionManager {
     public static void refreshCache() {
         com.arcadia.lib.data.DatabaseManager.executeAsync(() -> {
             List<AuctionListing> fresh = AuctionDatabase.fetchAllActive();
+            // Filter out listings currently being processed to prevent race condition double-buy
+            fresh.removeIf(l -> pendingSales.contains(l.listingId()));
             cache = new CopyOnWriteArrayList<>(fresh);
         });
     }
@@ -100,14 +106,23 @@ public final class AuctionManager {
     public static boolean listItem(ServerPlayer seller, ItemStack stack, long price, MinecraftServer server) {
         if (stack.isEmpty()) return false;
         if (price <= 0) {
-            seller.sendSystemMessage(Component.literal("§cPrice must be greater than 0."));
+            seller.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.error(
+                    Component.translatable("arcadia_ah.cmd.price_invalid").getString()));
+            return false;
+        }
+
+        // Check blacklist
+        String itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+        if (com.arcadia.ah.config.AhConfig.isBlacklisted(itemId)) {
+            seller.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.error(
+                    Component.translatable("arcadia_ah.cmd.blacklisted").getString()));
             return false;
         }
 
         List<AuctionListing> myListings = getByPlayer(seller.getUUID());
         if (myListings.size() >= maxListingsPerPlayer()) {
-            seller.sendSystemMessage(Component.literal(
-                    "§cYou already have " + maxListingsPerPlayer() + " active listings."));
+            seller.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.error(
+                    Component.translatable("arcadia_ah.cmd.max_listings", maxListingsPerPlayer()).getString()));
             return false;
         }
 
@@ -115,7 +130,7 @@ public final class AuctionManager {
         String nbt = AuctionItemSerializer.toBase64(stack, reg);
         if (nbt.isEmpty()) return false;
 
-        String category = (stack.getItem() instanceof PetItem) ? "pet" : "misc";
+        String category = stack.getItem().getClass().getSimpleName().equals("PetItem") ? "pet" : "misc";
         long now = System.currentTimeMillis();
 
         AuctionListing listing = new AuctionListing(
@@ -141,14 +156,13 @@ public final class AuctionManager {
         int qty = stack.getCount();
         String itemName = stack.getHoverName().getString();
         if (qty > 1) {
-            seller.sendSystemMessage(Component.literal(
-                    "§a[AH] Listed §f" + qty + "×" + itemName
-                    + " §afor §f" + NumismaticsCompat.formatPrice(price) + " §7total §a(§f"
-                    + NumismaticsCompat.formatPrice(price / qty) + "§7/unit§a)."));
+            seller.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.success(
+                    "Listed " + qty + "×" + itemName
+                    + " for " + com.arcadia.lib.economy.EconomyService.formatPrice(price) + " total ("
+                    + com.arcadia.lib.economy.EconomyService.formatPrice(price / qty) + "/unit)."));
         } else {
-            seller.sendSystemMessage(Component.literal(
-                    "§a[AH] Listed §f" + itemName
-                    + " §afor §f" + NumismaticsCompat.formatPrice(price) + "§a."));
+            seller.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.success(
+                    "Listed " + itemName + " for " + com.arcadia.lib.economy.EconomyService.formatPrice(price) + "."));
         }
         return true;
     }
@@ -161,23 +175,24 @@ public final class AuctionManager {
         Optional<AuctionListing> opt = cache.stream()
                 .filter(l -> l.listingId().equals(listingId)).findFirst();
         if (opt.isEmpty()) {
-            buyer.sendSystemMessage(Component.literal("§cListing no longer available."));
+            buyer.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.error("Listing no longer available."));
             return;
         }
         AuctionListing listing = opt.get();
 
         if (listing.sellerUuid().equals(buyer.getUUID())) {
-            buyer.sendSystemMessage(Component.literal("§cYou cannot buy your own listing."));
+            buyer.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.error("You cannot buy your own listing."));
             return;
         }
 
-        if (!NumismaticsCompat.deductBalance(buyer, listing.price())) {
-            buyer.sendSystemMessage(Component.literal(
-                    "§cNot enough funds. Need §f" + NumismaticsCompat.formatPrice(listing.price()) + "§c."));
+        if (!com.arcadia.lib.economy.EconomyService.deduct(buyer, listing.price())) {
+            buyer.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.error(
+                    "Not enough funds. Need " + com.arcadia.lib.economy.EconomyService.formatPrice(listing.price()) + "."));
             return;
         }
 
-        // Remove from cache immediately to prevent double-buys
+        // Mark as pending sale to prevent race condition with cache refresh
+        pendingSales.add(listingId);
         cache.removeIf(l -> l.listingId().equals(listingId));
 
         net.minecraft.core.HolderLookup.Provider reg = server.registryAccess();
@@ -206,22 +221,23 @@ public final class AuctionManager {
             AuctionDatabase.insertMailbox(payment);
             AuctionDatabase.logSale(listing.sellerUuid(), listing.sellerName(),
                     buyer.getUUID(), listing.price());
+            pendingSales.remove(listingId); // Safe to re-appear in cache now (deleted from DB)
         });
 
         // If seller is online on THIS server, pay them directly
         ServerPlayer sellerOnline = server.getPlayerList().getPlayer(listing.sellerUuid());
         if (sellerOnline != null) {
-            NumismaticsCompat.addBalance(sellerOnline, listing.price());
+            com.arcadia.lib.economy.EconomyService.add(sellerOnline, listing.price());
             AuctionDatabase.deleteMailboxEntry(payment.entryId());
-            sellerOnline.sendSystemMessage(Component.literal(
-                    "§6[AH] §f" + buyer.getGameProfile().getName()
-                    + " §6bought your §f" + listing.itemDisplayName()
-                    + " §6for §f" + NumismaticsCompat.formatPrice(listing.price()) + "§6."));
+            sellerOnline.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.success(
+                    buyer.getGameProfile().getName() + " bought your "
+                    + listing.itemDisplayName() + " for "
+                    + com.arcadia.lib.economy.EconomyService.formatPrice(listing.price()) + "."));
         }
 
-        buyer.sendSystemMessage(Component.literal(
-                "§a[AH] Bought §f" + listing.itemDisplayName()
-                + " §afor §f" + NumismaticsCompat.formatPrice(listing.price()) + "§a."));
+        buyer.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.success(
+                "Bought " + listing.itemDisplayName()
+                + " for " + com.arcadia.lib.economy.EconomyService.formatPrice(listing.price()) + "."));
     }
 
     // -------------------------------------------------------------------------
@@ -232,12 +248,12 @@ public final class AuctionManager {
         Optional<AuctionListing> opt = cache.stream()
                 .filter(l -> l.listingId().equals(listingId)).findFirst();
         if (opt.isEmpty()) {
-            seller.sendSystemMessage(Component.literal("§cListing not found."));
+            seller.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.error("Listing not found."));
             return;
         }
         AuctionListing listing = opt.get();
         if (!listing.sellerUuid().equals(seller.getUUID())) {
-            seller.sendSystemMessage(Component.literal("§cThis is not your listing."));
+            seller.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.error("This is not your listing."));
             return;
         }
 
@@ -253,8 +269,8 @@ public final class AuctionManager {
         com.arcadia.lib.data.DatabaseManager.executeAsync(() ->
                 AuctionDatabase.deleteListing(listingId));
 
-        seller.sendSystemMessage(Component.literal(
-                "§e[AH] Cancelled listing for §f" + listing.itemDisplayName() + "§e. Item returned."));
+        seller.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.warning(
+                "Cancelled listing for " + listing.itemDisplayName() + ". Item returned."));
     }
 
     // -------------------------------------------------------------------------
@@ -295,26 +311,31 @@ public final class AuctionManager {
             List<MailboxEntry> entries = AuctionDatabase.fetchMailbox(player.getUUID());
             if (entries.isEmpty()) return;
 
-            net.minecraft.core.HolderLookup.Provider reg = server.registryAccess();
-            for (MailboxEntry entry : entries) {
-                if ("coins".equals(entry.type())) {
-                    NumismaticsCompat.addBalance(player, entry.coins());
-                    String reason = entry.reason() != null ? entry.reason() : "Auction sale";
-                    player.sendSystemMessage(Component.literal(
-                            "§6[AH Mailbox] §f" + NumismaticsCompat.formatPrice(entry.coins())
-                            + " §6received: §7" + reason));
-                } else if ("item".equals(entry.type()) && entry.itemNbt() != null) {
-                    ItemStack item = AuctionItemSerializer.fromBase64(entry.itemNbt(), reg);
-                    if (!item.isEmpty()) {
-                        if (!player.getInventory().add(item)) player.drop(item, false);
-                        String reason = entry.reason() != null ? entry.reason() : "Auction return";
+            // Schedule inventory mutations back on the main server thread
+            server.execute(() -> {
+                net.minecraft.core.HolderLookup.Provider reg = server.registryAccess();
+                for (MailboxEntry entry : entries) {
+                    if ("coins".equals(entry.type())) {
+                        com.arcadia.lib.economy.EconomyService.add(player, entry.coins());
+                        String reason = entry.reason() != null ? entry.reason() : "Auction sale";
                         player.sendSystemMessage(Component.literal(
-                                "§6[AH Mailbox] Item returned: §f"
-                                + item.getHoverName().getString() + " §7(" + reason + ")"));
+                                "§6⚙ Arcadia §8▸ §a" + com.arcadia.lib.economy.EconomyService.formatPrice(entry.coins())
+                                + " §6received: §7" + reason));
+                    } else if ("item".equals(entry.type()) && entry.itemNbt() != null) {
+                        ItemStack item = AuctionItemSerializer.fromBase64(entry.itemNbt(), reg);
+                        if (!item.isEmpty()) {
+                            if (!player.getInventory().add(item)) player.drop(item, false);
+                            String reason = entry.reason() != null ? entry.reason() : "Auction return";
+                            player.sendSystemMessage(Component.literal(
+                                    "§6⚙ Arcadia §8▸ §aItem returned: §f"
+                                    + item.getHoverName().getString() + " §7(" + reason + ")"));
+                        }
                     }
+                    // Delete processed entries asynchronously
+                    com.arcadia.lib.data.DatabaseManager.executeAsync(() ->
+                            AuctionDatabase.deleteMailboxEntry(entry.entryId()));
                 }
-                AuctionDatabase.deleteMailboxEntry(entry.entryId());
-            }
+            });
         });
     }
 }

@@ -1,12 +1,9 @@
 package com.arcadia.prestige.server;
 
-import com.arcadia.pets.PetsModItems;
-import com.arcadia.pets.server.PetManager;
+import com.arcadia.lib.ArcadiaModRegistry;
 import com.arcadia.lib.LibModItems;
 import com.arcadia.lib.data.DatabaseManager;
 import com.arcadia.lib.data.PlayerDataHandler;
-import com.arcadia.pets.item.PetData;
-import com.arcadia.pets.item.PetStat;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -17,6 +14,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import net.minecraft.world.item.Items;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -83,44 +82,45 @@ public final class DailyRewardHandler {
     // Milestone gift claims
     // -------------------------------------------------------------------------
 
-    /** In-memory fallback for debug mode: (uuid, cycle) → bitmask. */
-    private static final java.util.Map<String, Integer> DEBUG_CLAIMS = new java.util.concurrent.ConcurrentHashMap<>();
+    /** In-memory cache for milestone claims: "uuid:cycle" → bitmask. Also used as fallback in debug/singleplayer. */
+    private static final java.util.Map<String, Integer> claimsCache = new java.util.concurrent.ConcurrentHashMap<>();
 
-    private static String debugKey(UUID uuid, int cycle) { return uuid + ":" + cycle; }
+    private static String claimKey(UUID uuid, int cycle) { return uuid + ":" + cycle; }
 
-    /** Returns the bitmask of milestone gifts claimed by the player in the given cycle. */
+    /** Returns the bitmask of milestone gifts claimed by the player in the given cycle. Uses in-memory cache to avoid blocking the main thread. */
     public static int getMilestoneClaims(UUID uuid, int cycle) {
-        if (DatabaseManager.isDebugMode()) {
-            return DEBUG_CLAIMS.getOrDefault(debugKey(uuid, cycle), 0);
-        }
+        return claimsCache.getOrDefault(claimKey(uuid, cycle), 0);
+    }
+
+    /** Pre-loads milestone claims from DB into cache. Call on player login via executeAsync. */
+    public static void preloadClaims(UUID uuid, int cycle) {
+        if (DatabaseManager.isDebugMode()) return; // already in-memory
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(
                      "SELECT claims FROM arcadia_prestige_daily_milestone_claims WHERE uuid=? AND cycle=?")) {
             ps.setString(1, uuid.toString());
             ps.setInt(2, cycle);
             try (ResultSet rs = ps.executeQuery()) {
-                return rs.next() ? rs.getInt("claims") : 0;
+                if (rs.next()) claimsCache.put(claimKey(uuid, cycle), rs.getInt("claims"));
             }
-        } catch (SQLException e) {
-            return 0;
-        }
+        } catch (SQLException ignored) {}
     }
 
     private static void saveClaims(UUID uuid, int cycle, int claims) {
-        if (DatabaseManager.isDebugMode()) {
-            DEBUG_CLAIMS.put(debugKey(uuid, cycle), claims);
-            return;
-        }
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement(
-                     "INSERT INTO arcadia_prestige_daily_milestone_claims (uuid, cycle, claims) VALUES (?,?,?) " +
-                     "ON DUPLICATE KEY UPDATE claims=?")) {
-            ps.setString(1, uuid.toString());
-            ps.setInt(2, cycle);
-            ps.setInt(3, claims);
-            ps.setInt(4, claims);
-            ps.executeUpdate();
-        } catch (SQLException ignored) {}
+        claimsCache.put(claimKey(uuid, cycle), claims);
+        if (DatabaseManager.isDebugMode()) return;
+        DatabaseManager.executeAsync(() -> {
+            try (Connection conn = DatabaseManager.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(
+                         "INSERT INTO arcadia_prestige_daily_milestone_claims (uuid, cycle, claims) VALUES (?,?,?) " +
+                         "ON DUPLICATE KEY UPDATE claims=?")) {
+                ps.setString(1, uuid.toString());
+                ps.setInt(2, cycle);
+                ps.setInt(3, claims);
+                ps.setInt(4, claims);
+                ps.executeUpdate();
+            } catch (SQLException ignored) {}
+        });
     }
 
     /** Bit index for a (milestoneIdx, rankIdx) pair. */
@@ -245,46 +245,59 @@ public final class DailyRewardHandler {
     // Milestones: day 5, 10, 15, 20 (diamond block slots)
     // -------------------------------------------------------------------------
 
+    /** Total cycles before looping (15 × 24 = 360 days ≈ 1 year). */
+    public static final int MAX_CYCLES = 15;
+
+    /**
+     * Builds rewards for a given cycle day (1-24), scaling with the cycle number.
+     * Cycle 0 = basic, Cycle 14 = best. After cycle 15 it loops.
+     * Rewards include: pet items, vanilla ores, Numismatics coins, tokens.
+     */
     public static List<ItemStack> buildRewards(int cycleDay, ServerPlayer player) {
         List<ItemStack> rewards = new ArrayList<>();
 
-        switch (cycleDay) {
-            case 1  -> rewards.add(treat(4));
-            case 2  -> { rewards.add(token(3)); rewards.add(treat(2)); }
-            case 3  -> rewards.add(bag(COMMON));
-            case 4  -> { rewards.add(snack(2)); rewards.add(token(3)); }
-            case 5  -> { rewards.add(bag(UNCOMMON)); rewards.add(token(5)); }             // ★ milestone
-            case 6  -> { rewards.add(treat(6)); rewards.add(token(4)); }
-            case 7  -> { rewards.add(snack(3)); rewards.add(token(3)); }
-            case 8  -> { rewards.add(token(8)); rewards.add(treat(4)); }
-            case 9  -> { rewards.add(bag(COMMON)); rewards.add(token(3)); }
-            case 10 -> { rewards.add(bag(UNCOMMON)); rewards.add(essence(1)); }           // ★★ milestone
-            case 11 -> { rewards.add(snack(3)); rewards.add(treat(4)); }
-            case 12 -> { rewards.add(token(12)); rewards.add(treat(3)); }
-            case 13 -> { rewards.add(bag(UNCOMMON)); rewards.add(token(3)); }
-            case 14 -> { rewards.add(snack(4)); rewards.add(token(5)); }
-            case 15 -> { rewards.add(bag(UNCOMMON)); rewards.add(token(8)); rewards.add(essence(1)); } // ★★★ milestone
-            case 16 -> { rewards.add(token(12)); rewards.add(treat(5)); }
-            case 17 -> { rewards.add(treat(8)); rewards.add(snack(3)); }
-            case 18 -> { rewards.add(token(15)); rewards.add(snack(2)); }
-            case 19 -> { rewards.add(bag(UNCOMMON)); rewards.add(token(5)); }
-            case 20 -> { rewards.add(bag(UNCOMMON)); rewards.add(essence(2)); rewards.add(token(20)); } // ★★★★ milestone
-            case 21 -> { rewards.add(essence(1)); rewards.add(snack(4)); }
-            case 22 -> { rewards.add(token(15)); rewards.add(treat(8)); }
-            case 23 -> { rewards.add(snack(5)); rewards.add(token(5)); }
-            case 24 -> { rewards.add(bag(UNCOMMON)); rewards.add(token(8)); }
-            default -> rewards.add(treat(3));
-        }
+        // Determine cycle tier (0-14) for scaling
+        int streak = PlayerDataHandler.getStreak(player.getUUID());
+        int cycle = Math.min((streak - 1) / CYCLE, MAX_CYCLES - 1);
 
-        // Luck bonus: active pet's LCK may grant an extra common bag
-        PetData activePet = PetManager.getActivePetData(player.getUUID());
-        if (activePet != null) {
-            int luck = activePet.stats().getOrDefault(PetStat.LUCK, 0);
-            if (luck >= 1 && luck <= 5 && new Random().nextInt(100) < LUCK_CHANCES[luck]) {
-                rewards.add(bag(COMMON));
-                player.sendSystemMessage(
-                        Component.translatable("arcadia_prestige.msg.luck_bonus").withStyle(ChatFormatting.AQUA));
+        // Base reward per day slot
+        switch (cycleDay) {
+            case 1  -> { rewards.add(treat(4 + cycle)); rewards.add(coins(player, 50 + cycle * 30)); }
+            case 2  -> { rewards.add(token(3 + cycle)); rewards.add(new ItemStack(Items.IRON_INGOT, 2 + cycle / 2)); }
+            case 3  -> { rewards.add(bag(COMMON)); rewards.add(coins(player, 80 + cycle * 20)); }
+            case 4  -> { rewards.add(snack(2 + cycle / 3)); rewards.add(new ItemStack(Items.GOLD_INGOT, 1 + cycle / 3)); }
+            case 5  -> { rewards.add(bag(UNCOMMON)); rewards.add(coins(player, 150 + cycle * 50)); rewards.add(token(5 + cycle)); } // ★ milestone
+            case 6  -> { rewards.add(treat(6 + cycle)); rewards.add(new ItemStack(Items.LAPIS_LAZULI, 4 + cycle)); }
+            case 7  -> { rewards.add(snack(3 + cycle / 3)); rewards.add(new ItemStack(Items.EMERALD, 1 + cycle / 2)); }
+            case 8  -> { rewards.add(token(8 + cycle * 2)); rewards.add(coins(player, 120 + cycle * 40)); }
+            case 9  -> { rewards.add(bag(COMMON)); rewards.add(new ItemStack(Items.DIAMOND, 1 + cycle / 4)); }
+            case 10 -> { rewards.add(bag(UNCOMMON)); rewards.add(essence(1)); rewards.add(coins(player, 300 + cycle * 80)); } // ★★ milestone
+            case 11 -> { rewards.add(snack(3 + cycle / 2)); rewards.add(new ItemStack(Items.GOLD_INGOT, 3 + cycle / 2)); }
+            case 12 -> { rewards.add(token(12 + cycle * 2)); rewards.add(new ItemStack(Items.EMERALD, 2 + cycle / 3)); }
+            case 13 -> { rewards.add(bag(cycle >= 5 ? RARE : UNCOMMON)); rewards.add(coins(player, 200 + cycle * 50)); }
+            case 14 -> { rewards.add(snack(4 + cycle / 2)); rewards.add(new ItemStack(Items.DIAMOND, 1 + cycle / 3)); }
+            case 15 -> { rewards.add(bag(RARE)); rewards.add(essence(1 + cycle / 5)); rewards.add(coins(player, 500 + cycle * 100)); } // ★★★ milestone
+            case 16 -> { rewards.add(token(12 + cycle * 3)); rewards.add(new ItemStack(Items.EMERALD, 3 + cycle / 2)); }
+            case 17 -> { rewards.add(treat(8 + cycle)); rewards.add(new ItemStack(Items.DIAMOND, 2 + cycle / 3)); }
+            case 18 -> { rewards.add(coins(player, 400 + cycle * 80)); rewards.add(new ItemStack(Items.GOLD_INGOT, 5 + cycle)); }
+            case 19 -> { rewards.add(bag(cycle >= 8 ? RARE : UNCOMMON)); rewards.add(token(5 + cycle * 2)); }
+            case 20 -> { // ★★★★ milestone — best daily reward
+                rewards.add(bag(cycle >= 10 ? EPIC : RARE));
+                rewards.add(essence(2 + cycle / 4));
+                rewards.add(coins(player, 1000 + cycle * 200));
+                if (cycle >= 5) rewards.add(new ItemStack(Items.DIAMOND, 3 + cycle / 2));
+                if (cycle >= 10) rewards.add(new ItemStack(Items.NETHERITE_INGOT, 1));
             }
+            case 21 -> { rewards.add(essence(1)); rewards.add(new ItemStack(Items.EMERALD, 4 + cycle / 2)); }
+            case 22 -> { rewards.add(coins(player, 300 + cycle * 60)); rewards.add(new ItemStack(Items.DIAMOND, 1 + cycle / 3)); }
+            case 23 -> { rewards.add(snack(5 + cycle / 2)); rewards.add(token(5 + cycle * 2)); }
+            case 24 -> { // Cycle completion bonus
+                rewards.add(bag(cycle >= 12 ? EPIC : cycle >= 6 ? RARE : UNCOMMON));
+                rewards.add(token(10 + cycle * 3));
+                rewards.add(coins(player, 500 + cycle * 150));
+                if (cycle >= 8) rewards.add(new ItemStack(Items.NETHERITE_SCRAP, 1 + cycle / 5));
+            }
+            default -> { rewards.add(treat(3)); rewards.add(coins(player, 30)); }
         }
 
         return rewards;
@@ -296,14 +309,15 @@ public final class DailyRewardHandler {
 
     public static Component previewReward(int cycleDay) {
         return switch (cycleDay) {
-            case 3, 9        -> Component.translatable("arcadia_prestige.reward.common_bag");
-            case 5, 13, 19   -> Component.translatable("arcadia_prestige.reward.rare_bag");
-            case 10, 15, 24  -> Component.translatable("arcadia_prestige.reward.epic_bag");
-            case 20          -> Component.translatable("arcadia_prestige.reward.legendary_bag");
-            case 21          -> Component.translatable("arcadia_prestige.reward.star_essence");
-            default          -> cycleDay % 3 == 0
-                    ? Component.translatable("arcadia_prestige.reward.token_snack")
-                    : Component.translatable("arcadia_prestige.reward.token_treat");
+            case 5          -> Component.translatable("arcadia_prestige.reward.milestone_1");
+            case 10         -> Component.translatable("arcadia_prestige.reward.milestone_2");
+            case 15         -> Component.translatable("arcadia_prestige.reward.milestone_3");
+            case 20         -> Component.translatable("arcadia_prestige.reward.milestone_4");
+            case 24         -> Component.translatable("arcadia_prestige.reward.cycle_bonus");
+            case 3, 9, 13   -> Component.translatable("arcadia_prestige.reward.bag_coins");
+            case 17, 22     -> Component.translatable("arcadia_prestige.reward.diamonds_coins");
+            case 21         -> Component.translatable("arcadia_prestige.reward.star_essence");
+            default         -> Component.translatable("arcadia_prestige.reward.mixed");
         };
     }
 
@@ -329,7 +343,7 @@ public final class DailyRewardHandler {
     // -------------------------------------------------------------------------
 
     private static void autoCollectMilestones(ServerPlayer player, int completedCycle) {
-        String grade = LuckPermsHook.getGrade(player);
+        String grade = com.arcadia.lib.permissions.PermissionService.getGrade(player);
         int maxRankIdx = switch (grade) {
             case "mvp"  -> 2;
             case "vip+" -> 1;
@@ -373,16 +387,41 @@ public final class DailyRewardHandler {
     private static final int EPIC     = 3;
 
     private static ItemStack bag(int tier) {
-        return new ItemStack(switch (tier) {
-            case UNCOMMON -> PetsModItems.UNCOMMON_PET_BAG.get();
-            case RARE     -> PetsModItems.RARE_PET_BAG.get();
-            case EPIC     -> PetsModItems.EPIC_PET_BAG.get();
-            default       -> PetsModItems.COMMON_PET_BAG.get();
-        }, 1);
+        String itemId = switch (tier) {
+            case UNCOMMON -> "uncommon_pet_bag";
+            case RARE     -> "rare_pet_bag";
+            case EPIC     -> "epic_pet_bag";
+            default       -> "common_pet_bag";
+        };
+        ItemStack stack = ArcadiaModRegistry.createRewardItem(itemId);
+        return stack.isEmpty() ? new ItemStack(LibModItems.ARCADIA_TOKEN.get()) : stack;
     }
 
-    private static ItemStack treat(int count)   { return new ItemStack(PetsModItems.PET_TREAT.get(), count); }
-    private static ItemStack snack(int count)   { return new ItemStack(PetsModItems.PET_SNACK.get(), count); }
-    private static ItemStack token(int count)   { return new ItemStack(LibModItems.ARCADIA_TOKEN.get(), count); }
-    private static ItemStack essence(int count) { return new ItemStack(PetsModItems.STAR_ESSENCE.get(), count); }
+    private static ItemStack treat(int count) {
+        ItemStack s = ArcadiaModRegistry.createRewardItem("pet_treat", count);
+        return s.isEmpty() ? new ItemStack(Items.COOKIE, count) : s;
+    }
+    private static ItemStack snack(int count) {
+        ItemStack s = ArcadiaModRegistry.createRewardItem("pet_snack", count);
+        return s.isEmpty() ? new ItemStack(Items.GOLDEN_APPLE, count) : s;
+    }
+    private static ItemStack token(int count) { return new ItemStack(LibModItems.ARCADIA_TOKEN.get(), count); }
+    private static ItemStack essence(int count) {
+        ItemStack s = ArcadiaModRegistry.createRewardItem("star_essence", count);
+        return s.isEmpty() ? new ItemStack(Items.NETHER_STAR, count) : s;
+    }
+
+    /**
+     * Gives coins via EconomyService. Returns a visual emerald stack as a "receipt"
+     * so the player sees something in the reward list. The actual balance is added directly.
+     */
+    private static ItemStack coins(ServerPlayer player, int amount) {
+        com.arcadia.lib.economy.EconomyService.add(player, amount);
+        // Return a visual item — the coins are already credited
+        ItemStack receipt = new ItemStack(Items.SUNFLOWER, 1);
+        receipt.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,
+                Component.literal("+" + com.arcadia.lib.economy.EconomyService.formatPrice(amount))
+                        .withStyle(ChatFormatting.GOLD));
+        return receipt;
+    }
 }

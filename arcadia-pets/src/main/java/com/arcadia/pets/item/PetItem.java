@@ -48,10 +48,10 @@ public class PetItem extends Item {
                     .deposit(sp.getUUID(), stack);
             if (deposited) {
                 stack.shrink(1);
-                sp.sendSystemMessage(Component.translatable("arcadia_prestige.msg.pet_deposited")
+                sp.sendSystemMessage(Component.translatable("arcadia_pets.msg.pet_deposited")
                         .withStyle(ChatFormatting.GREEN));
             } else {
-                sp.sendSystemMessage(Component.translatable("arcadia_prestige.msg.collection_full")
+                sp.sendSystemMessage(Component.translatable("arcadia_pets.msg.collection_full")
                         .withStyle(ChatFormatting.RED));
             }
         }

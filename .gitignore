@@ -6,9 +6,16 @@ out/
 *.class
 *.jar
 !gradle/wrapper/gradle-wrapper.jar
+!jars/*.jar
 .idea/
 *.iml
 *.ipr
 *.iws
 .DS_Store
-CHANGELOG.md
+
+# Claude Code
+.claude/
+CLAUDE.md
+
+# IDE
+.vscode/

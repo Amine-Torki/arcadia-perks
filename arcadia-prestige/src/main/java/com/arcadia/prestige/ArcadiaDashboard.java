@@ -7,7 +7,7 @@ import com.arcadia.prestige.config.PrestigeConfig;
 import com.arcadia.prestige.network.PacketHandler;
 import com.arcadia.prestige.server.DashboardMenu;
 import com.arcadia.prestige.server.CosmeticPermissionScanner;
-import com.arcadia.prestige.server.LuckPermsHook;
+// LuckPermsHook moved to lib as LuckPermsBackend — initialized via PermissionService
 import com.mojang.logging.LogUtils;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -37,49 +37,73 @@ public class ArcadiaDashboard {
         NeoForge.EVENT_BUS.addListener(this::onServerAboutToStart);
         NeoForge.EVENT_BUS.addListener(this::onServerStopping);
 
-        container.registerConfig(ModConfig.Type.SERVER, DatabaseConfig.SPEC, "arcadia-database.toml");
-        container.registerConfig(ModConfig.Type.SERVER, PrestigeConfig.SPEC, "arcadia-prestige.toml");
+        container.registerConfig(ModConfig.Type.SERVER, DatabaseConfig.SPEC, "arcadia/lib/database.toml");
+        container.registerConfig(ModConfig.Type.SERVER, PrestigeConfig.SPEC, "arcadia/prestige/prestige.toml");
     }
 
     private void onCommonSetup(FMLCommonSetupEvent event) {
-        if (net.neoforged.fml.ModList.get().isLoaded("arcadia_pets")) PetsModuleSetup.init();
-        if (net.neoforged.fml.ModList.get().isLoaded("arcadia_ah"))   AhModuleSetup.init();
-    }
+        // Register database tables for this module
+        com.arcadia.lib.data.DatabaseManager.registerTables(new com.arcadia.prestige.server.PrestigeCoreTableDefinition());
 
-    /**
-     * Inner class — only loaded/instantiated when arcadia-pets is confirmed present.
-     * Java does not load inner classes until they are first referenced at runtime.
-     */
-    private static final class PetsModuleSetup {
-        static void init() {
-            com.arcadia.pets.server.DashboardMenuBridge.register(p -> DashboardMenu.openFor(p, 1));
-            DashboardMenu.registerPetsHandler(com.arcadia.pets.server.PetsDashboardTab::new);
-        }
-    }
+        // Register hub opener so /arcadia and other mods can open the hub
+        com.arcadia.lib.ArcadiaModRegistry.registerHubOpener(p -> {
+            com.arcadia.lib.network.ArcadiaLibNet.sendOpenHub(p);
+        });
 
-    /**
-     * Inner class — only loaded/instantiated when arcadia-ah is confirmed present.
-     */
-    private static final class AhModuleSetup {
-        static void init() {
-            com.arcadia.ah.server.AhDashboardBridge.register(p -> DashboardMenu.openFor(p, 3));
-            // Reopen the dashboard at tab 3 after search — the client closed the search screen
-            // and needs the dashboard screen to come back.
-            com.arcadia.ah.server.AhDashboardBridge.registerSearchRefresher(
-                sp -> DashboardMenu.openFor(sp, 3));
-            DashboardMenu.registerAhHandler(com.arcadia.ah.server.AhDashboardTab::new);
+        // Register tab openers for cosmetics and daily (always available)
+        com.arcadia.lib.ArcadiaModRegistry.registerTabOpener(0, p -> DashboardMenu.openFor(p, 0));
+        com.arcadia.lib.ArcadiaModRegistry.registerTabOpener(2, p -> DashboardMenu.openFor(p, 2));
+
+        // Search refresher for AH (reopen dashboard at tab 3 after search)
+        com.arcadia.lib.ArcadiaModRegistry.registerSearchRefresher(p -> DashboardMenu.openFor(p, 3));
+
+        // Discover pet/ah tab handlers registered by their respective mods
+        var petsFactory = com.arcadia.lib.ArcadiaModRegistry.getTabHandler(1);
+        if (petsFactory != null) {
+            DashboardMenu.registerPetsHandler(petsFactory);
+            com.arcadia.lib.ArcadiaModRegistry.registerTabOpener(1, p -> DashboardMenu.openFor(p, 1));
         }
+
+        var ahFactory = com.arcadia.lib.ArcadiaModRegistry.getTabHandler(3);
+        if (ahFactory != null) {
+            DashboardMenu.registerAhHandler(ahFactory);
+            com.arcadia.lib.ArcadiaModRegistry.registerTabOpener(3, p -> DashboardMenu.openFor(p, 3));
+        }
+
+        // Register hub cards for prestige's own tabs (cosmetics + daily)
+        com.arcadia.lib.ArcadiaModRegistry.registerCard(
+                new com.arcadia.lib.client.ArcadiaModCard("cosmetics", "✨",
+                        "arcadia_prestige.hub.cosmetics.label", "arcadia_prestige.hub.cosmetics.sub",
+                        0x6BB8D4, 0, true));
+        com.arcadia.lib.ArcadiaModRegistry.registerCard(
+                new com.arcadia.lib.client.ArcadiaModCard("daily", "⭐",
+                        "arcadia_prestige.hub.daily.label", "arcadia_prestige.hub.daily.sub",
+                        0xD4A847, 2, true));
+
+        // Register generic client-side tab opener (sends the C2SDashboardAction packet)
+        com.arcadia.lib.ArcadiaModRegistry.registerClientTabOpener(tabIndex ->
+                net.neoforged.neoforge.network.PacketDistributor.sendToServer(
+                        new com.arcadia.prestige.network.C2SDashboardAction(
+                                com.arcadia.prestige.network.C2SDashboardAction.OPEN_TAB,
+                                String.valueOf(tabIndex))));
     }
 
     private void onServerAboutToStart(ServerAboutToStartEvent event) {
-        DatabaseManager.initialize();
-        LuckPermsHook.init();
+        boolean isDedicated = event.getServer().isDedicatedServer();
+        DatabaseManager.initialize(isDedicated);
+        com.arcadia.lib.data.PlayerDataHandler.setServer(event.getServer());
+        com.arcadia.lib.permissions.PermissionService.init(
+                com.arcadia.lib.permissions.LuckPermsBackend.createOrFallback());
+        com.arcadia.lib.economy.EconomyService.init();
         CosmeticPermissionScanner.init();
-        LOGGER.info("[ArcadiaPrestige] Server initialized. Debug mode: {}", DebugMode.ENABLED);
+        LOGGER.info("[ArcadiaPrestige] Server initialized. Dedicated: {}, DB active: {}, Debug: {}",
+                isDedicated, DatabaseManager.isDatabaseActive(), DebugMode.ENABLED);
     }
 
     private void onServerStopping(ServerStoppingEvent event) {
         DatabaseManager.shutdown();
+        com.arcadia.lib.permissions.PermissionService.shutdown();
+        com.arcadia.lib.economy.EconomyService.shutdown();
     }
 
     private void onConfigLoad(ModConfigEvent event) {

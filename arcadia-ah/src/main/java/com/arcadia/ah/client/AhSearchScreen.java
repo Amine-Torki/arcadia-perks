@@ -1,6 +1,7 @@
 package com.arcadia.ah.client;
 
 import com.arcadia.ah.network.C2SAhSearch;
+import com.arcadia.lib.client.ArcadiaTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -28,21 +29,22 @@ public class AhSearchScreen extends Screen {
         int cx = this.width / 2;
         int cy = this.height / 2;
 
-        searchBox = new EditBox(this.font, cx - 100, cy - 10, 200, 20, Component.literal("Search..."));
+        searchBox = new EditBox(this.font, cx - 100, cy - 10, 200, 20,
+                Component.translatable("arcadia_ah.gui.search.hint"));
         searchBox.setMaxLength(64);
         searchBox.setValue(initialQuery);
         searchBox.setFocused(true);
         addRenderableWidget(searchBox);
 
-        addRenderableWidget(Button.builder(Component.literal("Search"), btn -> confirm())
+        addRenderableWidget(Button.builder(Component.translatable("arcadia_ah.gui.search.confirm"), btn -> confirm())
                 .bounds(cx - 51, cy + 16, 50, 20).build());
 
-        addRenderableWidget(Button.builder(Component.literal("Clear"), btn -> {
+        addRenderableWidget(Button.builder(Component.translatable("arcadia_ah.gui.search.clear"), btn -> {
             searchBox.setValue("");
             confirm();
         }).bounds(cx + 1, cy + 16, 50, 20).build());
 
-        addRenderableWidget(Button.builder(Component.literal("Cancel"), btn -> cancel())
+        addRenderableWidget(Button.builder(Component.translatable("arcadia_ah.gui.search.cancel"), btn -> cancel())
                 .bounds(cx - 25, cy + 40, 50, 20).build());
     }
 
@@ -66,19 +68,19 @@ public class AhSearchScreen extends Screen {
     }
 
     private void cancel() {
-        // Reopen dashboard at AH tab without changing the search
-        PacketDistributor.sendToServer(new C2SAhSearch(initialQuery));
+        // Close without sending any packet — the server still has the old query
         this.onClose();
     }
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        graphics.fill(0, 0, this.width, this.height, 0x88000000);
+        graphics.fill(0, 0, this.width, this.height, ArcadiaTheme.OVERLAY_BG);
         int cx = this.width / 2;
         int cy = this.height / 2;
-        graphics.fill(cx - 110, cy - 30, cx + 110, cy + 65, 0xCC000000);
-        graphics.drawCenteredString(this.font, Component.literal("§6Search Auction House"),
-                cx, cy - 24, 0xFFFFFF);
+        ArcadiaTheme.drawPanel(graphics, cx - 110, cy - 30, 220, 95, false, ArcadiaTheme.COPPER);
+        ArcadiaTheme.drawCenteredText(graphics,
+                Component.translatable("arcadia_ah.gui.tab.auction_house"),
+                cx, cy - 24, ArcadiaTheme.BRASS);
         super.render(graphics, mouseX, mouseY, partialTick);
     }
 

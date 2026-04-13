@@ -1,7 +1,7 @@
 package com.arcadia.ah.network;
 
 import com.arcadia.ah.auction.AuctionManager;
-import com.arcadia.ah.server.AhDashboardBridge;
+import com.arcadia.lib.ArcadiaModRegistry;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -32,7 +32,7 @@ public record C2SAhSearch(String query) implements CustomPacketPayload {
             if (!(ctx.player() instanceof ServerPlayer sp)) return;
             AuctionManager.setSearch(sp.getUUID(), query);
             // Refresh the dashboard AH tab so results update; do NOT reopen the search screen.
-            AhDashboardBridge.notifySearchUpdated(sp);
+            ArcadiaModRegistry.notifySearchUpdated(sp);
         });
     }
 }

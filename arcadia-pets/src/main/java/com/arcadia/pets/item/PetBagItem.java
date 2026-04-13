@@ -76,11 +76,11 @@ public class PetBagItem extends Item {
                         PetCollectionSavedData.getOrCreate(serverPlayer.getServer());
                 if (colData.deposit(serverPlayer.getUUID(), petStack)) {
                     serverPlayer.sendSystemMessage(Component.translatable(
-                            "arcadia_prestige.gui.pet_bag.sent_to_collection")
+                            "arcadia_pets.gui.pet_bag.sent_to_collection")
                             .withStyle(ChatFormatting.GREEN));
                 } else if (player.getInventory().add(petStack)) {
                     serverPlayer.sendSystemMessage(Component.translatable(
-                            "arcadia_prestige.gui.pet_bag.collection_full_to_inv")
+                            "arcadia_pets.gui.pet_bag.collection_full_to_inv")
                             .withStyle(ChatFormatting.YELLOW));
                 } else {
                     net.minecraft.world.entity.item.ItemEntity dropped =
@@ -89,7 +89,7 @@ public class PetBagItem extends Item {
                         LOCKED_DROPS.put(dropped.getUUID(), serverPlayer.getUUID());
                     }
                     serverPlayer.sendSystemMessage(Component.translatable(
-                            "arcadia_prestige.gui.pet_bag.all_full")
+                            "arcadia_pets.gui.pet_bag.all_full")
                             .withStyle(ChatFormatting.RED));
                 }
 
@@ -112,12 +112,12 @@ public class PetBagItem extends Item {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context,
                                 List<Component> tooltipComponents, TooltipFlag tooltipFlag) {
-        tooltipComponents.add(Component.translatable("arcadia_prestige.gui.pet_bag.min_rarity")
+        tooltipComponents.add(Component.translatable("arcadia_pets.gui.pet_bag.min_rarity")
                 .withStyle(ChatFormatting.GRAY)
                 .append(minimumRarity.getTranslatableName()));
 
         tooltipComponents.add(Component.empty());
-        tooltipComponents.add(Component.translatable("arcadia_prestige.gui.pet_bag.loot_chances")
+        tooltipComponents.add(Component.translatable("arcadia_pets.gui.pet_bag.loot_chances")
                 .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
 
         PetRarity[] rarities = PetRarity.values();
@@ -130,16 +130,16 @@ public class PetBagItem extends Item {
                 if (r.ordinal() >= minimumRarity.ordinal()) {
                     float chance = (float) r.getWeight() / totalWeight * 100f;
                     tooltipComponents.add(Component.translatable(
-                            "arcadia_prestige.gui.pet_bag.chance_format",
+                            "arcadia_pets.gui.pet_bag.chance_format",
                             r.getTranslatableName(), String.format("%.1f", chance)));
                 }
             }
         }
 
         tooltipComponents.add(Component.empty());
-        tooltipComponents.add(Component.translatable("arcadia_prestige.gui.pet_bag.click_to_open")
+        tooltipComponents.add(Component.translatable("arcadia_pets.gui.pet_bag.click_to_open")
                 .withStyle(ChatFormatting.YELLOW));
-        tooltipComponents.add(Component.translatable("arcadia_prestige.gui.pet_bag.shift_to_open_all")
+        tooltipComponents.add(Component.translatable("arcadia_pets.gui.pet_bag.shift_to_open_all")
                 .withStyle(ChatFormatting.YELLOW));
     }
 

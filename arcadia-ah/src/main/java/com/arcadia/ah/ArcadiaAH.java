@@ -23,15 +23,39 @@ public final class ArcadiaAH {
 
         modBus.addListener(AhPacketHandler::onRegisterPayloadHandlers);
         modBus.addListener(this::onConfigLoad);
+        modBus.addListener(this::onCommonSetup);
 
         NeoForge.EVENT_BUS.addListener(this::onServerAboutToStart);
 
-        container.registerConfig(ModConfig.Type.SERVER, AhConfig.SPEC, "arcadia-ah.toml");
+        container.registerConfig(ModConfig.Type.SERVER, AhConfig.SPEC, "arcadia/ah/ah.toml");
+    }
+
+    private void onCommonSetup(net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent event) {
+        // Register database tables
+        com.arcadia.lib.data.DatabaseManager.registerTables(new com.arcadia.ah.auction.AuctionTableDefinition());
+
+        // Register AH tab handler via the central lib registry
+        com.arcadia.lib.ArcadiaModRegistry.registerTabHandler(3,
+                com.arcadia.ah.server.AhDashboardTab::new);
+
+        // Register server-side actions
+        com.arcadia.lib.ArcadiaModRegistry.registerServerAction("ah.refresh_cache",
+                p -> com.arcadia.ah.auction.AuctionManager.refreshCache());
+        com.arcadia.lib.ArcadiaModRegistry.registerServerActionWithPayload("ah.clear_search",
+                (p, unused) -> com.arcadia.ah.auction.AuctionManager.clearSearch(p.getUUID()));
+
+        // Register hub card so the Arcadia Hub displays the AH module
+        com.arcadia.lib.ArcadiaModRegistry.registerCard(
+                new com.arcadia.lib.client.ArcadiaModCard("ah", "★",
+                        "arcadia_ah.hub.auction.label", "arcadia_ah.hub.auction.sub",
+                        0xB87333, 3, true));
+        LOGGER.info("[ArcadiaAH] Registered AH tab in ArcadiaModRegistry.");
     }
 
     private void onServerAboutToStart(ServerAboutToStartEvent event) {
-        AuctionDatabase.createTables();
-        LOGGER.info("[ArcadiaAH] Auction tables verified.");
+        // Tables are now created centrally by DatabaseManager via AuctionTableDefinition
+        LOGGER.info("[ArcadiaAH] Server starting. DB active: {}",
+                com.arcadia.lib.data.DatabaseManager.isDatabaseActive());
     }
 
     private void onConfigLoad(ModConfigEvent event) {

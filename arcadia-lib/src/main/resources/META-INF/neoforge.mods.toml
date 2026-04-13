@@ -5,6 +5,7 @@ license="All Rights Reserved"
 modId="arcadia_lib"
 version="${file.jarVersion}"
 displayName="Arcadia Lib"
+mixinConfigs="arcadia_lib.mixins.json"
 description="Shared library for Arcadia mods."
 [[dependencies.arcadia_lib]]
     modId="neoforge"

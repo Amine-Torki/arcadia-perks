@@ -19,6 +19,14 @@ public final class PlayerDataHandler {
     private static final long CLAIM_COOLDOWN_MS = 24L * 60 * 60 * 1000;
     private static final long STREAK_RESET_MS = 48L * 60 * 60 * 1000;
 
+    /** Server reference for SavedData access in singleplayer mode. */
+    private static net.minecraft.server.MinecraftServer serverRef;
+
+    /** Called from ArcadiaDashboard.onServerAboutToStart to provide server reference. */
+    public static void setServer(net.minecraft.server.MinecraftServer server) {
+        serverRef = server;
+    }
+
     private PlayerDataHandler() {}
 
     public record PlayerRecord(UUID uuid, String grade, String particleId, long lastClaim, int streak) {}
@@ -30,10 +38,23 @@ public final class PlayerDataHandler {
         }
 
         // Debug mode: create a Founder-level default record without hitting the DB
-        if (DatabaseManager.isDebugMode()) {
+        if (com.arcadia.lib.DebugMode.ENABLED) {
             PlayerRecord debugRecord = new PlayerRecord(uuid, "founder", "", 0L, 0);
             cache.put(uuid, debugRecord);
             return debugRecord;
+        }
+
+        // In-memory mode (singleplayer): load from world SavedData for persistence across restarts
+        if (DatabaseManager.isDebugMode()) {
+            long lastClaim = 0L;
+            int streak = 0;
+            if (serverRef != null) {
+                long[] saved = PlayerDataSavedData.getOrCreate(serverRef).get(uuid);
+                if (saved != null) { lastClaim = saved[0]; streak = (int) saved[1]; }
+            }
+            PlayerRecord record = new PlayerRecord(uuid, null, "", lastClaim, streak);
+            cache.put(uuid, record);
+            return record;
         }
 
         String uuidStr = uuid.toString();
@@ -115,8 +136,8 @@ public final class PlayerDataHandler {
         long now = System.currentTimeMillis();
         long elapsed = now - record.lastClaim();
 
-        // In debug mode: always allow claiming (no cooldown) for easy testing
-        if (!DatabaseManager.isDebugMode() && elapsed < CLAIM_COOLDOWN_MS) {
+        // In debug mode only: skip cooldown for easy testing
+        if (!com.arcadia.lib.DebugMode.ENABLED && elapsed < CLAIM_COOLDOWN_MS) {
             return -1;
         }
 
@@ -130,7 +151,13 @@ public final class PlayerDataHandler {
         PlayerRecord updated = new PlayerRecord(uuid, record.grade(), record.particleId(), now, newStreak);
         cache.put(uuid, updated);
 
-        if (DatabaseManager.isDebugMode()) return newStreak;
+        if (DatabaseManager.isDebugMode()) {
+            // Persist to world SavedData for singleplayer so claims survive restarts
+            if (serverRef != null) {
+                PlayerDataSavedData.getOrCreate(serverRef).save(uuid, now, newStreak);
+            }
+            return newStreak;
+        }
 
         String uuidStr = uuid.toString();
 
@@ -182,7 +209,7 @@ public final class PlayerDataHandler {
     }
 
     public static boolean canClaimDaily(UUID uuid) {
-        if (DatabaseManager.isDebugMode()) return true;
+        if (com.arcadia.lib.DebugMode.ENABLED) return true;
         long elapsed = System.currentTimeMillis() - loadPlayer(uuid).lastClaim();
         return elapsed >= CLAIM_COOLDOWN_MS;
     }

@@ -2,7 +2,7 @@ package com.arcadia.ah;
 
 import com.arcadia.ah.auction.AuctionManager;
 import com.arcadia.ah.server.AhLeaderboardMenu;
-import com.arcadia.ah.server.AhDashboardBridge;
+import com.arcadia.lib.ArcadiaModRegistry;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.LongArgumentType;
@@ -22,12 +22,12 @@ public final class AhCommands {
     @SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event) {
         event.getDispatcher().register(
-            Commands.literal("ah")
+            Commands.literal("arcadia_ah")
                 .executes(ctx -> {
                     if (!checkEnabled(ctx.getSource())) return 0;
                     if (ctx.getSource().getEntity() instanceof ServerPlayer player) {
                         AuctionManager.refreshCache();
-                        AhDashboardBridge.openAhTab(player);
+                        ArcadiaModRegistry.openTab(player, 3);
                     }
                     return Command.SINGLE_SUCCESS;
                 })
@@ -44,8 +44,8 @@ public final class AhCommands {
                     .requires(src -> src.hasPermission(2))
                     .executes(ctx -> {
                         AhGlobalFlags.AH_ENABLED = true;
-                        ctx.getSource().sendSuccess(() -> Component.literal(
-                                "§a[Arcadia] Auction House enabled for all players."), true);
+                        ctx.getSource().sendSuccess(() -> Component.translatable(
+                                "arcadia_ah.cmd.enabled"), true);
                         return Command.SINGLE_SUCCESS;
                     })
                 )
@@ -53,8 +53,8 @@ public final class AhCommands {
                     .requires(src -> src.hasPermission(2))
                     .executes(ctx -> {
                         AhGlobalFlags.AH_ENABLED = false;
-                        ctx.getSource().sendSuccess(() -> Component.literal(
-                                "§c[Arcadia] Auction House disabled. Operators are unaffected."), true);
+                        ctx.getSource().sendSuccess(() -> Component.translatable(
+                                "arcadia_ah.cmd.disabled"), true);
                         return Command.SINGLE_SUCCESS;
                     })
                 )
@@ -74,7 +74,7 @@ public final class AhCommands {
         if (!AhGlobalFlags.AH_ENABLED
                 && src.getEntity() instanceof ServerPlayer p
                 && !p.hasPermissions(2)) {
-            src.sendFailure(Component.literal("§c[Arcadia] The Auction House is currently disabled on this server."));
+            src.sendFailure(Component.translatable("arcadia_ah.cmd.disabled_msg"));
             return false;
         }
         return true;
@@ -87,7 +87,7 @@ public final class AhCommands {
         long price = LongArgumentType.getLong(ctx, "price");
         ItemStack held = player.getMainHandItem();
         if (held.isEmpty()) {
-            ctx.getSource().sendFailure(Component.literal("Hold the item you want to sell."));
+            ctx.getSource().sendFailure(Component.translatable("arcadia_ah.cmd.hold_item"));
             return 0;
         }
         int count = (quantity == -1) ? 1 : Math.min(quantity, held.getCount());

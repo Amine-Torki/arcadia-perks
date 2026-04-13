@@ -69,7 +69,7 @@ public final class CosmeticPermissionScanner {
                     rescan();
                 }
             });
-        } catch (Exception e) {
+        } catch (Throwable e) {
             LOGGER.warn("[CosmeticPermissionScanner] Could not subscribe to LP events: {}", e.getMessage());
         }
     }
@@ -84,10 +84,10 @@ public final class CosmeticPermissionScanner {
 
             // Ordered from lowest to highest rank — first match wins for each cosmetic.
             String[][] tiers = {
-                    { PrestigeConfig.GRADE_PERM_VIP,      "VIP"     },
-                    { PrestigeConfig.GRADE_PERM_VIP_PLUS, "VIP+"    },
-                    { PrestigeConfig.GRADE_PERM_MVP,      "MVP"     },
-                    { PrestigeConfig.GRADE_PERM_FOUNDER,  "Founder" },
+                    { com.arcadia.lib.permissions.PermissionConfig.GRADE_PERM_VIP,      "VIP"     },
+                    { com.arcadia.lib.permissions.PermissionConfig.GRADE_PERM_VIP_PLUS, "VIP+"    },
+                    { com.arcadia.lib.permissions.PermissionConfig.GRADE_PERM_MVP,      "MVP"     },
+                    { com.arcadia.lib.permissions.PermissionConfig.GRADE_PERM_FOUNDER,  "Founder" },
             };
 
             // cosmetic_id → index of the lowest tier that directly grants it
@@ -121,8 +121,8 @@ public final class CosmeticPermissionScanner {
             tierLabels = Map.copyOf(result);
             LOGGER.info("[CosmeticPermissionScanner] Scanned — {} tier assignments found.", result.size());
 
-        } catch (Exception e) {
-            LOGGER.warn("[CosmeticPermissionScanner] Scan failed: {}", e.getMessage());
+        } catch (Throwable e) {
+            LOGGER.warn("[CosmeticPermissionScanner] Scan skipped — LuckPerms not available: {}", e.getMessage());
         }
     }
 

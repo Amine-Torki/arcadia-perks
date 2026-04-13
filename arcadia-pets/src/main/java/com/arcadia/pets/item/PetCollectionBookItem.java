@@ -29,8 +29,7 @@ public class PetCollectionBookItem extends Item {
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         if (!level.isClientSide && player instanceof ServerPlayer sp) {
             if (!com.arcadia.pets.PetsGlobalFlags.PETS_ENABLED && !sp.hasPermissions(2)) {
-                sp.sendSystemMessage(Component.literal("§c[Arcadia] Pets are currently disabled on this server.")
-                        .withStyle(ChatFormatting.RED));
+                sp.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.error("Pets are currently disabled on this server."));
                 return InteractionResultHolder.fail(player.getItemInHand(hand));
             }
             if (player.isShiftKeyDown()) {
@@ -43,11 +42,11 @@ public class PetCollectionBookItem extends Item {
                         return InteractionResultHolder.sidedSuccess(player.getItemInHand(hand), level.isClientSide);
                     }
                 }
-                sp.sendSystemMessage(Component.translatable("arcadia_prestige.msg.no_active_pet")
+                sp.sendSystemMessage(Component.translatable("arcadia_pets.msg.no_active_pet")
                         .withStyle(ChatFormatting.RED));
             } else {
                 // Right-click → open the dashboard Pets tab (/pets)
-                com.arcadia.pets.server.DashboardMenuBridge.openPetsTab(sp);
+                com.arcadia.lib.ArcadiaModRegistry.openTab(sp, 1);
             }
         }
         return InteractionResultHolder.sidedSuccess(player.getItemInHand(hand), level.isClientSide);
@@ -55,11 +54,11 @@ public class PetCollectionBookItem extends Item {
 
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext ctx, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable("arcadia_prestige.item.pet_collection_book.desc")
+        tooltip.add(Component.translatable("arcadia_pets.item.pet_collection_book.desc")
                 .withStyle(ChatFormatting.AQUA));
-        tooltip.add(Component.translatable("arcadia_prestige.item.pet_collection_book.hint")
+        tooltip.add(Component.translatable("arcadia_pets.item.pet_collection_book.hint")
                 .withStyle(ChatFormatting.DARK_GRAY));
-        tooltip.add(Component.translatable("arcadia_prestige.item.pet_collection_book.shift_hint")
+        tooltip.add(Component.translatable("arcadia_pets.item.pet_collection_book.shift_hint")
                 .withStyle(ChatFormatting.DARK_GRAY));
     }
 }

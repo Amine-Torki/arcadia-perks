@@ -18,33 +18,67 @@ public final class DatabaseManager {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     private static HikariDataSource dataSource;
-    private static boolean debugMode = false;
+    private static boolean inMemoryMode = false;
     private static final ExecutorService EXECUTOR = Executors.newFixedThreadPool(4);
+
+    /** Registered table definitions from all Arcadia modules. */
+    private static final java.util.List<TableDefinition> registeredTables = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+    /** Register a table definition. Call during FMLCommonSetupEvent. */
+    public static void registerTables(TableDefinition def) {
+        registeredTables.add(def);
+    }
 
     private DatabaseManager() {}
 
     /**
-     * Called at mod startup. Uses in-memory mode when DebugMode is enabled,
-     * otherwise connects to MySQL using ArcadiaConfig values.
+     * Called at server startup. Determines the storage backend:
+     * <ul>
+     *   <li>DebugMode enabled → in-memory (no MySQL)</li>
+     *   <li>Integrated server (singleplayer) → in-memory (no MySQL)</li>
+     *   <li>Database config disabled → in-memory (no MySQL)</li>
+     *   <li>Otherwise → connects to MySQL via HikariCP</li>
+     * </ul>
+     *
+     * @param isDedicatedServer true when running on a dedicated server, false for integrated (singleplayer)
      */
-    public static void initialize() {
+    public static void initialize(boolean isDedicatedServer) {
         if (com.arcadia.lib.DebugMode.ENABLED) {
-            debugMode = true;
+            inMemoryMode = true;
             LOGGER.info("[ArcadiaPrestige] DEBUG MODE — MySQL disabled, using in-memory storage.");
-        } else {
-            init(
-                com.arcadia.lib.config.DatabaseConfig.DB_HOST,
-                com.arcadia.lib.config.DatabaseConfig.DB_PORT,
-                com.arcadia.lib.config.DatabaseConfig.DB_NAME,
-                com.arcadia.lib.config.DatabaseConfig.DB_USER,
-                com.arcadia.lib.config.DatabaseConfig.DB_PASS,
-                com.arcadia.lib.config.DatabaseConfig.MAX_POOL_SIZE
-            );
+            return;
         }
+
+        if (!isDedicatedServer) {
+            inMemoryMode = true;
+            LOGGER.info("[ArcadiaPrestige] Integrated server (singleplayer) detected — MySQL disabled, using world save data.");
+            return;
+        }
+
+        if (!com.arcadia.lib.config.DatabaseConfig.DB_ENABLED) {
+            inMemoryMode = true;
+            LOGGER.info("[ArcadiaPrestige] Database disabled in config — using in-memory storage.");
+            return;
+        }
+
+        init(
+            com.arcadia.lib.config.DatabaseConfig.DB_HOST,
+            com.arcadia.lib.config.DatabaseConfig.DB_PORT,
+            com.arcadia.lib.config.DatabaseConfig.DB_NAME,
+            com.arcadia.lib.config.DatabaseConfig.DB_USER,
+            com.arcadia.lib.config.DatabaseConfig.DB_PASS,
+            com.arcadia.lib.config.DatabaseConfig.MAX_POOL_SIZE
+        );
     }
 
+    /** Returns true when running without a MySQL connection (debug, singleplayer, or config disabled). */
     public static boolean isDebugMode() {
-        return debugMode;
+        return inMemoryMode;
+    }
+
+    /** Returns true when a live MySQL connection pool is active. */
+    public static boolean isDatabaseActive() {
+        return !inMemoryMode && dataSource != null && !dataSource.isClosed();
     }
 
     public static void init(String host, int port, String dbName, String user, String pass, int maxPoolSize) {
@@ -52,7 +86,7 @@ public final class DatabaseManager {
         config.setJdbcUrl("jdbc:mysql://" + host + ":" + port + "/" + dbName + "?useSSL=false&autoReconnect=true&allowPublicKeyRetrieval=true");
         config.setUsername(user);
         config.setPassword(pass);
-        config.setPoolName("ArcadiaDashboard");
+        config.setPoolName("ArcadiaLib");
         config.setMaximumPoolSize(maxPoolSize);
         config.setConnectionTimeout(5000);
         config.setLeakDetectionThreshold(10000);
@@ -63,7 +97,7 @@ public final class DatabaseManager {
 
         try {
             dataSource = new HikariDataSource(config);
-            LOGGER.info("ArcadiaDashboard database pool initialized.");
+            LOGGER.info("ArcadiaLib database pool initialized.");
             createTables();
         } catch (Exception e) {
             LOGGER.error("Failed to initialize database connection pool", e);
@@ -72,7 +106,7 @@ public final class DatabaseManager {
     }
 
     public static Connection getConnection() throws SQLException {
-        if (debugMode) {
+        if (inMemoryMode) {
             throw new SQLException("Debug mode active — no database connection available.");
         }
         if (dataSource == null) {
@@ -81,49 +115,31 @@ public final class DatabaseManager {
         return dataSource.getConnection();
     }
 
+    /**
+     * Creates all tables registered by Arcadia modules via {@link #registerTables(TableDefinition)}.
+     * Called automatically after the connection pool initializes.
+     */
     private static void createTables() {
+        if (registeredTables.isEmpty()) {
+            LOGGER.info("[ArcadiaLib] No table definitions registered.");
+            return;
+        }
         try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
-            stmt.executeUpdate("""
-                    CREATE TABLE IF NOT EXISTS arcadia_prestige_player_data (
-                        uuid VARCHAR(36) PRIMARY KEY,
-                        grade VARCHAR(16),
-                        particle_id VARCHAR(64) DEFAULT '',
-                        last_claim BIGINT DEFAULT 0,
-                        streak INT DEFAULT 0
-                    )
-                    """);
-
-            stmt.executeUpdate("""
-                    CREATE TABLE IF NOT EXISTS arcadia_prestige_pet_registry (
-                        pet_id VARCHAR(36) PRIMARY KEY,
-                        owner_uuid VARCHAR(36),
-                        mob_type VARCHAR(64),
-                        rarity TINYINT,
-                        total_stars TINYINT,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        INDEX idx_owner_uuid (owner_uuid)
-                    )
-                    """);
-
-            stmt.executeUpdate("""
-                    CREATE TABLE IF NOT EXISTS arcadia_prestige_daily_milestone_claims (
-                        uuid VARCHAR(36) NOT NULL,
-                        cycle INT NOT NULL,
-                        claims INT NOT NULL DEFAULT 0,
-                        PRIMARY KEY (uuid, cycle)
-                    )
-                    """);
-
-            LOGGER.info("ArcadiaDashboard database tables verified.");
+            for (TableDefinition def : registeredTables) {
+                for (String sql : def.createTableStatements()) {
+                    stmt.executeUpdate(sql);
+                }
+                LOGGER.info("[ArcadiaLib] Tables verified for module: {}", def.moduleId());
+            }
         } catch (SQLException e) {
-            LOGGER.error("Failed to create database tables", e);
+            LOGGER.error("[ArcadiaLib] Failed to create database tables", e);
         }
     }
 
     public static void shutdown() {
         if (dataSource != null && !dataSource.isClosed()) {
             dataSource.close();
-            LOGGER.info("ArcadiaDashboard database pool shut down.");
+            LOGGER.info("ArcadiaLib database pool shut down.");
         }
         EXECUTOR.shutdown();
     }

@@ -1,10 +1,10 @@
 package com.arcadia.pets.client;
 
+import com.arcadia.lib.client.ArcadiaTheme;
 import com.arcadia.pets.ArcadiaPets;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -13,20 +13,22 @@ import net.neoforged.neoforge.client.event.RenderGuiLayerEvent;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 
 /**
- * Renders the pet HUD widget: portrait (36×36) + pet name label + HP bar + aftershock bar.
- * All elements move together as a single draggable group.
- * Positioned and toggled via {@link HudSettings}. Only visible when a pet is active.
+ * Steampunk-themed pet HUD widget: portrait + pet name + HP bar + hunger + aftershock.
+ * Draggable via HUD settings. Only visible when a pet is active.
  */
 @EventBusSubscriber(modid = ArcadiaPets.MOD_ID, value = Dist.CLIENT)
 public final class PetHudRenderer {
 
-    /** Portrait box size (25% smaller than original 48). */
-    private static final int PORTRAIT_W = 36;
-    private static final int PORTRAIT_H = 36;
-    /** HP and aftershock bars span the same width as the portrait. */
+    private static final int PORTRAIT_W = 38;
+    private static final int PORTRAIT_H = 38;
     private static final int BAR_W      = PORTRAIT_W;
     private static final int HP_BAR_H   = 5;
+    private static final int HUNGER_H   = 3;
     private static final int AS_BAR_H   = 4;
+
+    // Cached HP string to avoid allocation every frame
+    private static String cachedHpStr = "";
+    private static int lastHpInt = -1, lastMaxHpInt = -1;
 
     private PetHudRenderer() {}
 
@@ -42,13 +44,11 @@ public final class PetHudRenderer {
         if (!HudSettings.showPetPortrait) return;
         if (mc.options.hideGui) return;
 
-        // Advance the smoothed HP display value each render frame
         ClientPetState.tickDisplayHp();
 
-        GuiGraphics g  = event.getGuiGraphics();
+        GuiGraphics g = event.getGuiGraphics();
         int sw = mc.getWindow().getGuiScaledWidth();
         int sh = mc.getWindow().getGuiScaledHeight();
-
         int ptX = HudSettings.resolvePortraitX(sw);
         int ptY = HudSettings.resolvePortraitY(sh);
 
@@ -60,95 +60,119 @@ public final class PetHudRenderer {
         int    hunger  = ClientPetState.getHunger();
         float  hpPct   = maxHp > 0 ? Math.max(0f, Math.min(1f, hp / maxHp)) : 0f;
 
-        // ── Pet name above the portrait ───────────────────────────────────────
-        int nameH = 0;
+        // ── Background panel ──────────────────────────────────────────────────
+        int nameH = name.isEmpty() ? 0 : 10;
+        int totalH = nameH + PORTRAIT_H + 2 + HP_BAR_H
+                + (HudSettings.showAftershock && ClientPetState.isAttackMode() ? 2 + AS_BAR_H : 0);
+        int panelW = PORTRAIT_W + 4;
+        int panelX = ptX - 2;
+        int panelY = ptY - 2;
+
+        g.fill(panelX, panelY, panelX + panelW, panelY + totalH + 6, 0xBB0E0B14);
+        g.fill(panelX, panelY, panelX + panelW, panelY + 1,
+                ArcadiaTheme.withAlpha(ArcadiaTheme.COPPER, 0xAA));
+        ArcadiaTheme.drawBorder(g, panelX, panelY, panelW, totalH + 6,
+                ArcadiaTheme.withAlpha(ArcadiaTheme.COPPER, 0x44));
+
+        int y = ptY;
+
+        // ── Pet name ──────────────────────────────────────────────────────────
         if (!name.isEmpty()) {
-            g.drawString(mc.font, name, ptX, ptY, 0xFFFFAA, false);
-            nameH = 9;
+            String displayName = name;
+            while (mc.font.width(displayName) > PORTRAIT_W && displayName.length() > 3) {
+                displayName = displayName.substring(0, displayName.length() - 1);
+            }
+            if (!displayName.equals(name)) displayName += ".";
+            g.pose().pushPose();
+            g.pose().translate(ptX, y, 0);
+            g.pose().scale(0.8f, 0.8f, 1f);
+            g.drawString(mc.font, displayName, 1, 1, 0x22000000, false);
+            g.drawString(mc.font, displayName, 0, 0, ArcadiaTheme.BRASS, false);
+            g.pose().popPose();
+            y += 10;
         }
 
-        int boxY = ptY + nameH;
-
-        // ── Portrait border: pulses red when HP < 25% ─────────────────────────
+        // ── Portrait border ───────────────────────────────────────────────────
         int borderColor;
         if (hpPct < 0.25f && hpPct > 0f) {
             long t = System.currentTimeMillis() % 700L;
-            borderColor = t < 350L ? 0xEEFF2222 : 0x55FF2222;
+            borderColor = t < 350L ? 0xEECC3322 : 0x88884422;
         } else {
-            borderColor = 0x66FFFFFF;
+            borderColor = ArcadiaTheme.withAlpha(ArcadiaTheme.COPPER, 0x88);
         }
 
-        // ── Portrait box ──────────────────────────────────────────────────────
-        g.fill(ptX,                  boxY,                  ptX + PORTRAIT_W, boxY + PORTRAIT_H, 0xCC080812);
-        g.fill(ptX,                  boxY,                  ptX + PORTRAIT_W, boxY + 1,              borderColor);
-        g.fill(ptX,                  boxY + PORTRAIT_H - 1, ptX + PORTRAIT_W, boxY + PORTRAIT_H,     borderColor);
-        g.fill(ptX,                  boxY,                  ptX + 1,          boxY + PORTRAIT_H,      borderColor);
-        g.fill(ptX + PORTRAIT_W - 1, boxY,                  ptX + PORTRAIT_W, boxY + PORTRAIT_H,      borderColor);
+        g.fill(ptX, y, ptX + PORTRAIT_W, y + PORTRAIT_H, 0xCC0A0814);
+        ArcadiaTheme.drawBorder(g, ptX, y, PORTRAIT_W, PORTRAIT_H, borderColor);
 
-        // Entity portrait — live render (client-side cost only, acceptable)
+        // Entity render
         if (!mobType.isEmpty()) {
             LivingEntity entity = ClientPetCache.getEntity(mobType);
             if (entity != null) {
                 float maxDim = Math.max(entity.getBbWidth(), entity.getBbHeight());
                 int scale = Math.max(6, Math.min(16, (int)(11f / maxDim)));
                 InventoryScreen.renderEntityInInventoryFollowsMouse(
-                        g, ptX + 1, boxY + 1, ptX + PORTRAIT_W - 1, boxY + PORTRAIT_H - 1,
-                        scale, 0f, ptX + PORTRAIT_W / 2f, boxY + PORTRAIT_H / 2f, entity);
+                        g, ptX + 1, y + 1, ptX + PORTRAIT_W - 1, y + PORTRAIT_H - 1,
+                        scale, 0f, ptX + PORTRAIT_W / 2f, y + PORTRAIT_H / 2f, entity);
             }
         }
 
-        // ── Hunger strip (3px, inside portrait bottom edge) ───────────────────
+        // ── Hunger strip ──────────────────────────────────────────────────────
         float hungerPct = Math.max(0f, Math.min(1f, hunger / 100f));
         int hungerColor;
-        if (hungerPct > 0.50f) {
-            hungerColor = 0xBB44CC44;
-        } else if (hungerPct > 0.20f) {
-            hungerColor = 0xBBDDAA22;
-        } else {
+        if (hungerPct > 0.50f)      hungerColor = 0xBB44AA44;
+        else if (hungerPct > 0.20f) hungerColor = 0xBBCC8822;
+        else {
             long t = System.currentTimeMillis() % 600L;
-            hungerColor = t < 300L ? 0xBBDD2222 : 0xBBFF6666;
+            hungerColor = t < 300L ? 0xBBCC2222 : 0xBBFF5544;
         }
-        int stripY = boxY + PORTRAIT_H - 4;
-        g.fill(ptX + 1, stripY, ptX + PORTRAIT_W - 1, boxY + PORTRAIT_H - 1, 0x55000000);
-        g.fill(ptX + 1, stripY, ptX + 1 + (int)((PORTRAIT_W - 2) * hungerPct), boxY + PORTRAIT_H - 1, hungerColor);
+        int stripY = y + PORTRAIT_H - HUNGER_H - 1;
+        g.fill(ptX + 1, stripY, ptX + PORTRAIT_W - 1, stripY + HUNGER_H, 0x66000000);
+        g.fill(ptX + 1, stripY, ptX + 1 + (int)((PORTRAIT_W - 2) * hungerPct), stripY + HUNGER_H, hungerColor);
 
-        int y = boxY + PORTRAIT_H + 1;
+        y += PORTRAIT_H + 2;
 
-        // ── HP bar (smoothly animated) ────────────────────────────────────────
+        // ── HP bar ────────────────────────────────────────────────────────────
         if (HudSettings.showHpBar) {
-            float dispPct  = maxHp > 0 ? Math.max(0f, Math.min(1f, dispHp / maxHp)) : 0f;
-            int fillColor  = hpPct > 0.60f ? 0xFFAA4444 : hpPct > 0.30f ? 0xFFCC7722 : 0xFFDD3333;
-            g.fill(ptX, y, ptX + BAR_W, y + HP_BAR_H, 0xAA000000);
-            g.fill(ptX, y, ptX + (int)(BAR_W * dispPct), y + HP_BAR_H, fillColor);
+            float dispPct = maxHp > 0 ? Math.max(0f, Math.min(1f, dispHp / maxHp)) : 0f;
+            int fillColor = hpPct > 0.60f ? 0xFF44AA44 : hpPct > 0.30f ? 0xFFCC8822 : 0xFFCC3333;
 
-            // HP numbers to the right of the bar at 0.65 scale
-            String hpStr = (int)hp + "/" + (int)maxHp;
+            g.fill(ptX, y, ptX + BAR_W, y + HP_BAR_H, 0x88000000);
+            g.fill(ptX, y, ptX + (int)(BAR_W * dispPct), y + HP_BAR_H, fillColor);
+            ArcadiaTheme.drawBorder(g, ptX - 1, y - 1, BAR_W + 2, HP_BAR_H + 2,
+                    ArcadiaTheme.withAlpha(ArcadiaTheme.COPPER, 0x33));
+
+            int hpI = (int) hp, maxI = (int) maxHp;
+            if (hpI != lastHpInt || maxI != lastMaxHpInt) {
+                cachedHpStr = hpI + "/" + maxI;
+                lastHpInt = hpI;
+                lastMaxHpInt = maxI;
+            }
             g.pose().pushPose();
             g.pose().translate(ptX + BAR_W + 2, y - 1, 0);
-            g.pose().scale(0.65f, 0.65f, 1f);
-            g.drawString(mc.font, hpStr, 0, 0, 0xDDDDDD, false);
+            g.pose().scale(0.6f, 0.6f, 1f);
+            g.drawString(mc.font, cachedHpStr, 0, 0, ArcadiaTheme.TEXT_SECONDARY, false);
             g.pose().popPose();
 
             y += HP_BAR_H + 2;
         }
 
-        // ── Aftershock bar (only in ATK mode) ─────────────────────────────────
+        // ── Aftershock bar ────────────────────────────────────────────────────
         if (HudSettings.showAftershock && ClientPetState.isAttackMode()) {
             boolean onCooldown = ClientAftershockState.isOnCooldown();
-            int barColor;
-            int fillW;
-            if (onCooldown) {
-                float frac = ClientAftershockState.getCooldownFraction();
-                fillW    = (int)(BAR_W * frac);
-                barColor = 0xFFCC44FF;
-            } else {
-                fillW    = BAR_W;
-                barColor = 0xFF44CC44;
-            }
-            g.fill(ptX, y, ptX + BAR_W, y + AS_BAR_H, 0xAA000000);
+            int barColor = onCooldown ? 0xFFAA44DD : 0xFF44CC44;
+            int fillW = onCooldown ? (int)(BAR_W * ClientAftershockState.getCooldownFraction()) : BAR_W;
+
+            g.fill(ptX, y, ptX + BAR_W, y + AS_BAR_H, 0x88000000);
             g.fill(ptX, y, ptX + fillW, y + AS_BAR_H, barColor);
-            g.drawString(mc.font, "\u26A1", ptX + BAR_W + 2, y - 1,
-                    onCooldown ? 0xFFCC44FF : 0xFF55FF55, false);
+            ArcadiaTheme.drawBorder(g, ptX - 1, y - 1, BAR_W + 2, AS_BAR_H + 2,
+                    ArcadiaTheme.withAlpha(ArcadiaTheme.COPPER, 0x33));
+
+            g.pose().pushPose();
+            g.pose().translate(ptX + BAR_W + 2, y - 1, 0);
+            g.pose().scale(0.6f, 0.6f, 1f);
+            g.drawString(mc.font, "\u26A1", 0, 0,
+                    onCooldown ? 0xFFAA44DD : 0xFF55FF55, false);
+            g.pose().popPose();
         }
     }
 }

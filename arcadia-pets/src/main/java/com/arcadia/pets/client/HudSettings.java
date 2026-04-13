@@ -97,6 +97,6 @@ public final class HudSettings {
         else o.addProperty(k, v);
     }
     private static Path path() {
-        return Minecraft.getInstance().gameDirectory.toPath().resolve("config/arcadia_hud.json");
+        return Minecraft.getInstance().gameDirectory.toPath().resolve("config/arcadia/pets/hud.json");
     }
 }

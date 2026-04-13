@@ -89,6 +89,8 @@ public final class PetManager {
     // -- Equipped pet state (summoned — effects/modes apply) -
     private static final Map<UUID, Entity>  activePets    = new ConcurrentHashMap<>();
     private static final Map<UUID, PetData> activePetData = new ConcurrentHashMap<>();
+    /** Reverse lookup: entity network ID → owner UUID. O(1) isActivePetEntity. */
+    private static final Map<Integer, UUID> petEntityIdToOwner = new ConcurrentHashMap<>();
 
     // -- Death cooldown  - keyed by PET UUID so other pets stay summonable
     private static final Map<UUID, Long> deathCooldowns = new ConcurrentHashMap<>();
@@ -224,6 +226,7 @@ public final class PetManager {
 
         player.serverLevel().addFreshEntity(pet);
         activePets.put(player.getUUID(), pet);
+        petEntityIdToOwner.put(pet.getId(), player.getUUID());
         activePetData.put(player.getUUID(), data);
         designatedPetId.put(player.getUUID(), data.petId());
         SkillHandler.triggerSummon(player);
@@ -279,6 +282,7 @@ public final class PetManager {
         SkillHandler.triggerRecall(player);
         UUID playerUuid = player.getUUID();
         Entity pet = activePets.remove(playerUuid);
+        if (pet != null) petEntityIdToOwner.remove(pet.getId());
         PetData data = activePetData.remove(playerUuid);
         if (pet instanceof LivingEntity le && data != null) {
             storedPetHp.put(data.petId(), le.getHealth());
@@ -340,31 +344,38 @@ public final class PetManager {
     // Event handlers
     // =========================================================================
 
+    /** Called via ArcadiaModRegistry server action from prestige's ParticleScheduler. */
+    public static void handlePlayerLogout(ServerPlayer sp) {
+        onPlayerLogout_internal(sp);
+    }
+
     public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getEntity() instanceof ServerPlayer sp) {
-            UUID pid = sp.getUUID();
-            // Save designated pet (the selection, independent of equipped state)
-            UUID designated = designatedPetId.get(pid);
-            if (designated != null) {
-                sp.getPersistentData().putUUID("arcadia_active_pet", designated);
-            } else {
-                sp.getPersistentData().remove("arcadia_active_pet");
-            }
-            // Save equipped pet for auto re-summon on login
-            PetData active = activePetData.get(pid);
-            PetData pocket = pocketPets.get(pid);
-            PetData equipped = active != null ? active : pocket;
-            if (equipped != null) {
-                sp.getPersistentData().putUUID("arcadia_last_pet", equipped.petId());
-            } else {
-                sp.getPersistentData().remove("arcadia_last_pet");
-            }
-            despawn(sp);
-            designatedPetId.remove(pid);
-            petMovement.remove(pid);
-            petBehaviour.remove(pid);
-            disabledSkills.remove(pid);
+            onPlayerLogout_internal(sp);
         }
+    }
+
+    private static void onPlayerLogout_internal(ServerPlayer sp) {
+        UUID pid = sp.getUUID();
+        UUID designated = designatedPetId.get(pid);
+        if (designated != null) {
+            sp.getPersistentData().putUUID("arcadia_active_pet", designated);
+        } else {
+            sp.getPersistentData().remove("arcadia_active_pet");
+        }
+        PetData active = activePetData.get(pid);
+        PetData pocket = pocketPets.get(pid);
+        PetData equipped = active != null ? active : pocket;
+        if (equipped != null) {
+            sp.getPersistentData().putUUID("arcadia_last_pet", equipped.petId());
+        } else {
+            sp.getPersistentData().remove("arcadia_last_pet");
+        }
+        despawn(sp);
+        designatedPetId.remove(pid);
+        petMovement.remove(pid);
+        petBehaviour.remove(pid);
+        disabledSkills.remove(pid);
     }
 
     // =========================================================================
@@ -379,12 +390,14 @@ public final class PetManager {
         UUID playerUuid = player.getUUID();
         UUID prev = designatedPetId.get(playerUuid);
         designatedPetId.put(playerUuid, petId);
-        // If changing to a different pet, unsummon whatever is currently equipped
+        // If changing to a different pet, unsummon old and auto-summon new
         if (prev != null && !prev.equals(petId)) {
             PetData activeDat = activePetData.get(playerUuid);
             PetData pocket = pocketPets.get(playerUuid);
             if (activeDat != null || pocket != null) {
                 despawn(player);
+                // Auto-summon the new pet so HUD updates immediately
+                summonByPetId(player, petId);
             }
         }
     }
@@ -439,12 +452,12 @@ public final class PetManager {
             if (!c.isEmpty() && c.getItem() == PetsModItems.STAR_ESSENCE.get()) { essenceStack = c; break; }
         }
         if (essenceStack.isEmpty()) {
-            player.sendSystemMessage(Component.translatable("arcadia_prestige.msg.pet_no_essence").withStyle(ChatFormatting.RED));
+            player.sendSystemMessage(Component.translatable("arcadia_pets.msg.pet_no_essence").withStyle(ChatFormatting.RED));
             return false;
         }
         boolean applied = StarEssenceItem.applyToPet(petStack, essenceStack);
         if (applied) {
-            player.sendSystemMessage(Component.translatable("arcadia_prestige.msg.pet_star_upgraded").withStyle(ChatFormatting.GOLD));
+            player.sendSystemMessage(Component.translatable("arcadia_pets.msg.pet_star_upgraded").withStyle(ChatFormatting.GOLD));
         }
         return applied;
     }
@@ -504,8 +517,8 @@ public final class PetManager {
             openPanelFor(player, s);
 
             Component msg = finalName != null
-                    ? Component.translatable("arcadia_prestige.msg.pet_renamed", finalName)
-                    : Component.translatable("arcadia_prestige.msg.pet_name_cleared");
+                    ? Component.translatable("arcadia_pets.msg.pet_renamed", finalName)
+                    : Component.translatable("arcadia_pets.msg.pet_name_cleared");
             player.sendSystemMessage(msg.copy().withStyle(ChatFormatting.GREEN));
             return;
         }
@@ -536,7 +549,7 @@ public final class PetManager {
                     if (sp != null && data != null) {
                         updatePetItemOnDeath(sp, data);
                         sendHpSync(sp, 0f, 0f, false);
-                        sp.sendSystemMessage(Component.translatable("arcadia_prestige.msg.pet_died")
+                        sp.sendSystemMessage(Component.translatable("arcadia_pets.msg.pet_died")
                                 .withStyle(ChatFormatting.RED));
                     }
                 }
@@ -551,11 +564,11 @@ public final class PetManager {
             int next = Math.max(0, prev - amount);
             if (prev > 0 && next == 0)
                 player.sendSystemMessage(net.minecraft.network.chat.Component
-                        .translatable("arcadia_prestige.msg.pet_starving")
+                        .translatable("arcadia_pets.msg.pet_starving")
                         .withStyle(net.minecraft.ChatFormatting.RED));
             else if (prev > 25 && next <= 25)
                 player.sendSystemMessage(net.minecraft.network.chat.Component
-                        .translatable("arcadia_prestige.msg.pet_hungry", next)
+                        .translatable("arcadia_pets.msg.pet_hungry", next)
                         .withStyle(net.minecraft.ChatFormatting.YELLOW));
             return new PetData(d.petId(), d.mobType(), d.rarity(), d.stats(), d.modifierApplied(),
                     d.customName(), next, d.happiness(), d.skills());
@@ -642,8 +655,7 @@ public final class PetManager {
 
     public static void handlePetAction(ServerPlayer player, int actionId, UUID petId) {
         if (!com.arcadia.pets.PetsGlobalFlags.PETS_ENABLED && !player.hasPermissions(2)) {
-            player.sendSystemMessage(Component.literal("§c[Arcadia] Pets are currently disabled on this server.")
-                    .withStyle(ChatFormatting.RED));
+            player.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.error("Pets are currently disabled on this server."));
             return;
         }
         int baseAction = actionId >= 256 ? actionId / 256 : actionId;
@@ -656,7 +668,7 @@ public final class PetManager {
                 // Per-pet cooldown check  - other pets are unaffected
                 if (isOnCooldown(petId)) {
                     int secs = getCooldownTicks(petId) / 20;
-                    player.sendSystemMessage(Component.translatable("arcadia_prestige.msg.pet_recovery_cooldown", (secs / 60), (secs % 60))
+                    player.sendSystemMessage(Component.translatable("arcadia_pets.msg.pet_recovery_cooldown", (secs / 60), (secs % 60))
                             .withStyle(ChatFormatting.RED));
                 } else {
                     summonByPetId(player, petId);
@@ -679,7 +691,7 @@ public final class PetManager {
             }
             if (foodSlot < 0) {
                 player.sendSystemMessage(
-                        Component.translatable("arcadia_prestige.msg.pet_needs_food").withStyle(ChatFormatting.RED));
+                        Component.translatable("arcadia_pets.msg.pet_needs_food").withStyle(ChatFormatting.RED));
             } else {
                 int hungerGain    = feedType == 1 ? com.arcadia.pets.item.PetSnackItem.HUNGER_BONUS : 30;
                 int hpGain        = feedType == 1 ? 5 : 3;
@@ -696,7 +708,7 @@ public final class PetManager {
                                 pd.skills()));
                         player.getInventory().getItem(foodSlot).shrink(1);
                         // Generic feed message with HP gain
-                        player.sendSystemMessage(Component.translatable("arcadia_prestige.msg.pet_fed", hpGain).withStyle(ChatFormatting.GREEN));
+                        player.sendSystemMessage(Component.translatable("arcadia_pets.msg.pet_fed", hpGain).withStyle(ChatFormatting.GREEN));
                         if (hpGain > 0) applyHpHeal(player, petId, hpGain);
                         // Always send HP sync so hunger/happiness updates reach the client HUD
                         Mob mob = getActivePetMob(player.getUUID());
@@ -1091,7 +1103,7 @@ public final class PetManager {
             isPocket = false; // not in active/pocket cache — item-only update
         }
         if (currentData == null) {
-            player.sendSystemMessage(Component.translatable("arcadia_prestige.msg.no_active_pet")
+            player.sendSystemMessage(Component.translatable("arcadia_pets.msg.no_active_pet")
                     .withStyle(ChatFormatting.RED));
             return;
         }
@@ -1105,7 +1117,7 @@ public final class PetManager {
             if (s.level() >= 1 && s.level() < 10) { idx = i; break; }
         }
         if (idx == -1) {
-            player.sendSystemMessage(Component.translatable("arcadia_prestige.msg.skills_maxed")
+            player.sendSystemMessage(Component.translatable("arcadia_pets.msg.skills_maxed")
                     .withStyle(ChatFormatting.GOLD));
             return;
         }
@@ -1143,14 +1155,14 @@ public final class PetManager {
 
         // Feedback messages
         if (finalLvl > prevLvl) {
-            player.sendSystemMessage(Component.translatable("arcadia_prestige.msg.skill_leveled",
+            player.sendSystemMessage(Component.translatable("arcadia_pets.msg.skill_leveled",
                     target.skill().getDisplayName(), finalLvl).withStyle(ChatFormatting.GOLD));
             // Check if a new skill was unlocked by reaching Lv 10
             if (skillIdx + 1 < newData.skills().size()) {
                 com.arcadia.pets.skill.SkillInstance next = newData.skills().get(skillIdx + 1);
                 com.arcadia.pets.skill.SkillInstance wasLocked = oldData.skills().get(skillIdx + 1);
                 if (wasLocked.level() == 0 && next.level() == 1) {
-                    player.sendSystemMessage(Component.translatable("arcadia_prestige.msg.skill_revealed",
+                    player.sendSystemMessage(Component.translatable("arcadia_pets.msg.skill_revealed",
                             next.skill().getDisplayName()).withStyle(ChatFormatting.LIGHT_PURPLE));
                 }
             }
@@ -1191,7 +1203,7 @@ public final class PetManager {
         long cooldownMs = getDeathCooldownMs(data);
         deathCooldowns.put(data.petId(), System.currentTimeMillis() + cooldownMs);
         lastDeadPet.put(playerUuid, data.petId());
-        player.sendSystemMessage(Component.translatable("arcadia_prestige.msg.pocket_pet_died")
+        player.sendSystemMessage(Component.translatable("arcadia_pets.msg.pocket_pet_died")
                 .withStyle(ChatFormatting.RED));
         sendHpSync(player, 0f, maxHp, false);
         return remaining; // negative; caller uses -remaining as pass-through damage
@@ -1313,8 +1325,9 @@ public final class PetManager {
     }
 
     /** Returns true if the given mob is currently an active summoned pet for any player. */
+    /** O(1) check via reverse entity ID lookup (was O(n) containsValue scan). */
     public static boolean isActivePetEntity(Mob mob) {
-        return activePets.containsValue(mob);
+        return petEntityIdToOwner.containsKey(mob.getId());
     }
 
     /**
@@ -1493,16 +1506,21 @@ public final class PetManager {
     }
 
     /** Converts "minecraft:iron_golem" -> "Iron Golem". */
+    /** Cache for formatted mob type names — avoids String.split + StringBuilder on every HP sync. */
+    private static final Map<String, String> mobTypeNameCache = new ConcurrentHashMap<>();
+
     private static String formatMobType(String mobType) {
-        String raw = mobType.contains(":") ? mobType.substring(mobType.indexOf(':') + 1) : mobType;
-        StringBuilder sb = new StringBuilder();
-        for (String word : raw.split("_")) {
-            if (!word.isEmpty()) {
-                if (!sb.isEmpty()) sb.append(' ');
-                sb.append(Character.toUpperCase(word.charAt(0))).append(word.substring(1));
+        return mobTypeNameCache.computeIfAbsent(mobType, mt -> {
+            String raw = mt.contains(":") ? mt.substring(mt.indexOf(':') + 1) : mt;
+            StringBuilder sb = new StringBuilder();
+            for (String word : raw.split("_")) {
+                if (!word.isEmpty()) {
+                    if (!sb.isEmpty()) sb.append(' ');
+                    sb.append(Character.toUpperCase(word.charAt(0))).append(word.substring(1));
+                }
             }
-        }
-        return sb.toString();
+            return sb.toString();
+        });
     }
 
     // =========================================================================
@@ -1521,6 +1539,9 @@ public final class PetManager {
         private final double startDist;
         private final double stopDist;
         private int tickDelay;
+        // Cached owner reference — avoids getPlayerByUUID every tick (was 60μs cause)
+        private Player cachedOwner;
+        private int ownerCacheTick;
 
         public PetFollowGoal(Mob mob, UUID ownerUuid, double speed, double startDist, double stopDist) {
             this.mob = mob; this.ownerUuid = ownerUuid;
@@ -1528,13 +1549,21 @@ public final class PetManager {
             setFlags(EnumSet.of(Flag.MOVE));
         }
 
+        private Player getOwner() {
+            if (cachedOwner == null || cachedOwner.isRemoved() || ++ownerCacheTick >= 20) {
+                ownerCacheTick = 0;
+                cachedOwner = ((ServerLevel) mob.level()).getPlayerByUUID(ownerUuid);
+            }
+            return cachedOwner;
+        }
+
         @Override public boolean canUse() {
-            Player owner = ((ServerLevel) mob.level()).getPlayerByUUID(ownerUuid);
+            Player owner = getOwner();
             return owner != null && mob.distanceToSqr(owner) > startDist * startDist;
         }
 
         @Override public boolean canContinueToUse() {
-            Player owner = ((ServerLevel) mob.level()).getPlayerByUUID(ownerUuid);
+            Player owner = getOwner();
             return owner != null && (!mob.getNavigation().isDone() || mob.distanceToSqr(owner) > stopDist * stopDist);
         }
 
@@ -1543,8 +1572,7 @@ public final class PetManager {
         @Override public void tick() {
             if (--tickDelay > 0) return;
             tickDelay = 10;
-            ServerLevel sl = (ServerLevel) mob.level();
-            Player owner = sl.getPlayerByUUID(ownerUuid);
+            Player owner = getOwner();
             if (owner == null) { mob.getNavigation().stop(); return; }
             if (mob.distanceToSqr(owner) > 1024.0) {
                 // If the owner is flying or high in the air, auto-pocket instead of

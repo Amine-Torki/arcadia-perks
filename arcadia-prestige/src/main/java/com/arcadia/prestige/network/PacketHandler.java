@@ -24,11 +24,7 @@ public final class PacketHandler {
                 C2SDashboardAction.STREAM_CODEC,
                 C2SDashboardAction::handle
         );
-        registrar.playToClient(
-                S2COpenHub.TYPE,
-                S2COpenHub.STREAM_CODEC,
-                (p, ctx) -> p.handle(ctx)
-        );
+        // S2COpenHub moved to arcadia-lib (ArcadiaLibNet)
     }
 
     public static void sendToPlayer(ServerPlayer player, CustomPacketPayload payload) {
