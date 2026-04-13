@@ -1,10 +1,12 @@
 {
-  "required": true,
+  "required": false,
   "package": "com.arcadia.lib.mixin",
   "compatibilityLevel": "JAVA_21",
   "minVersion": "0.8",
-  "client": [],
+  "client": [
+    "CreativeTabLagFixMixin"
+  ],
   "injectors": {
-    "defaultRequire": 1
+    "defaultRequire": 0
   }
 }
