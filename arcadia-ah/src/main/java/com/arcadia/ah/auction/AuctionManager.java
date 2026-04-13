@@ -153,6 +153,12 @@ public final class AuctionManager {
         });
 
         cache.add(listing); // optimistic local add
+
+        // Quest progress: AH_SELL
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(
+                new com.arcadia.lib.event.QuestProgressEvent(
+                        seller.getUUID(), "AH_SELL", "", 1));
+
         int qty = stack.getCount();
         String itemName = stack.getHoverName().getString();
         if (qty > 1) {

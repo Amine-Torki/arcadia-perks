@@ -65,6 +65,24 @@ public final class PetCollectionSavedData extends SavedData {
     }
 
     /**
+     * Returns the player's collection serialised as a list of {@link CompoundTag}.
+     * Each tag represents one pet {@link ItemStack} and can be decoded client-side
+     * via {@link PetData#fromTag(CompoundTag)}.
+     */
+    public List<CompoundTag> getTagsFor(UUID playerUuid) {
+        List<ItemStack> col = collections.get(playerUuid);
+        if (col == null) return List.of();
+        List<CompoundTag> tags = new ArrayList<>(col.size());
+        for (ItemStack s : col) {
+            if (!(s.getItem() instanceof PetItem)) continue;
+            PetData d = PetData.fromStack(s);
+            if (d == null) continue;
+            tags.add(d.toTag());
+        }
+        return tags;
+    }
+
+    /**
      * Returns the mutable ItemStack stored for the given petId, or
      * {@link ItemStack#EMPTY} if not found. Callers that modify the returned
      * stack must call {@link #setDirty()} afterwards.

@@ -50,5 +50,32 @@ public final class PetPacketHandler {
                 C2SAuraTick.STREAM_CODEC,
                 C2SAuraTick::handle
         );
+
+        // ── Duel packets ──────────────────────────────────────────────────────
+        registrar.playToClient(
+                S2CDuelInvite.TYPE,
+                S2CDuelInvite.STREAM_CODEC,
+                S2CDuelInvite::handle
+        );
+        registrar.playToClient(
+                S2CDuelRosterPick.TYPE,
+                S2CDuelRosterPick.STREAM_CODEC,
+                S2CDuelRosterPick::handle
+        );
+        registrar.playToServer(
+                C2SDuelRosterReady.TYPE,
+                C2SDuelRosterReady.STREAM_CODEC,
+                C2SDuelRosterReady::handle
+        );
+        registrar.playToClient(
+                S2CDuelState.TYPE,
+                S2CDuelState.STREAM_CODEC,
+                S2CDuelState::handle
+        );
+        registrar.playToServer(
+                C2SDuelAction.TYPE,
+                C2SDuelAction.STREAM_CODEC,
+                C2SDuelAction::handle
+        );
     }
 }

@@ -3,6 +3,10 @@ package com.arcadia.prestige.server;
 import com.arcadia.lib.dashboard.DashboardTabHandler;
 import com.arcadia.lib.data.PlayerDataHandler;
 import com.arcadia.prestige.ModMenus;
+import com.arcadia.prestige.elo.EloManager;
+import com.arcadia.prestige.elo.PlayerEloData;
+import com.arcadia.prestige.quest.QuestInstance;
+import com.arcadia.prestige.quest.QuestManager;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
@@ -93,8 +97,8 @@ public class DashboardMenu extends AbstractContainerMenu {
 
         if (slotId < 54) {
             if (slotId < 9) {
-                if (slotId == 0) switchTab((currentTab + 3) % 4, player);
-                else if (slotId == 8) switchTab((currentTab + 1) % 4, player);
+                if (slotId == 0) switchTab((currentTab + 5) % 6, player);
+                else if (slotId == 8) switchTab((currentTab + 1) % 6, player);
                 else if (slotId == 4 && player instanceof ServerPlayer sp) {
                     DashboardTabHandler h = handlerForTab(currentTab);
                     if (h != null) h.handleNavBarClick(sp, this::refreshTab);
@@ -160,6 +164,8 @@ public class DashboardMenu extends AbstractContainerMenu {
         }
 
         if (currentTab == 0) { handleCosmeticsClick(slotId, sp); return; }
+        if (currentTab == 4) { handleQuestClick(slotId, sp); return; }
+        if (currentTab == 5) return; // Leaderboard is read-only
 
         DashboardTabHandler h = handlerForTab(currentTab);
         if (h != null) h.handleClick(slotId, button, sp, this::refreshTab);
@@ -211,6 +217,8 @@ public class DashboardMenu extends AbstractContainerMenu {
             case 1 -> { if (petsTab != null) petsTab.buildTab(dashboardContainer, (ServerPlayer) player); }
             case 2 -> buildDailyTab();
             case 3 -> { if (ahTab   != null) ahTab.buildTab(dashboardContainer, (ServerPlayer) player); }
+            case 4 -> buildQuestTab();
+            case 5 -> buildLeaderboardTab();
         }
         broadcastChanges();
     }
@@ -258,7 +266,22 @@ public class DashboardMenu extends AbstractContainerMenu {
             dashboardContainer.setItem(4, empty);
         }
 
-        for (int i : new int[]{1, 2, 3, 5, 6, 7}) {
+        // Arcadia Pass badge — slot 3 when player holds the pass
+        if (sp != null && com.arcadia.lib.permissions.PermissionService.hasPermission(sp, "arcadia.pass")) {
+            ItemStack badge = new ItemStack(Items.NETHER_STAR);
+            setName(badge, Component.literal("§d✦ Arcadia Pass").withStyle(ChatFormatting.LIGHT_PURPLE));
+            setLore(badge, List.of(
+                    Component.literal("§7+50% quest rewards").withStyle(ChatFormatting.GRAY),
+                    Component.literal("§7+5% ELO gain per duel win").withStyle(ChatFormatting.GRAY)));
+            badge.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
+            dashboardContainer.setItem(3, badge);
+        } else {
+            ItemStack sep = new ItemStack(Items.BLACK_STAINED_GLASS_PANE);
+            setName(sep, Component.literal(" "));
+            dashboardContainer.setItem(3, sep);
+        }
+
+        for (int i : new int[]{1, 2, 5, 6, 7}) {
             ItemStack sep = new ItemStack(Items.BLACK_STAINED_GLASS_PANE);
             setName(sep, Component.literal(" "));
             dashboardContainer.setItem(i, sep);
@@ -521,6 +544,225 @@ public class DashboardMenu extends AbstractContainerMenu {
                 Component.literal("Page " + (page + 1) + "  \u2014  Day " + pagePos + "/" + pathLen + " done").withStyle(ChatFormatting.YELLOW),
                 Component.literal("Don't miss a day!").withStyle(ChatFormatting.GRAY)));
         dashboardContainer.setItem(49, streakItem);
+    }
+
+    // ── Quest tab ─────────────────────────────────────────────────────────────
+
+    /** Slot indices for the three quest cards (left column of a 3-row layout). */
+    private static final int[] QUEST_SLOTS   = {19, 28, 37};
+    /** "Claim" button offset from each quest card slot. */
+    private static final int[] CLAIM_OFFSETS = {3,  3,  3};
+
+    private void handleQuestClick(int slotId, ServerPlayer sp) {
+        String dateKey = QuestManager.todayKey();
+        for (int i = 0; i < 3; i++) {
+            if (slotId == QUEST_SLOTS[i] + CLAIM_OFFSETS[i]) {
+                if (QuestManager.claimQuest(sp, dateKey, i)) refreshTab();
+                return;
+            }
+        }
+    }
+
+    private void buildQuestTab() {
+        if (!(player instanceof ServerPlayer sp)) return;
+
+        // Background
+        ItemStack bg = new ItemStack(Items.BLACK_STAINED_GLASS_PANE);
+        setName(bg, Component.literal(" "));
+        for (int s = 9; s < 54; s++) dashboardContainer.setItem(s, bg.copy());
+
+        String dateKey = QuestManager.todayKey();
+        QuestInstance[] quests = QuestManager.getOrGenerate(sp.getUUID(), dateKey);
+
+        // Header
+        ItemStack header = new ItemStack(Items.BOOK);
+        setName(header, Component.literal("§6Daily Quests").withStyle(net.minecraft.ChatFormatting.GOLD));
+        setLore(header, List.of(
+                Component.literal("§7Complete quests to earn rewards.").withStyle(net.minecraft.ChatFormatting.GRAY),
+                Component.literal("§7Resets at midnight.").withStyle(net.minecraft.ChatFormatting.DARK_GRAY)));
+        dashboardContainer.setItem(13, header);
+
+        for (int i = 0; i < 3; i++) {
+            QuestInstance q = quests[i];
+            int baseSlot  = QUEST_SLOTS[i];
+            int claimSlot = baseSlot + CLAIM_OFFSETS[i];
+
+            // Quest info card
+            boolean done    = q.isCompleted();
+            boolean claimed = q.claimed();
+            net.minecraft.world.item.Item icon = switch (q.def().difficulty()) {
+                case EASY   -> Items.IRON_SWORD;
+                case MEDIUM -> Items.GOLD_SWORD;
+                case HARD   -> Items.DIAMOND_SWORD;
+            };
+
+            ItemStack card = new ItemStack(claimed ? Items.LIME_DYE : (done ? icon : Items.GRAY_DYE));
+            String titleColor = claimed ? "§a" : (done ? "§e" : "§f");
+            setName(card, Component.literal(titleColor + q.def().title()));
+
+            List<Component> lore = new ArrayList<>();
+            lore.add(Component.literal("§7" + q.def().description()).withStyle(net.minecraft.ChatFormatting.GRAY));
+            lore.add(Component.literal("§8Difficulty: " + q.def().difficulty().displayName()));
+            lore.add(Component.literal("§7Progress: §f" + q.progress() + "§7/§f" + q.def().targetAmount())
+                    .withStyle(net.minecraft.ChatFormatting.GRAY));
+            lore.add(Component.literal("§6Reward: §f+" + q.def().rewardCoins() + " coins"
+                    + (q.def().rewardEssence() > 0 ? ", +" + q.def().rewardEssence() + " ✦" : "")));
+            if (claimed)      lore.add(Component.literal("§a✓ Claimed").withStyle(net.minecraft.ChatFormatting.GREEN));
+            else if (done)    lore.add(Component.literal("§e★ Completed – claim your reward!").withStyle(net.minecraft.ChatFormatting.YELLOW));
+            setLore(card, lore);
+            if (done && !claimed) card.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
+            dashboardContainer.setItem(baseSlot, card);
+
+            // Spacer slots
+            for (int off = 1; off < 3; off++) {
+                ItemStack bar = new ItemStack(Items.LIGHT_GRAY_STAINED_GLASS_PANE);
+                setName(bar, Component.literal(" "));
+                dashboardContainer.setItem(baseSlot + off, bar);
+            }
+
+            // Claim button
+            ItemStack claimBtn;
+            if (claimed) {
+                claimBtn = new ItemStack(Items.GRAY_STAINED_GLASS_PANE);
+                setName(claimBtn, Component.literal("§7Already claimed").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+            } else if (done) {
+                claimBtn = new ItemStack(Items.NETHER_STAR);
+                setName(claimBtn, Component.literal("§aClaim Reward").withStyle(net.minecraft.ChatFormatting.GREEN));
+                setLore(claimBtn, List.of(Component.literal("§7Click to collect!").withStyle(net.minecraft.ChatFormatting.GRAY)));
+                claimBtn.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
+            } else {
+                claimBtn = new ItemStack(Items.BARRIER);
+                setName(claimBtn, Component.literal("§cNot completed yet").withStyle(net.minecraft.ChatFormatting.RED));
+            }
+            dashboardContainer.setItem(claimSlot, claimBtn);
+        }
+    }
+
+    // ── Leaderboard tab ───────────────────────────────────────────────────────
+
+    private void buildLeaderboardTab() {
+        // Background
+        ItemStack bg = new ItemStack(Items.BLACK_STAINED_GLASS_PANE);
+        setName(bg, Component.literal(" "));
+        for (int s = 9; s < 54; s++) dashboardContainer.setItem(s, bg.copy());
+
+        // Header
+        ItemStack header = new ItemStack(Items.NETHER_STAR);
+        setName(header, Component.literal("§6Pet Duel Leaderboard").withStyle(ChatFormatting.GOLD));
+        setLore(header, List.of(
+                Component.literal("§7Top players ranked by ELO rating.").withStyle(ChatFormatting.GRAY),
+                Component.literal("§7Win duels to climb the ranks!").withStyle(ChatFormatting.DARK_GRAY)));
+        dashboardContainer.setItem(13, header);
+
+        java.util.List<PlayerEloData> top = EloManager.getLeaderboard(10);
+
+        // Layout: 2 rows × 5 columns starting at slot 19
+        int[] slots = {19, 20, 21, 22, 23, 28, 29, 30, 31, 32};
+        for (int rank = 0; rank < slots.length; rank++) {
+            if (rank >= top.size()) break;
+            PlayerEloData entry = top.get(rank);
+
+            // Pick icon based on rank position
+            net.minecraft.world.item.Item rankIcon = switch (rank) {
+                case 0 -> Items.GOLD_INGOT;
+                case 1 -> Items.IRON_INGOT;
+                case 2 -> Items.COPPER_INGOT;
+                default -> Items.STONE;
+            };
+
+            // Try to show the favorite pet as a spawn egg if available
+            ItemStack displayItem = buildLeaderboardEntry(rank + 1, entry, rankIcon);
+            dashboardContainer.setItem(slots[rank], displayItem);
+        }
+
+        if (top.isEmpty()) {
+            ItemStack empty = new ItemStack(Items.GRAY_STAINED_GLASS_PANE);
+            setName(empty, Component.literal("§7No duel records yet.").withStyle(ChatFormatting.DARK_GRAY));
+            dashboardContainer.setItem(31, empty);
+        }
+
+        // Footer: player's own rank
+        PlayerEloData myData = null;
+        if (player instanceof ServerPlayer sp) {
+            myData = EloManager.getOrCreate(sp.getUUID());
+        }
+        if (myData != null) {
+            ItemStack myRank = new ItemStack(Items.EXPERIENCE_BOTTLE);
+            setName(myRank, Component.literal("§bYour ELO: §e" + myData.rating()));
+            setLore(myRank, List.of(
+                    Component.literal("§7Wins: §a" + myData.wins() + "  §7Losses: §c" + myData.losses()),
+                    Component.literal("§7Fav. pet: §f" + formatMobType(myData.favoriteMobType()))));
+            dashboardContainer.setItem(49, myRank);
+        }
+    }
+
+    private ItemStack buildLeaderboardEntry(int rank, PlayerEloData data,
+                                             net.minecraft.world.item.Item fallbackIcon) {
+        // Try to get the actual 3D pet item from the player's collection
+        ItemStack icon = petItemFor(data.uuid(), data.favoriteMobType());
+        if (icon.isEmpty()) icon = new ItemStack(fallbackIcon);
+
+        String medal = switch (rank) {
+            case 1 -> "§6#1 ";
+            case 2 -> "§7#2 ";
+            case 3 -> "§c#3 ";
+            default -> "§8#" + rank + " ";
+        };
+        // Resolve display name from server player list if online
+        String name = resolvePlayerName(data.uuid());
+        setName(icon, Component.literal(medal + name));
+
+        List<Component> lore = new ArrayList<>();
+        lore.add(Component.literal("§eELO: §f" + data.rating()));
+        lore.add(Component.literal("§aW: §f" + data.wins() + "  §cL: §f" + data.losses()));
+        if (!data.favoriteMobType().isEmpty()) {
+            lore.add(Component.literal("§7Pet: §f" + formatMobType(data.favoriteMobType())));
+        }
+        setLore(icon, lore);
+        if (rank <= 3) icon.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
+        return icon;
+    }
+
+    /**
+     * Finds the first pet item in the player's collection whose mob type matches
+     * {@code mobType}, and returns a copy of that ItemStack (the actual 3D pet item).
+     * Falls back to {@link ItemStack#EMPTY} if not found.
+     */
+    private ItemStack petItemFor(UUID playerUuid, String mobType) {
+        if (mobType == null || mobType.isEmpty()) return ItemStack.EMPTY;
+        if (player.getServer() == null) return ItemStack.EMPTY;
+        try {
+            var col = com.arcadia.pets.server.PetCollectionSavedData
+                    .getOrCreate(player.getServer())
+                    .getCollection(playerUuid);
+            for (ItemStack stack : col) {
+                com.arcadia.pets.item.PetData pd = com.arcadia.pets.item.PetData.fromStack(stack);
+                if (pd != null && mobType.equals(pd.mobType())) return stack.copy();
+            }
+        } catch (Exception ignored) {}
+        return ItemStack.EMPTY;
+    }
+
+    /** Returns the online player's name, or a shortened UUID fragment if offline. */
+    private String resolvePlayerName(java.util.UUID uuid) {
+        if (player.getServer() == null) return uuid.toString().substring(0, 8) + "…";
+        net.minecraft.server.level.ServerPlayer sp =
+                (net.minecraft.server.level.ServerPlayer) player.getServer()
+                        .getPlayerList().getPlayer(uuid);
+        if (sp != null) return sp.getName().getString();
+        // Try game profile cache
+        com.mojang.authlib.GameProfile gp = player.getServer().getProfileCache()
+                .map(c -> c.get(uuid).orElse(null)).orElse(null);
+        return gp != null ? gp.getName() : uuid.toString().substring(0, 8) + "…";
+    }
+
+    /** Converts "minecraft:cat" → "Cat", "arcadia_pets:fairy_fox" → "Fairy fox". */
+    private static String formatMobType(String mobType) {
+        if (mobType == null || mobType.isEmpty()) return "—";
+        int colon = mobType.indexOf(':');
+        String name = colon >= 0 ? mobType.substring(colon + 1) : mobType;
+        name = name.replace('_', ' ');
+        return Character.toUpperCase(name.charAt(0)) + name.substring(1);
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
