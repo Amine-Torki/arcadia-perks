@@ -192,31 +192,40 @@ public final class DuelManager {
     /**
      * Resolves a player's action for their current turn.
      *
-     * @param player     acting player
-     * @param actionType 0=ATTACK, 1=SKILL, 2=DEFEND, 3=FORFEIT, 4=PASS
-     * @param skillId    skill identifier (used when actionType=1)
-     * @param targetIdx  0–2 target pet index in the target side's roster
+     * @param player      acting player
+     * @param actionType  0=ATTACK, 1=SKILL, 2=DEFEND, 3=FORFEIT, 4=PASS, 5=SKIP_PET
+     * @param skillId     skill identifier (used when actionType=1)
+     * @param actorPetIdx 0–2 index of which of the player's pets is performing the action
+     * @param targetIdx   0–2 target pet index in the target side's roster
      */
     public static ActionResult handleAction(ServerPlayer player, int actionType,
-                                            String skillId, int targetIdx) {
+                                            String skillId, int actorPetIdx, int targetIdx) {
         UUID duelId = PLAYER_TO_DUEL.get(player.getUUID());
         if (duelId == null)                              return ActionResult.NOT_IN_DUEL;
         DuelSession session = ACTIVE_DUELS.get(duelId);
         if (session == null || session.phase == DuelPhase.FINISHED) return ActionResult.DUEL_OVER;
 
-        TurnSlot slot = session.currentSlot();
-        if (slot == null || !slot.ownerUuid().equals(player.getUUID()))
+        // FORFEIT is valid at any time regardless of whose turn it is
+        if (actionType == 3) return handleForfeit(session, player.getUUID());
+
+        // Turn check
+        if (!player.getUUID().equals(session.currentTurnPlayer))
             return ActionResult.NOT_YOUR_TURN;
 
-        int actorIdx = slot.petIndex();
         UUID opponent = session.opponentOf(player.getUUID());
 
+        // PASS ends the whole player turn (no actorPetIdx check needed)
+        if (actionType == 4) return handlePass(session);
+
+        // All other actions require the specified pet to be in the pending set
+        if (!session.pendingPetActions.contains(actorPetIdx))
+            return ActionResult.NOT_YOUR_TURN;
+
         return switch (actionType) {
-            case 0 -> handleAttack(session, player.getUUID(), actorIdx, opponent, targetIdx);
-            case 1 -> handleSkill(session, player.getUUID(), actorIdx, skillId, opponent, targetIdx);
-            case 2 -> handleDefend(session, player.getUUID(), actorIdx);
-            case 3 -> handleForfeit(session, player.getUUID());
-            case 4 -> handlePass(session);
+            case 0 -> handleAttack(session, player.getUUID(), actorPetIdx, opponent, targetIdx);
+            case 1 -> handleSkill(session, player.getUUID(), actorPetIdx, skillId, opponent, targetIdx);
+            case 2 -> handleDefend(session, player.getUUID(), actorPetIdx);
+            case 5 -> handleSkipPet(session, actorPetIdx);
             default -> ActionResult.OK;
         };
     }
@@ -226,7 +235,6 @@ public final class DuelManager {
     private static ActionResult handleAttack(DuelSession session,
                                               UUID actor, int actorPet,
                                               UUID opponent, int targetPet) {
-        // Basic attack is FREE (costs no SP) but always ends the turn
         if (!session.isAlive(opponent, targetPet)) return ActionResult.INVALID_TARGET;
 
         int atk   = session.getAtk(actor, actorPet);
@@ -238,7 +246,7 @@ public final class DuelManager {
             endDuel(session, session.winner);
             return ActionResult.OK;
         }
-        session.endTurn(); // attack always ends the turn
+        session.endPetAction(actorPet);
         return ActionResult.OK;
     }
 
@@ -249,10 +257,9 @@ public final class DuelManager {
         DuelSkillDef def = DuelSkillAdapter.get(skillId);
         if (def == null) return ActionResult.SKILL_NOT_FOUND;
 
-        // Verify the acting pet actually has this skill at level > 0
         PetData petData = session.rosterFor(actor)[actorPet];
         if (petData == null) return ActionResult.SKILL_NOT_FOUND;
-        int skillLevel  = 0;
+        int skillLevel = 0;
         for (SkillInstance si : petData.skills()) {
             if (si.skill().getId().equals(skillId)) { skillLevel = si.level(); break; }
         }
@@ -261,13 +268,12 @@ public final class DuelManager {
         if (session.currentSP < def.spCost) return ActionResult.INSUFFICIENT_SP;
         if (session.getSkillCooldown(actor, actorPet, skillId) > 0) return ActionResult.SKILL_ON_COOLDOWN;
 
-        // Resolve canonical target based on DuelTargetType
         UUID targetOwner;
         int  resolvedTargetPet;
         switch (def.targetType) {
             case SELF -> { targetOwner = actor; resolvedTargetPet = actorPet; }
             case ALLY_SINGLE -> {
-                targetOwner      = actor;
+                targetOwner       = actor;
                 resolvedTargetPet = (targetPet >= 0 && targetPet < 3
                         && session.isAlive(actor, targetPet)) ? targetPet : actorPet;
             }
@@ -283,7 +289,6 @@ public final class DuelManager {
                 }
             }
             case ALL_ENEMIES, ALL_ALLIES, RANDOM_ENEMY -> {
-                // Effect function handles iteration internally; pass dummy values
                 targetOwner       = session.opponentOf(actor);
                 resolvedTargetPet = 0;
             }
@@ -300,19 +305,17 @@ public final class DuelManager {
             endDuel(session, session.winner);
             return ActionResult.OK;
         }
-        if (session.currentSP <= 0) session.endTurn();
+        session.endPetAction(actorPet);
         return ActionResult.OK;
     }
 
     private static ActionResult handleDefend(DuelSession session, UUID actor, int actorPet) {
-        // Defend is FREE (no SP cost) but always ends the turn
-        float fortify = 0.10f + (float)(session.getAtk(actor, actorPet)) * 0.005f;
-        fortify = Math.min(0.30f, fortify);
+        // Defend applies a GUARD token: 65% chance to intercept an ally-targeted hit at -40% dmg
         session.applyEffect(actor, actorPet,
-                new ActiveEffect(DuelStatusType.FORTIFY, 1, fortify));
-        session.addLog(session.petName(actor, actorPet) + " braces for impact! -"
-                + Math.round(fortify * 100) + "% incoming damage this turn.");
-        session.endTurn();
+                new ActiveEffect(DuelStatusType.GUARD, -1, 65f));
+        session.addLog(session.petName(actor, actorPet)
+                + " takes a guarding stance! (65% to intercept hits aimed at allies, -40% dmg)");
+        session.endPetAction(actorPet);
         return ActionResult.OK;
     }
 
@@ -324,9 +327,16 @@ public final class DuelManager {
     }
 
     private static ActionResult handlePass(DuelSession session) {
-        session.addLog("Turn passed. SP carried over.");
-        // SP is NOT zeroed — it naturally saves itself in endTurn() via petSP map
-        session.endTurn();
+        session.addLog("Turn ended early. SP carried over.");
+        session.pendingPetActions.clear();
+        session.endPlayerTurn();
+        return ActionResult.OK;
+    }
+
+    private static ActionResult handleSkipPet(DuelSession session, int actorPetIdx) {
+        session.addLog(session.petName(session.currentTurnPlayer, actorPetIdx)
+                + " skips their action this turn.");
+        session.endPetAction(actorPetIdx);
         return ActionResult.OK;
     }
 
@@ -380,6 +390,7 @@ public final class DuelManager {
         System.arraycopy(playerRoster, 0, session.p1Roster, 0, 3);
         PetData[] botRoster = BotRoster.generate(difficulty);
         System.arraycopy(botRoster, 0, session.p2Roster, 0, 3);
+        session.botDifficulty = difficulty;
         ACTIVE_DUELS.put(session.duelId, session);
         PLAYER_TO_DUEL.put(player.getUUID(), session.duelId);
         // BOT_UUID intentionally NOT added to PLAYER_TO_DUEL (no real player)
@@ -392,40 +403,53 @@ public final class DuelManager {
     }
 
     /**
-     * Executes the bot's turn: picks a random available skill or falls back to a basic attack.
-     * Called by {@link com.arcadia.pets.duel.DuelTickHandler} when {@code session.botActAt} has passed.
+     * Executes the bot's full player turn: acts for every pending pet in order.
+     * Called by {@link com.arcadia.pets.duel.DuelTickHandler} once the think delay has passed.
      */
     public static void executeBotTurn(DuelSession session) {
-        TurnSlot slot = session.currentSlot();
-        if (slot == null || !slot.ownerUuid().equals(BOT_UUID)) return;
+        if (!BOT_UUID.equals(session.currentTurnPlayer)) return;
 
-        int actorPet = slot.petIndex();
-        UUID player  = session.opponentOf(BOT_UUID); // the human player
-        int targetPet = session.firstAlivePet(player);
-        if (targetPet < 0) return; // no valid target — shouldn't happen
+        UUID humanPlayer = session.opponentOf(BOT_UUID);
 
-        // Collect usable skills (not on cooldown, enough SP)
-        List<String> usable = new ArrayList<>();
-        PetData pd = session.rosterFor(BOT_UUID)[actorPet];
-        if (pd != null) {
-            for (SkillInstance si : pd.skills()) {
-                if (si.level() <= 0) continue; // locked
-                int cd = session.getSkillCooldown(BOT_UUID, actorPet, si.skill().getId());
-                if (cd > 0) continue;
-                DuelSkillDef def = DuelSkillAdapter.get(si.skill().getId());
-                if (def == null) continue;
-                if (session.currentSP < def.spCost) continue;
-                usable.add(si.skill().getId());
+        // Snapshot pending list — it will be mutated by endPetAction inside handlers
+        List<Integer> pending = new ArrayList<>(session.pendingPetActions);
+
+        for (int actorPet : pending) {
+            // Check this pet is still pending (could have been resolved if duel ended early)
+            if (!session.pendingPetActions.contains(actorPet)) continue;
+            if (session.phase != DuelPhase.ACTIVE) break;
+
+            int targetPet = session.firstAlivePet(humanPlayer);
+            if (targetPet < 0) break;
+
+            // Collect usable skills for this pet
+            List<String> usable = new ArrayList<>();
+            PetData pd = session.rosterFor(BOT_UUID)[actorPet];
+            if (pd != null) {
+                for (SkillInstance si : pd.skills()) {
+                    if (si.level() <= 0) continue;
+                    int cd = session.getSkillCooldown(BOT_UUID, actorPet, si.skill().getId());
+                    if (cd > 0) continue;
+                    DuelSkillDef def = DuelSkillAdapter.get(si.skill().getId());
+                    if (def == null) continue;
+                    if (session.currentSP < def.spCost) continue;
+                    usable.add(si.skill().getId());
+                }
             }
-        }
 
-        if (!usable.isEmpty()) {
-            // Pick a random usable skill
-            String skillId = usable.get(new Random().nextInt(usable.size()));
-            handleSkillForBot(session, actorPet, skillId, player, targetPet);
-        } else {
-            // Fallback: basic attack
-            handleAttack(session, BOT_UUID, actorPet, player, targetPet);
+            // Difficulty-based bias toward basic attacks
+            int attackBias = 0;
+            if (session.botDifficulty == BotDifficulty.EASY)        attackBias = 50;
+            else if (session.botDifficulty == BotDifficulty.MEDIUM) attackBias = 20;
+            boolean forceAttack = !usable.isEmpty() && new Random().nextInt(100) < attackBias;
+
+            if (!usable.isEmpty() && !forceAttack) {
+                String skillId = usable.get(new Random().nextInt(usable.size()));
+                handleSkillForBot(session, actorPet, skillId, humanPlayer, targetPet);
+            } else {
+                handleAttack(session, BOT_UUID, actorPet, humanPlayer, targetPet);
+            }
+            // handleAttack/handleSkillForBot call endPetAction internally
         }
 
         session.botActAt = 0L;

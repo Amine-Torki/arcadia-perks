@@ -73,5 +73,12 @@ public enum DuelStatusType {
     /**
      * Adds {@code magnitude}% (integer) to the pet's effective EVA chance for {@code remainingTurns} turns.
      */
-    EVA_BOOST
+    EVA_BOOST,
+
+    /**
+     * The pet is guarding: {@code magnitude}% chance (integer) to intercept the next
+     * attack aimed at any alive ally, taking the hit instead at −40% damage.
+     * remainingTurns = -1 (consume-on-intercept or cleared at end of the opponent's turn).
+     */
+    GUARD
 }

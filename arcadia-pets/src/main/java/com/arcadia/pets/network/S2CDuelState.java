@@ -4,7 +4,6 @@ import com.arcadia.pets.client.DuelClientState;
 import com.arcadia.pets.duel.ActiveEffect;
 import com.arcadia.pets.duel.DuelPhase;
 import com.arcadia.pets.duel.DuelSession;
-import com.arcadia.pets.duel.TurnSlot;
 import com.arcadia.pets.item.PetData;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
@@ -26,18 +25,16 @@ import java.util.*;
 public record S2CDuelState(
         UUID   duelId,
         UUID   p1, UUID p2,
-        // Rosters as serialised NBT (sent once; clients cache them after first receipt)
+        // Rosters as serialised NBT
         CompoundTag[] p1RosterTags,
         CompoundTag[] p2RosterTags,
-        // Live HP & max-HP per pet (3 values each side)
+        // Live HP per pet
         int[] p1Hp, int[] p1MaxHp,
         int[] p2Hp, int[] p2MaxHp,
-        // Current turn: who is acting and with how many SP
-        UUID   actorUuid,
-        int    actorPetIdx,
-        int    currentSP,
-        // Encoded turn order (UUID + petIdx pairs for UI display)
-        List<long[]>  turnOrderEncoded,  // each entry: [uuidMsb, uuidLsb, petIdx]
+        // Current acting player + their pets still pending an action this turn
+        UUID          actorUuid,          // currentTurnPlayer UUID
+        List<Integer> pendingPetActions,  // pet indices (0–2) of the acting player's pets that have not yet acted
+        int           currentSP,
         // Skill cooldowns for BOTH sides (key = "side_petIdx_skillId", value = turns remaining)
         Map<String, Integer> skillCooldowns,
         // Active effects per pet slot (key = "side_petIdx")
@@ -45,12 +42,12 @@ public record S2CDuelState(
         // Combat log lines (up to 24)
         List<String> combatLog,
         // Phase & result
-        int    phaseOrdinal,
-        UUID   winner,          // null unless finished
-        // Deadline (epoch ms) so client can show a countdown
-        long   actionDeadline,
-        // Round counter (incremented each time all living pets have acted once)
-        int    roundNumber
+        int  phaseOrdinal,
+        UUID winner,           // null unless finished
+        // Deadline (epoch ms) so client can show countdown
+        long actionDeadline,
+        // Round counter
+        int  roundNumber
 ) implements CustomPacketPayload {
 
     public static final Type<S2CDuelState> TYPE =
@@ -66,18 +63,7 @@ public record S2CDuelState(
         CompoundTag[] p1Tags = rosterTags(session.p1Roster);
         CompoundTag[] p2Tags = rosterTags(session.p2Roster);
 
-        TurnSlot slot = session.currentSlot();
-        UUID actorUuid   = slot != null ? slot.ownerUuid() : null;
-        int  actorPetIdx = slot != null ? slot.petIndex()  : 0;
-
-        // Encode turn order as longs for compactness
-        List<long[]> orderEnc = new ArrayList<>();
-        for (TurnSlot s : session.getTurnOrder()) {
-            orderEnc.add(new long[]{
-                    s.ownerUuid().getMostSignificantBits(),
-                    s.ownerUuid().getLeastSignificantBits(),
-                    s.petIndex()});
-        }
+        List<Integer> pending = new ArrayList<>(session.pendingPetActions);
 
         // Encode effect labels per slot
         Map<String, List<String>> effectLabels = new LinkedHashMap<>();
@@ -93,8 +79,7 @@ public record S2CDuelState(
                 p1Tags, p2Tags,
                 session.p1Hp.clone(), session.p1MaxHp.clone(),
                 session.p2Hp.clone(), session.p2MaxHp.clone(),
-                actorUuid, actorPetIdx, session.currentSP,
-                orderEnc,
+                session.currentTurnPlayer, pending, session.currentSP,
                 new LinkedHashMap<>(session.getAllCooldowns()),
                 effectLabels,
                 session.getLog(),
@@ -129,13 +114,11 @@ public record S2CDuelState(
 
         buf.writeBoolean(pkt.actorUuid != null);
         if (pkt.actorUuid != null) buf.writeUUID(pkt.actorUuid);
-        buf.writeVarInt(pkt.actorPetIdx);
-        buf.writeVarInt(pkt.currentSP);
 
-        buf.writeVarInt(pkt.turnOrderEncoded.size());
-        for (long[] e : pkt.turnOrderEncoded) {
-            buf.writeLong(e[0]); buf.writeLong(e[1]); buf.writeVarInt((int) e[2]);
-        }
+        buf.writeVarInt(pkt.pendingPetActions.size());
+        for (int i : pkt.pendingPetActions) buf.writeVarInt(i);
+
+        buf.writeVarInt(pkt.currentSP);
 
         buf.writeVarInt(pkt.skillCooldowns.size());
         pkt.skillCooldowns.forEach((k, v) -> { buf.writeUtf(k); buf.writeVarInt(v); });
@@ -167,12 +150,12 @@ public record S2CDuelState(
         int[] p2Hp = readIntArray(buf, 3), p2MaxHp = readIntArray(buf, 3);
 
         UUID actor = buf.readBoolean() ? buf.readUUID() : null;
-        int actorPetIdx = buf.readVarInt(), ap = buf.readVarInt();
 
-        int orderSz = buf.readVarInt();
-        List<long[]> order = new ArrayList<>(orderSz);
-        for (int i = 0; i < orderSz; i++)
-            order.add(new long[]{buf.readLong(), buf.readLong(), buf.readVarInt()});
+        int pendSz = buf.readVarInt();
+        List<Integer> pending = new ArrayList<>(pendSz);
+        for (int i = 0; i < pendSz; i++) pending.add(buf.readVarInt());
+
+        int sp = buf.readVarInt();
 
         int cdSz = buf.readVarInt();
         Map<String, Integer> cds = new LinkedHashMap<>(cdSz);
@@ -199,7 +182,7 @@ public record S2CDuelState(
 
         return new S2CDuelState(duelId, p1, p2, p1Tags, p2Tags,
                 p1Hp, p1MaxHp, p2Hp, p2MaxHp,
-                actor, actorPetIdx, ap, order, cds, fxLabels, log,
+                actor, pending, sp, cds, fxLabels, log,
                 phase, winner, deadline, roundNumber);
     }
 

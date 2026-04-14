@@ -59,21 +59,21 @@ public final class DuelSkillAdapter {
                             + "% EVA for " + turns + " turn(s).";
                 }));
 
-        // lucky_oink: small single-ally heal
-        // lv1: 2 HP → lv10: 7 HP
+        // lucky_oink: single-ally heal
+        // lv1: 4 HP → lv10: 9 HP
         m.put("lucky_oink", new DuelSkillDef(1, 2, 1, DuelTargetType.ALLY_SINGLE,
                 (session, actor, aIdx, target, tIdx, level) -> {
-                    int heal = 2 + level / 2;
+                    int heal = 4 + level / 2;
                     session.heal(target, tIdx, heal);
                     return session.petName(actor, aIdx) + " shares good fortune! "
                             + session.petName(target, tIdx) + " recovers " + heal + " HP.";
                 }));
 
         // steady_heal: moderate single-ally heal
-        // lv1: 3 HP → lv10: 8 HP
+        // lv1: 6 HP → lv10: 16 HP
         m.put("steady_heal", new DuelSkillDef(1, 2, 1, DuelTargetType.ALLY_SINGLE,
                 (session, actor, aIdx, target, tIdx, level) -> {
-                    int heal = 3 + level / 2;
+                    int heal = 5 + level;
                     session.heal(target, tIdx, heal);
                     return session.petName(actor, aIdx) + " channels steady healing! "
                             + session.petName(target, tIdx) + " recovers " + heal + " HP.";
@@ -112,16 +112,16 @@ public final class DuelSkillAdapter {
                             + gain + " SP restored (" + session.currentSP + "/" + DuelSession.SP_MAX + ").";
                 }));
 
-        // sweet_sting: POISON DoT on one enemy
-        // lv1: 1 dmg/turn × 2t → lv10: 3 dmg/turn × 4t
+        // sweet_sting: POISON fading DoT on one enemy
+        // lv1: starts 3 dmg × 3t (total 6) → lv10: starts 6 dmg × 5t (total 20)
         m.put("sweet_sting", new DuelSkillDef(1, 2, 1, DuelTargetType.ENEMY_SINGLE,
                 (session, actor, aIdx, target, tIdx, level) -> {
-                    int dmg   = 1 + level / 4;
-                    int turns = 2 + level / 5;
+                    int dmg   = 2 + level / 3;
+                    int turns = 3 + level / 4;
                     session.applyEffect(target, tIdx,
                             new ActiveEffect(DuelStatusType.POISON, turns, dmg));
                     return session.petName(actor, aIdx) + " stings " + session.petName(target, tIdx)
-                            + "! " + dmg + " poison dmg × " + turns + " turns.";
+                            + "! 🐝 " + dmg + "→1 poison × " + turns + " turns.";
                 }));
 
         // ══════════════════════════════════════════════════════════════════════
@@ -140,10 +140,10 @@ public final class DuelSkillAdapter {
                 }));
 
         // pack_call: heavy single-target damage (scaled ATK burst)
-        // lv1: ATK×1.6 → lv10: ATK×2.5
+        // lv1: ATK×2.1 → lv10: ATK×3.0
         m.put("pack_call", new DuelSkillDef(2, 3, 2, DuelTargetType.ENEMY_SINGLE,
                 (session, actor, aIdx, target, tIdx, level) -> {
-                    float mult  = 1.5f + level * 0.1f;
+                    float mult  = 2.0f + level * 0.1f;
                     int baseDmg = (int)(session.getAtk(actor, aIdx) * mult);
                     int dealt   = session.resolveDamage(actor, aIdx, target, tIdx, baseDmg);
                     return session.petName(actor, aIdx) + " calls the pack on "
@@ -175,10 +175,10 @@ public final class DuelSkillAdapter {
                 }));
 
         // bounding_leap: piercing damage (ignores SHIELD + FORTIFY)
-        // lv1: ATK+1 → lv10: ATK+10
+        // lv1: ATK+4 → lv10: ATK+13
         m.put("bounding_leap", new DuelSkillDef(2, 3, 2, DuelTargetType.ENEMY_SINGLE,
                 (session, actor, aIdx, target, tIdx, level) -> {
-                    int dmg = session.getAtk(actor, aIdx) + level;
+                    int dmg = session.getAtk(actor, aIdx) + 3 + level;
                     DerivedPetStats tStats = new DerivedPetStats(session.rosterFor(target)[tIdx]);
                     List<ActiveEffect> tFx = session.effectsFor(target, tIdx);
                     ActiveEffect phased = tFx.stream()
@@ -225,17 +225,17 @@ public final class DuelSkillAdapter {
                             + String.format("%.1f", mult) + ".";
                 }));
 
-        // lava_walker: BURN DoT on one enemy
-        // lv1: 1 dmg/turn × 2t → lv10: 4 dmg/turn × 4t
+        // lava_walker: BURN fading DoT on one enemy
+        // lv1: starts 4 dmg × 4t (total 10) → lv10: starts 7 dmg × 6t (total 27)
         m.put("lava_walker", new DuelSkillDef(2, 3, 2, DuelTargetType.ENEMY_SINGLE,
                 (session, actor, aIdx, target, tIdx, level) -> {
-                    int dmg   = 1 + level / 3;
-                    int turns = 2 + level / 4;
+                    int dmg   = 3 + level / 3;
+                    int turns = 4 + level / 5;
                     session.applyEffect(target, tIdx,
                             new ActiveEffect(DuelStatusType.BURN, turns, dmg));
                     return session.petName(actor, aIdx) + " scorches "
-                            + session.petName(target, tIdx) + "! " + dmg
-                            + " burn dmg × " + turns + " turns.";
+                            + session.petName(target, tIdx) + "! 🔥 " + dmg
+                            + "→1 burn × " + turns + " turns.";
                 }));
 
         // ★ meditate: SP RESTORE — commune with inner spirit (2 SP cost → +3 or +4 SP)
@@ -320,31 +320,32 @@ public final class DuelSkillAdapter {
                     return session.petName(actor, aIdx) + " steps into the void! Immune to next hit.";
                 }));
 
-        // flame_aura: AoE fire damage to all enemies
-        // lv1: 2 dmg each → lv10: 7 dmg each
+        // flame_aura: fading BURN DoT on all enemies (stackable)
+        // lv1: 4→1 burn × 4t per enemy (10 total each) → lv10: 7→1 burn × 7t (28 each)
         m.put("flame_aura", new DuelSkillDef(3, 4, 3, DuelTargetType.ALL_ENEMIES,
                 (session, actor, aIdx, target, tIdx, level) -> {
-                    int dmg = 2 + level / 2;
+                    int burnStart = 3 + level / 3;
+                    int burnTurns = 4 + level / 3;
                     UUID opp = session.opponentOf(actor);
                     StringBuilder log = new StringBuilder(
                             session.petName(actor, aIdx) + " erupts in flames!");
                     for (int i = 0; i < 3; i++) {
                         if (session.isAlive(opp, i)) {
-                            int dealt = session.resolveDamage(actor, aIdx, opp, i, dmg);
-                            if (dealt > 0)
-                                log.append(" ").append(session.petName(opp, i))
-                                        .append(": ").append(dealt).append(" dmg.");
+                            session.applyEffect(opp, i,
+                                    new ActiveEffect(DuelStatusType.BURN, burnTurns, burnStart));
+                            log.append(" ").append(session.petName(opp, i))
+                                    .append(": 🔥").append(burnStart).append("→1×").append(burnTurns).append("t.");
                         }
                     }
                     return log.toString();
                 }));
 
         // soul_drain: WITHER target + immediate damage + ★ restores 1 SP
-        // lv1: wither -1 maxHP, 1 dmg → lv10: wither -4 maxHP, 3 dmg
+        // lv1: wither -2 maxHP, 3 dmg → lv10: wither -5 maxHP, 6 dmg
         m.put("soul_drain", new DuelSkillDef(2, 4, 3, DuelTargetType.ENEMY_SINGLE,
                 (session, actor, aIdx, target, tIdx, level) -> {
-                    int wither = 1 + level / 3;
-                    int dmg    = 1 + level / 4;
+                    int wither = 2 + level / 3;
+                    int dmg    = 2 + level / 3;
                     session.applyEffect(target, tIdx,
                             new ActiveEffect(DuelStatusType.WITHER, -1, wither));
                     int dealt = session.resolveDamage(actor, aIdx, target, tIdx, dmg);
@@ -376,10 +377,10 @@ public final class DuelSkillAdapter {
         // ══════════════════════════════════════════════════════════════════════
 
         // sonic_shriek: damage + STUN (enemy loses next turn)
-        // lv1: 3 dmg → lv10: 8 dmg
+        // lv1: 6 dmg → lv10: 16 dmg
         m.put("sonic_shriek", new DuelSkillDef(3, 5, 3, DuelTargetType.ENEMY_SINGLE,
                 (session, actor, aIdx, target, tIdx, level) -> {
-                    int dmg   = 3 + level / 2;
+                    int dmg   = 5 + level;
                     int dealt = session.resolveDamage(actor, aIdx, target, tIdx, dmg);
                     if (dealt > 0) {
                         session.applyEffect(target, tIdx,
@@ -392,10 +393,10 @@ public final class DuelSkillAdapter {
                 }));
 
         // draconic_surge: massive single-target burst
-        // lv1: ATK×2.1 → lv10: ATK×3.0
+        // lv1: ATK×2.65 → lv10: ATK×4.15
         m.put("draconic_surge", new DuelSkillDef(3, 5, 3, DuelTargetType.ENEMY_SINGLE,
                 (session, actor, aIdx, target, tIdx, level) -> {
-                    float mult  = 2.0f + level * 0.1f;
+                    float mult  = 2.5f + level * 0.15f;
                     int baseDmg = (int)(session.getAtk(actor, aIdx) * mult);
                     int dealt   = session.resolveDamage(actor, aIdx, target, tIdx, baseDmg);
                     return session.petName(actor, aIdx) + " surges with draconic power! "
@@ -403,11 +404,11 @@ public final class DuelSkillAdapter {
                 }));
 
         // wither_aura: AoE WITHER + damage on all enemies
-        // lv1: 1 dmg, -1 maxHP each → lv10: 4 dmg, -3 maxHP each
+        // lv1: 4 dmg, -2 maxHP each → lv10: 8 dmg, -5 maxHP each
         m.put("wither_aura", new DuelSkillDef(3, 5, 3, DuelTargetType.ALL_ENEMIES,
                 (session, actor, aIdx, target, tIdx, level) -> {
-                    int dmg    = 1 + level / 3;
-                    int wither = 1 + level / 4;
+                    int dmg    = 3 + level / 2;
+                    int wither = 2 + level / 3;
                     UUID opp = session.opponentOf(actor);
                     StringBuilder log = new StringBuilder(
                             session.petName(actor, aIdx) + " radiates wither energy!");
@@ -441,13 +442,13 @@ public final class DuelSkillAdapter {
                 }));
 
         // ground_slam: AoE scaling with END stat
-        // lv1: (ATK+END)×0.84 each → lv10: (ATK+END)×1.2 each
+        // lv1: (ATK+END)×1.05 each → lv10: (ATK+END)×1.65 each
         m.put("ground_slam", new DuelSkillDef(3, 5, 3, DuelTargetType.ALL_ENEMIES,
                 (session, actor, aIdx, target, tIdx, level) -> {
                     DerivedPetStats atkStats = new DerivedPetStats(session.rosterFor(actor)[aIdx]);
                     int endStar = session.rosterFor(actor)[aIdx].stats()
                             .getOrDefault(PetStat.ENDURANCE, 1);
-                    float scale  = 0.80f + level * 0.04f;
+                    float scale  = 1.00f + level * 0.06f;
                     int   baseDmg = (int)((atkStats.atk + endStar) * scale);
                     UUID opp = session.opponentOf(actor);
                     StringBuilder log = new StringBuilder(
@@ -468,10 +469,10 @@ public final class DuelSkillAdapter {
         // ══════════════════════════════════════════════════════════════════════
 
         // wither_skull: UNBLOCKABLE damage (bypasses all mitigation, only second_life survives)
-        // lv1: 4 dmg → lv10: 9 dmg
+        // lv1: 8 dmg → lv10: 18 dmg
         m.put("wither_skull", new DuelSkillDef(4, 5, 3, DuelTargetType.ENEMY_SINGLE,
                 (session, actor, aIdx, target, tIdx, level) -> {
-                    int dmg = 4 + level / 2;
+                    int dmg = 7 + level;
                     session.applyRawDamage(target, tIdx, dmg);
                     return session.petName(actor, aIdx) + " fires a wither skull at "
                             + session.petName(target, tIdx) + "! " + dmg + " UNBLOCKABLE dmg!";
@@ -517,5 +518,41 @@ public final class DuelSkillAdapter {
     /** Returns true if the given skill has a duel definition (i.e. is manually usable). */
     public static boolean hasDef(String skillId) {
         return REGISTRY.containsKey(skillId);
+    }
+
+    /** One-line description of what the skill does, shown in the duel UI on hover. */
+    public static String getDescription(String skillId) {
+        return switch (skillId) {
+            case "featherfall"      -> "Boosts own evasion for 1–2 turns.";
+            case "lucky_oink"       -> "Heals a chosen ally.";
+            case "steady_heal"      -> "Channels steady healing to a chosen ally.";
+            case "lucky_paw"        -> "Next attack gains bonus critical hit chance.";
+            case "night_vision"     -> "Multiplies own next attack damage.";
+            case "quick_step"       -> "Costs 1 SP but restores more — net SP gain.";
+            case "sweet_sting"      -> "Poisons an enemy (fading DoT — starts strong, decays each turn).";
+            case "woolly_buffer"    -> "Shields an ally — partially absorbs the next hit.";
+            case "pack_call"        -> "Heavy ATK-scaled strike on a single enemy.";
+            case "aquatic_bond"     -> "Reduces an enemy's ATK for several turns.";
+            case "bamboo_fortitude" -> "Reduces damage taken by an ally for multiple turns.";
+            case "bounding_leap"    -> "Piercing strike — ignores shields and fortify.";
+            case "shell_guard"      -> "Makes self immune to the next hit received.";
+            case "ancient_sense"    -> "Large multiplier on own next attack damage.";
+            case "lava_walker"      -> "Burns an enemy (fading DoT — starts hot, decays each turn).";
+            case "meditate"         -> "Restores 2 SP and heals a small amount of HP.";
+            case "wishful_gift"     -> "Random: heal self, strike an enemy, or cleanse a debuff.";
+            case "iron_will"        -> "Reflects a portion of the next incoming hit back at the attacker.";
+            case "void_step"        -> "Immune to the next hit; bonus EVA boost at higher levels.";
+            case "flame_aura"       -> "Applies a fading burn to all 3 enemy pets (stackable).";
+            case "soul_drain"       -> "Withers enemy max HP, deals damage, and restores 1 SP.";
+            case "wind_deflect"     -> "Combo: reflect + evasion boost on self.";
+            case "sonic_shriek"     -> "Deals damage and stuns an enemy for one turn.";
+            case "draconic_surge"   -> "Massive ATK-scaled burst on a single enemy.";
+            case "wither_aura"      -> "Shrinks max HP and damages all 3 enemy pets.";
+            case "fatigue_curse"    -> "Heavily reduces enemy ATK for turns and stuns it.";
+            case "ground_slam"      -> "AoE damage scaling with own ATK + END stat.";
+            case "wither_skull"     -> "Unblockable direct damage — bypasses all defenses.";
+            case "spirit_burst"     -> "Restores SP; at high level, boosts all alive allies.";
+            default -> "";
+        };
     }
 }

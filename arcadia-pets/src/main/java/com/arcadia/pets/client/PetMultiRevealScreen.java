@@ -1,5 +1,6 @@
 package com.arcadia.pets.client;
 
+import com.arcadia.lib.client.ArcadiaTheme;
 import com.arcadia.pets.config.PetPoolConfig;
 import com.arcadia.pets.item.PetData;
 import com.arcadia.pets.item.PetRarity;
@@ -239,7 +240,7 @@ public class PetMultiRevealScreen extends Screen {
         if (phase == 0) {
             renderStrips(g, partialTick);
         } else {
-            g.fill(0, 0, width, height, 0x99000000);
+            g.fill(0, 0, width, height, ArcadiaTheme.OVERLAY_BG);
             renderMiniCards(g, mouseX, mouseY);
             if (currentDetailCard >= 0) renderDetailCard(g, currentDetailCard);
             if (ticksPhase1 > 30) {
@@ -263,17 +264,20 @@ public class PetMultiRevealScreen extends Screen {
         // For 4 strips, narrow the cards and shrink card text to 0.8× so they all fit comfortably.
         float fontScale = count <= 3 ? 1.0f : 0.8f;
 
-        g.drawCenteredString(font,
+        ArcadiaTheme.drawTitleBar(g,
                 Component.translatable("arcadia_pets.gui.multi_reveal.rolling", count)
                         .withStyle(s -> s.withBold(true)),
-                cx, areaTop - 22, 0xFFFFD700);
+                cx, areaTop - 22, 160);
 
         for (int i = 0; i < count; i++) {
             int stripTop = areaTop + i * (slotH + STRIP_GAP);
             int cardTopY = stripTop + 5;
             float scroll = prevScrollPos[i] + (scrollPos[i] - prevScrollPos[i]) * partialTick;
 
-            g.fill(0, stripTop, width, stripTop + slotH, 0xCC000000);
+            // Steampunk strip background
+            g.fill(0, stripTop, width, stripTop + slotH, 0xDD0E0B14);
+            g.fill(0, stripTop, width, stripTop + 2, ArcadiaTheme.withAlpha(ArcadiaTheme.COPPER, 0x55));
+            g.fill(0, stripTop + slotH - 2, width, stripTop + slotH, ArcadiaTheme.withAlpha(ArcadiaTheme.COPPER, 0x55));
 
             int effCardH = slotH - 10;
             List<PetData> strip = strips.get(i);
@@ -285,39 +289,31 @@ public class PetMultiRevealScreen extends Screen {
                         j == resultIdx[i] && landed[i], effCardH, effCardW, fontScale);
             }
 
-            // Golden selector frame
+            // Steampunk selector frame
             int sl = cx - effCardW / 2 - 2, st = stripTop - 1;
-            int sr = cx + effCardW / 2 + 2, sb = stripTop + slotH + 1;
-            g.fill(sl, st, sr, st + 2, 0xFFFFD700);
-            g.fill(sl, sb - 2, sr, sb, 0xFFFFD700);
-            g.fill(sl, st, sl + 2, sb, 0xFFFFD700);
-            g.fill(sr - 2, st, sr, sb, 0xFFFFD700);
+            int sw = effCardW + 4, sh = slotH + 2;
+            ArcadiaTheme.drawGlow(g, sl, st, sw, sh, ArcadiaTheme.BRASS);
+            ArcadiaTheme.drawBorder(g, sl, st, sw, sh, ArcadiaTheme.COPPER);
         }
     }
 
     private void drawRouletteCard(GuiGraphics g, int x, int y, PetData data, boolean selected,
                                   int cardH, int cardW, float fontScale) {
         int rc = rarityColor(data.rarity());
-        g.fill(x, y, x + cardW, y + cardH, 0xCC000000 | (rc & 0x00FFFFFF));
-        g.fill(x + 2, y + 2, x + cardW - 2, y + cardH - 2, 0xCC101020);
-        if (selected) {
-            g.fill(x, y, x + cardW, y + 2, 0xFFFFD700);
-            g.fill(x, y + cardH - 2, x + cardW, y + cardH, 0xFFFFD700);
-            g.fill(x, y, x + 2, y + cardH, 0xFFFFD700);
-            g.fill(x + cardW - 2, y, x + cardW, y + cardH, 0xFFFFD700);
-        }
+        if (selected) ArcadiaTheme.drawGlow(g, x, y, cardW, cardH, rc);
+        ArcadiaTheme.drawPanel(g, x, y, cardW, cardH, selected, rc);
 
         // Scale text for narrow cards (4-strip mode)
         if (fontScale != 1.0f) {
             float icx = x + cardW / 2f;
             drawScaledCentered(g, data.rarity().getDisplayName(), icx, y + 8,  chatColor(data.rarity()), fontScale);
-            drawScaledCentered(g, mobName(data.mobType(), 8),     icx, y + 20, 0xFFFFFF,                 fontScale);
-            drawScaledCentered(g, data.totalStars() + "\u2605",   icx, y + cardH - 10, 0xFFD700,         fontScale);
+            drawScaledCentered(g, mobName(data.mobType(), 8),     icx, y + 20, ArcadiaTheme.TEXT_PRIMARY,  fontScale);
+            drawScaledCentered(g, data.totalStars() + "\u2605",   icx, y + cardH - 10, ArcadiaTheme.BRASS, fontScale);
         } else {
             int icx = x + cardW / 2;
             g.drawCenteredString(font, data.rarity().getDisplayName(), icx, y + 8,  chatColor(data.rarity()));
-            g.drawCenteredString(font, mobName(data.mobType(), 8),     icx, y + 26, 0xFFFFFF);
-            g.drawCenteredString(font, data.totalStars() + "\u2605",   icx, y + cardH - 18, 0xFFD700);
+            g.drawCenteredString(font, mobName(data.mobType(), 8),     icx, y + 26, ArcadiaTheme.TEXT_PRIMARY);
+            g.drawCenteredString(font, data.totalStars() + "\u2605",   icx, y + cardH - 18, ArcadiaTheme.BRASS);
         }
     }
 
@@ -360,31 +356,26 @@ public class PetMultiRevealScreen extends Screen {
         boolean fullyRevealed = revealed >= total;
         boolean special = fullyRevealed && total >= 25;
 
-        // Gold glow for 25+ stars once fully revealed
+        // Amber glow for 25+ stars once fully revealed
         if (special) {
             int ga = 50 + (int) (30 * Math.sin(ticksPhase1 * 0.2));
-            g.fill(x - 4, y - 4, x + MINI_W + 4, y + MINI_H + 4, (ga << 24) | 0xFFD700);
+            g.fill(x - 4, y - 4, x + MINI_W + 4, y + MINI_H + 4, ArcadiaTheme.withAlpha(ArcadiaTheme.AMBER, ga));
         }
 
-        int border = active ? rc : (rc & 0x00FFFFFF) | 0xAA000000;
-        g.fill(x, y, x + MINI_W, y + MINI_H, active ? 0xE8181828 : 0xCC101020);
-        g.fill(x, y, x + MINI_W, y + 2, border);
-        g.fill(x, y + MINI_H - 2, x + MINI_W, y + MINI_H, border);
-        g.fill(x, y, x + 2, y + MINI_H, border);
-        g.fill(x + MINI_W - 2, y, x + MINI_W, y + MINI_H, border);
+        ArcadiaTheme.drawPanel(g, x, y, MINI_W, MINI_H, active, rc);
 
         g.drawCenteredString(font, data.rarity().getDisplayName(),
                 x + MINI_W / 2, y + 8, chatColor(data.rarity()));
         g.drawCenteredString(font,
                 Component.literal(mobName(data.mobType(), 9)).withStyle(s -> s.withBold(true)),
-                x + MINI_W / 2, y + 26, 0xFFFFFF);
+                x + MINI_W / 2, y + 26, ArcadiaTheme.TEXT_PRIMARY);
         // Stars pop in one at a time
         g.drawCenteredString(font, revealed + " \u2605",
-                x + MINI_W / 2, y + MINI_H - 22, special ? 0xFFD700 : 0xCCAA00);
+                x + MINI_W / 2, y + MINI_H - 22, special ? ArcadiaTheme.BRASS : ArcadiaTheme.TEXT_SECONDARY);
         if (active) {
             g.drawCenteredString(font,
                     Component.translatable("arcadia_pets.gui.multi_reveal.inspect"),
-                    x + MINI_W / 2, y + MINI_H - 10, 0x88FFFFFF);
+                    x + MINI_W / 2, y + MINI_H - 10, ArcadiaTheme.TEXT_DIM);
         }
     }
 
@@ -406,16 +397,11 @@ public class PetMultiRevealScreen extends Screen {
         // Glow for legendary / mythic
         if (data.rarity() == PetRarity.LEGENDARY || data.rarity() == PetRarity.MYTHIC) {
             int ga = 40 + (int) (20 * Math.sin(ticksPhase1 * 0.1));
-            int glow = (ga << 24) | (rc & 0x00FFFFFF);
-            g.fill(cardX - 8, cardY - 8, cardX + DETAIL_W + 8, cardY + cardH + 8, glow);
-            g.fill(cardX - 4, cardY - 4, cardX + DETAIL_W + 4, cardY + cardH + 4, glow);
+            g.fill(cardX - 8, cardY - 8, cardX + DETAIL_W + 8, cardY + cardH + 8, ArcadiaTheme.withAlpha(rc, ga));
+            g.fill(cardX - 4, cardY - 4, cardX + DETAIL_W + 4, cardY + cardH + 4, ArcadiaTheme.withAlpha(rc, ga + 16));
         }
 
-        g.fill(cardX, cardY, cardX + DETAIL_W, cardY + cardH, 0xF0101020);
-        g.fill(cardX, cardY, cardX + DETAIL_W, cardY + 3, rc);
-        g.fill(cardX, cardY + cardH - 2, cardX + DETAIL_W, cardY + cardH, rc);
-        g.fill(cardX, cardY, cardX + 2, cardY + cardH, rc);
-        g.fill(cardX + DETAIL_W - 2, cardY, cardX + DETAIL_W, cardY + cardH, rc);
+        ArcadiaTheme.drawPanel(g, cardX, cardY, DETAIL_W, cardH, false, rc);
 
         int ty = cardY + 12;
 
@@ -444,11 +430,11 @@ public class PetMultiRevealScreen extends Screen {
         ty += 10;
         g.drawCenteredString(font,
                 Component.translatable("arcadia_pets.gui.reveal.total_stars", total),
-                cx, ty, 0xAAAAAA);
+                cx, ty, ArcadiaTheme.TEXT_SECONDARY);
         ty += 14;
 
         // Divider
-        g.fill(cardX + 10, ty, cardX + DETAIL_W - 10, ty + 1, 0x60FFFFFF);
+        ArcadiaTheme.drawSeparator(g, cardX, ty, DETAIL_W, ArcadiaTheme.withAlpha(ArcadiaTheme.COPPER, 0x60));
         ty += 7;
 
         // Stats — 2 columns × 3 rows
@@ -460,7 +446,7 @@ public class PetMultiRevealScreen extends Screen {
             int sy   = ty + (i % 3) * 13;
             int stars = data.stats().getOrDefault(stat, 0);
             String lbl = stat.getIcon() + " ";
-            g.drawString(font, lbl, sx, sy, 0xAAAAAA, false);
+            g.drawString(font, lbl, sx, sy, ArcadiaTheme.TEXT_SECONDARY, false);
             int lw = font.width(lbl);
             g.drawString(font, "\u2606\u2606\u2606\u2606\u2606", sx + lw, sy, 0x444444, false);
             if (stars > 0) g.drawString(font, "\u2605".repeat(stars), sx + lw, sy, 0xFFD700, false);
@@ -470,7 +456,7 @@ public class PetMultiRevealScreen extends Screen {
         List<SkillInstance> skills = data.skills();
         if (!skills.isEmpty()) {
             int sy = ty + 3 * 13 + 5;
-            g.fill(cardX + 10, sy, cardX + DETAIL_W - 10, sy + 1, 0x40FFFFFF);
+            ArcadiaTheme.drawSeparator(g, cardX, sy, DETAIL_W, ArcadiaTheme.withAlpha(ArcadiaTheme.COPPER, 0x40));
             sy += 5;
             g.drawCenteredString(font,
                     Component.translatable("arcadia_pets.gui.pet.skills_label")

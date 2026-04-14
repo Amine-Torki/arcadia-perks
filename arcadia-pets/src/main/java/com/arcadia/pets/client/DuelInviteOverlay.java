@@ -101,12 +101,12 @@ public final class DuelInviteOverlay {
         int declineX = tx + TOAST_W - BTN_W - 4;
 
         if (mouseX >= acceptX && mouseX <= acceptX + BTN_W && mouseY >= btnY && mouseY <= btnY + BTN_H) {
-            PacketDistributor.sendToServer(new C2SDuelAction(C2SDuelAction.ACCEPT_CHALLENGE, "", 0));
+            PacketDistributor.sendToServer(new C2SDuelAction(C2SDuelAction.ACCEPT_CHALLENGE, "", 0, 0));
             dismiss();
             return true;
         }
         if (mouseX >= declineX && mouseX <= declineX + BTN_W && mouseY >= btnY && mouseY <= btnY + BTN_H) {
-            PacketDistributor.sendToServer(new C2SDuelAction(C2SDuelAction.DECLINE_CHALLENGE, "", 0));
+            PacketDistributor.sendToServer(new C2SDuelAction(C2SDuelAction.DECLINE_CHALLENGE, "", 0, 0));
             dismiss();
             return true;
         }

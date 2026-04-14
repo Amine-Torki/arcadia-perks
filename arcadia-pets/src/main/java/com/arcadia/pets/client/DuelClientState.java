@@ -19,9 +19,13 @@ public final class DuelClientState {
     /** Decoded pet data for both rosters (indexed [side 0=p1 / 1=p2][pet 0–2]). */
     private static volatile PetData[][] rosters = null;
 
+    /** Last received hint from the opponent (cleared on each state update). */
+    private static volatile int opponentHintType = -1;
+    private static volatile int opponentHintPet  = -1;
+
     private DuelClientState() {}
 
-    /** Updates the cached state from a fresh packet. */
+    /** Updates the cached state from a fresh packet. Action completed — clear stale hint. */
     public static void update(S2CDuelState state) {
         current = state;
         PetData[][] r = new PetData[2][3];
@@ -32,7 +36,21 @@ public final class DuelClientState {
                     ? PetData.fromTag(state.p2RosterTags()[i]) : null;
         }
         rosters = r;
+        // Opponent completed their action — hint is no longer valid
+        opponentHintType = -1;
+        opponentHintPet  = -1;
     }
+
+    /** Called when a {@link com.arcadia.pets.network.S2CDuelHint} arrives from the opponent. */
+    public static void updateOpponentHint(int hintType, int petIdx) {
+        opponentHintType = hintType;
+        opponentHintPet  = petIdx;
+    }
+
+    /** Current opponent hint type (-1 = none). See {@link com.arcadia.pets.network.C2SDuelHint} constants. */
+    public static int opponentHintType() { return opponentHintType; }
+    /** Pet index associated with the current opponent hint (-1 = none). */
+    public static int opponentHintPet()  { return opponentHintPet; }
 
     /** Returns the latest duel state, or null if not in a duel. */
     public static S2CDuelState get() { return current; }
@@ -53,6 +71,12 @@ public final class DuelClientState {
     public static boolean isMyTurn(UUID localPlayerUuid) {
         S2CDuelState s = current;
         return s != null && localPlayerUuid.equals(s.actorUuid());
+    }
+
+    /** Pet indices (0–2) of the current acting player's pets that have not yet submitted an action. */
+    public static List<Integer> pendingPetActions() {
+        S2CDuelState s = current;
+        return s != null ? s.pendingPetActions() : Collections.emptyList();
     }
 
     /** Returns HP for a given side (0=p1, 1=p2) and pet index. */

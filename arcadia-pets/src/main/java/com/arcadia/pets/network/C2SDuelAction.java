@@ -18,24 +18,27 @@ import java.util.UUID;
  *
  * <h3>Action types</h3>
  * <ul>
- *   <li>0 = ATTACK — basic attack; {@code targetPetIdx} is the enemy pet to hit</li>
- *   <li>1 = SKILL  — use a skill; {@code skillId} names the skill, {@code targetPetIdx}
- *       indicates the target pet (ally or enemy, per the skill's target type)</li>
- *   <li>2 = DEFEND — brace for impact; ends the turn</li>
- *   <li>3 = FORFEIT — concede the duel</li>
- *   <li>4 = PASS   — spend remaining AP and end the turn</li>
- *   <li>10 = ACCEPT_CHALLENGE — sent by the challenged player to accept a duel invite</li>
- *   <li>11 = DECLINE_CHALLENGE — sent by the challenged player to decline</li>
+ *   <li>0 = ATTACK  — basic attack; {@code actorPetIdx} is which of your pets attacks,
+ *       {@code targetPetIdx} is the enemy pet to hit</li>
+ *   <li>1 = SKILL   — use a skill; {@code skillId} names the skill, {@code actorPetIdx} is your
+ *       acting pet, {@code targetPetIdx} is the target (ally or enemy per skill type)</li>
+ *   <li>2 = DEFEND  — that pet guards (GUARD status); {@code actorPetIdx} identifies the pet</li>
+ *   <li>3 = FORFEIT — concede the duel (actorPetIdx/targetPetIdx ignored)</li>
+ *   <li>4 = PASS    — end the entire player turn early, SP carried over</li>
+ *   <li>5 = SKIP_PET — skip this specific pet's action this turn; {@code actorPetIdx} identifies the pet</li>
+ *   <li>10 = ACCEPT_CHALLENGE  — sent by challenged player to accept a duel invite</li>
+ *   <li>11 = DECLINE_CHALLENGE — sent by challenged player to decline</li>
  * </ul>
  */
 public record C2SDuelAction(int actionType, String skillId,
-                            int targetPetIdx) implements CustomPacketPayload {
+                            int actorPetIdx, int targetPetIdx) implements CustomPacketPayload {
 
     public static final int ATTACK             = 0;
     public static final int SKILL              = 1;
     public static final int DEFEND             = 2;
     public static final int FORFEIT            = 3;
     public static final int PASS               = 4;
+    public static final int SKIP_PET           = 5;
     public static final int ACCEPT_CHALLENGE   = 10;
     public static final int DECLINE_CHALLENGE  = 11;
 
@@ -48,11 +51,13 @@ public record C2SDuelAction(int actionType, String skillId,
     private static void encode(FriendlyByteBuf buf, C2SDuelAction pkt) {
         buf.writeVarInt(pkt.actionType);
         buf.writeUtf(pkt.skillId);
+        buf.writeVarInt(pkt.actorPetIdx);
         buf.writeVarInt(pkt.targetPetIdx);
     }
 
     private static C2SDuelAction decode(FriendlyByteBuf buf) {
-        return new C2SDuelAction(buf.readVarInt(), buf.readUtf(), buf.readVarInt());
+        return new C2SDuelAction(buf.readVarInt(), buf.readUtf(),
+                buf.readVarInt(), buf.readVarInt());
     }
 
     @Override
@@ -122,11 +127,12 @@ public record C2SDuelAction(int actionType, String skillId,
     // ── In-combat action ─────────────────────────────────────────────────────
 
     private static void handleCombatAction(ServerPlayer player, C2SDuelAction pkt) {
-        DuelManager.ActionResult result = DuelManager.handleAction(
-                player, pkt.actionType, pkt.skillId, pkt.targetPetIdx);
-
+        // Grab session BEFORE handleAction — forfeit removes it from the active map
         DuelSession session = DuelManager.getSessionFor(player.getUUID());
         if (session == null) return;
+
+        DuelManager.handleAction(player, pkt.actionType, pkt.skillId,
+                pkt.actorPetIdx, pkt.targetPetIdx);
 
         // Broadcast updated state to both players
         S2CDuelState state = S2CDuelState.from(session);
@@ -175,13 +181,12 @@ public record C2SDuelAction(int actionType, String skillId,
                 new com.arcadia.lib.event.QuestProgressEvent(
                         winner.getUUID(), "PET_DUEL_WIN", "", 1));
 
-        // Duel participation XP: 2 XP per roster pet (= 1/5 of a treat) for both players
+        // Duel participation XP: 2 XP per roster pet for winner, 1 for loser
         ServerPlayer loserPlayer = (ServerPlayer) server.getPlayerList().getPlayer(loser);
         grantDuelParticipationXp(winner,      session.rosterFor(session.winner), 2);
         grantDuelParticipationXp(loserPlayer, session.rosterFor(loser),          1);
 
-        // ELO update — resolved by arcadia-prestige's EloEventHandler
-        // Also carries pet IDs so the handler can grant Pass bonus XP (+1 per winner pet)
+        // ELO update
         String winnerMob = mobTypeOf(session.rosterFor(session.winner));
         String loserMob  = mobTypeOf(session.rosterFor(loser));
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(
@@ -191,7 +196,6 @@ public record C2SDuelAction(int actionType, String skillId,
                         petIdsOf(session.rosterFor(loser))));
     }
 
-    /** Grants {@code xpPerPet} skill XP to every non-null pet in a roster. */
     private static void grantDuelParticipationXp(ServerPlayer player,
                                                   com.arcadia.pets.item.PetData[] roster,
                                                   int xpPerPet) {
@@ -202,7 +206,6 @@ public record C2SDuelAction(int actionType, String skillId,
         }
     }
 
-    /** Returns the mob type of the first non-null pet in a roster. */
     private static String mobTypeOf(com.arcadia.pets.item.PetData[] roster) {
         for (com.arcadia.pets.item.PetData pd : roster) {
             if (pd != null) return pd.mobType();
@@ -210,7 +213,6 @@ public record C2SDuelAction(int actionType, String skillId,
         return "";
     }
 
-    /** Collects non-null petIds from a roster. */
     private static java.util.List<java.util.UUID> petIdsOf(com.arcadia.pets.item.PetData[] roster) {
         java.util.List<java.util.UUID> ids = new java.util.ArrayList<>();
         for (com.arcadia.pets.item.PetData pd : roster) {
@@ -221,12 +223,9 @@ public record C2SDuelAction(int actionType, String skillId,
 
     private static void tryGiveCoins(ServerPlayer player, int amount) {
         try {
-            // Numismatics API call — wrapped in try/catch in case the API changes
             Class<?> api = Class.forName("com.simibubi.numismatics.api.NumismaticsApi");
             var method = api.getMethod("addCoins", ServerPlayer.class, int.class);
             method.invoke(null, player, amount);
-        } catch (Exception ignored) {
-            // Numismatics not present or API mismatch — silently skip coins
-        }
+        } catch (Exception ignored) {}
     }
 }

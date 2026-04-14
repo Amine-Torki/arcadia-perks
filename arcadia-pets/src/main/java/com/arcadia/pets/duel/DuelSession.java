@@ -11,84 +11,83 @@ import java.util.concurrent.ThreadLocalRandom;
 /**
  * Full mutable state of a running duel.
  *
- * <h3>Team layout</h3>
+ * <h3>Turn model (player-based)</h3>
  * <ul>
- *   <li>p1 = challenger, p2 = challengee</li>
- *   <li>Each player has a roster of 3 pets (indices 0–2)</li>
- *   <li>All 3 pets are "on-field" simultaneously (Final Fantasy / Dragon Quest style)</li>
+ *   <li>Players alternate full turns: p1 acts with ALL alive pets, then p2, then p1, …</li>
+ *   <li>{@link #currentTurnPlayer} is whose turn it is.</li>
+ *   <li>{@link #pendingPetActions} holds the indices (0–2) of pets that still need to act this turn.</li>
+ *   <li>A player calls {@link #endPetAction(int)} after each pet acts; when the set empties,
+ *       {@link #endPlayerTurn()} fires automatically.</li>
  * </ul>
  *
- * <h3>Win condition</h3>
- * A player loses when ALL 3 of their pets reach 0 HP.
- *
- * <h3>Turn order</h3>
- * Sorted by AGI (highest first) across all 6 living pets. Rebuilt at the start of
- * each new round. Dead pets are skipped; stunned pets lose their turn.
- *
  * <h3>Spirit Points (SP)</h3>
- * Each pet starts combat with 0 SP and gains {@link #SP_PER_TURN} SP when their turn opens,
- * capped at {@link #SP_MAX}. Unused SP carries over to the next round. The basic attack is
- * always free; skills cost 1–4 SP. Some skills can restore SP directly.
+ * Each player's team shares a single SP pool. At the start of your turn you gain
+ * {@link #SP_PER_TURN} SP (carried over from last turn, capped at {@link #SP_MAX}).
+ * Basic attack and defend are free; skills cost 1–4 SP.
+ *
+ * <h3>Guard (Defend action)</h3>
+ * Defending applies {@link DuelStatusType#GUARD} to that pet.
+ * During the opponent's turn, each incoming attack checks all alive allies of the
+ * target for a GUARD token — the first one that passes a % roll intercepts the hit
+ * at −40 % damage. Remaining GUARD tokens are cleared at the end of the attacking
+ * player's turn.
  */
 public final class DuelSession {
 
     // ── Constants ─────────────────────────────────────────────────────────────
 
-    /** Maximum Spirit Points a pet can hold. */
-    public static final int SP_MAX        = 5;
-    /** SP gained at the start of each turn. */
-    public static final int SP_PER_TURN   = 1;
-    public static final int TURN_TIMEOUT_MS = 30_000; // 30 seconds
-    private static final int MAX_LOG       = 24;
+    public static final int SP_MAX          = 5;
+    public static final int SP_PER_TURN     = 1;
+    public static final int TURN_TIMEOUT_MS = 45_000; // 45 s for a full team turn
+    private static final int MAX_LOG        = 24;
 
     // ── Identity ─────────────────────────────────────────────────────────────
 
     public final UUID duelId = UUID.randomUUID();
-    /** Challenger (p1). */
-    public final UUID p1;
-    /** Challengee (p2). */
-    public final UUID p2;
+    public final UUID p1;   // challenger
+    public final UUID p2;   // challengee
 
     // ── Rosters ──────────────────────────────────────────────────────────────
 
-    public final PetData[] p1Roster    = new PetData[3];
-    public final PetData[] p2Roster    = new PetData[3];
-    public final int[]     p1Hp        = new int[3];
-    public final int[]     p2Hp        = new int[3];
-    public final int[]     p1MaxHp     = new int[3];
-    public final int[]     p2MaxHp     = new int[3];
-    /** Tracks whether each pet's Second Life passive has already triggered. */
+    public final PetData[] p1Roster        = new PetData[3];
+    public final PetData[] p2Roster        = new PetData[3];
+    public final int[]     p1Hp            = new int[3];
+    public final int[]     p2Hp            = new int[3];
+    public final int[]     p1MaxHp         = new int[3];
+    public final int[]     p2MaxHp         = new int[3];
     public final boolean[] p1SecondLifeUsed = new boolean[3];
     public final boolean[] p2SecondLifeUsed = new boolean[3];
 
-    // ── Status effects ────────────────────────────────────────────────────────
-    // Key format: "1_0" = p1's pet 0, "2_2" = p2's pet 2.
+    // ── Status effects & cooldowns ────────────────────────────────────────────
 
-    private final Map<String, List<ActiveEffect>> effects = new HashMap<>();
+    private final Map<String, List<ActiveEffect>> effects       = new HashMap<>();
+    private final Map<String, Integer>            skillCooldowns = new HashMap<>();
 
-    // ── Skill cooldowns ───────────────────────────────────────────────────────
-    // Key format: "1_0_featherfall" → remaining turns.
+    // ── Player-based turn state ───────────────────────────────────────────────
 
-    private final Map<String, Integer> skillCooldowns = new HashMap<>();
+    /** UUID of the player whose turn it currently is. */
+    public UUID currentTurnPlayer;
 
-    // ── Turn order ────────────────────────────────────────────────────────────
-
-    private final List<TurnSlot> turnOrder = new ArrayList<>();
-    private int turnOrderIndex = 0;
+    /**
+     * Indices (0–2) of the acting player's pets that have not yet submitted an
+     * action this turn. Populated by {@link #openPlayerTurn(UUID)}, drained by
+     * {@link #endPetAction(int)}.
+     */
+    public final LinkedHashSet<Integer> pendingPetActions = new LinkedHashSet<>();
 
     // ── Spirit Points ─────────────────────────────────────────────────────────
-    // Persisted per-pet across turns so unused SP carries over.
 
-    /** Per-pet stored SP between turns; key = petKey (e.g. "1_0"). */
-    private final Map<String, Integer> petSP = new HashMap<>();
-    /** SP currently available for the acting pet this turn. */
+    /** SP available for the current acting team this turn. Shared across all 3 pets. */
     public int currentSP = 0;
+
+    private int p1StoredSP = 0; // SP that carries over to p1's next turn
+    private int p2StoredSP = 0; // SP that carries over to p2's next turn
 
     // ── Phase ─────────────────────────────────────────────────────────────────
 
-    public DuelPhase phase = DuelPhase.ROSTER_PICK;
-    public boolean p1Confirmed = false;
-    public boolean p2Confirmed = false;
+    public DuelPhase phase        = DuelPhase.ROSTER_PICK;
+    public boolean   p1Confirmed  = false;
+    public boolean   p2Confirmed  = false;
 
     // ── Combat log ───────────────────────────────────────────────────────────
 
@@ -96,19 +95,17 @@ public final class DuelSession {
 
     // ── Timing ───────────────────────────────────────────────────────────────
 
-    /** Epoch-ms deadline for the current turn. 0 = not started yet. */
     public long actionDeadline = 0L;
-
-    /** Epoch-ms at which the bot should act. 0 = not a bot turn. */
-    public long botActAt = 0L;
+    public long botActAt       = 0L;
 
     // ── Result ────────────────────────────────────────────────────────────────
 
-    /** Null until the duel finishes. */
-    public UUID winner = null;
+    public UUID winner     = null;
+    public int  roundNumber = 0;
 
-    /** Incremented each time a full round (all living pets have acted once) completes. */
-    public int roundNumber = 0;
+    // ── Bot metadata ──────────────────────────────────────────────────────────
+
+    public BotDifficulty botDifficulty = null;
 
     // ── Constructor ──────────────────────────────────────────────────────────
 
@@ -121,13 +118,12 @@ public final class DuelSession {
     // Roster helpers
     // =========================================================================
 
-    public UUID opponentOf(UUID player)          { return player.equals(p1) ? p2  : p1; }
-    public PetData[] rosterFor(UUID player)      { return player.equals(p1) ? p1Roster : p2Roster; }
-    public int[]     hpFor(UUID player)          { return player.equals(p1) ? p1Hp     : p2Hp; }
-    public int[]     maxHpFor(UUID player)       { return player.equals(p1) ? p1MaxHp  : p2MaxHp; }
-    public boolean[] secondLifeUsedFor(UUID pl)  { return pl.equals(p1) ? p1SecondLifeUsed : p2SecondLifeUsed; }
+    public UUID     opponentOf(UUID player)         { return player.equals(p1) ? p2  : p1; }
+    public PetData[] rosterFor(UUID player)         { return player.equals(p1) ? p1Roster : p2Roster; }
+    public int[]    hpFor(UUID player)              { return player.equals(p1) ? p1Hp     : p2Hp; }
+    public int[]    maxHpFor(UUID player)           { return player.equals(p1) ? p1MaxHp  : p2MaxHp; }
+    public boolean[] secondLifeUsedFor(UUID pl)     { return pl.equals(p1) ? p1SecondLifeUsed : p2SecondLifeUsed; }
 
-    /** True when all 3 pets of this player are at 0 HP. */
     public boolean isDefeated(UUID player) {
         int[] hp = hpFor(player);
         return hp[0] <= 0 && hp[1] <= 0 && hp[2] <= 0;
@@ -137,7 +133,6 @@ public final class DuelSession {
         return hpFor(player)[petIdx] > 0;
     }
 
-    /** Returns the index of the first living pet for this player, or -1 if all dead. */
     public int firstAlivePet(UUID player) {
         int[] hp = hpFor(player);
         for (int i = 0; i < 3; i++) if (hp[i] > 0) return i;
@@ -145,19 +140,14 @@ public final class DuelSession {
     }
 
     // =========================================================================
-    // Turn-order management
+    // Combat initialisation
     // =========================================================================
 
-    /**
-     * Initialises combat after both rosters are confirmed.
-     * Sets HP from {@link DerivedPetStats}, applies Second Life markers,
-     * builds the first turn order, and opens the first turn.
-     */
     public void startCombat() {
         for (int side = 0; side < 2; side++) {
             UUID player = side == 0 ? p1 : p2;
             PetData[] roster = rosterFor(player);
-            int[] hp = hpFor(player);
+            int[] hp    = hpFor(player);
             int[] maxHp = maxHpFor(player);
             for (int i = 0; i < 3; i++) {
                 if (roster[i] == null) { maxHp[i] = 1; hp[i] = 0; continue; }
@@ -167,99 +157,95 @@ public final class DuelSession {
             }
         }
         phase = DuelPhase.ACTIVE;
-        rebuildTurnOrder();
-        openTurn();
+        openPlayerTurn(p1); // p1 (challenger) goes first
     }
+
+    // =========================================================================
+    // Turn management
+    // =========================================================================
 
     /**
-     * Rebuilds the turn order from all currently living pets, sorted by AGI desc.
-     * Ties are broken by p1 going before p2.
+     * Opens a new turn for the given player. Populates {@link #pendingPetActions}
+     * with all alive, non-stunned pets. Stunned pets have their stun consumed and
+     * are logged as skipped. If no pets can act, skips immediately to the opponent.
      */
-    public void rebuildTurnOrder() {
-        turnOrder.clear();
-        for (int side = 0; side < 2; side++) {
-            UUID player = side == 0 ? p1 : p2;
-            PetData[] roster = rosterFor(player);
-            for (int i = 0; i < 3; i++) {
-                if (roster[i] != null && isAlive(player, i)) {
-                    int agi = roster[i].stats().getOrDefault(PetStat.AGILITY, 1);
-                    turnOrder.add(new TurnSlot(player, i, agi));
-                }
-            }
-        }
-        turnOrder.sort((a, b) -> {
-            if (b.agility() != a.agility()) return b.agility() - a.agility();
-            return a.ownerUuid().equals(p1) ? -1 : 1; // p1 goes first on ties
-        });
-        turnOrderIndex = 0;
-    }
+    public void openPlayerTurn(UUID player) {
+        currentTurnPlayer = player;
+        pendingPetActions.clear();
 
-    /** Returns the slot that is currently acting. */
-    public TurnSlot currentSlot() {
-        if (turnOrder.isEmpty()) return null;
-        return turnOrder.get(turnOrderIndex % turnOrder.size());
-    }
-
-    /**
-     * Opens a new turn for the current slot pet: sets AP and deadline.
-     * Automatically skips stunned or dead pets and loops to the next one.
-     */
-    public void openTurn() {
-        while (true) {
-            if (turnOrder.isEmpty()) return;
-            TurnSlot slot = currentSlot();
-
-            // Dead pet — advance without doing anything
-            if (!isAlive(slot.ownerUuid(), slot.petIndex())) {
-                advanceToNextSlot();
-                continue;
-            }
-
-            // Stunned pet — consume stun, skip turn, advance
-            List<ActiveEffect> fx = effectsFor(slot.ownerUuid(), slot.petIndex());
+        for (int i = 0; i < 3; i++) {
+            if (!isAlive(player, i)) continue;
+            List<ActiveEffect> fx = effectsFor(player, i);
             ActiveEffect stun = fx.stream()
                     .filter(e -> e.type == DuelStatusType.STUN)
                     .findFirst().orElse(null);
             if (stun != null) {
                 fx.remove(stun);
-                addLog(petName(slot.ownerUuid(), slot.petIndex()) + " is stunned and loses their turn!");
-                advanceToNextSlot();
-                continue;
+                addLog(petName(player, i) + " is stunned and cannot act this turn!");
+            } else {
+                pendingPetActions.add(i);
             }
+        }
 
-            // Valid turn: restore SP (+SP_PER_TURN, carrying over unspent SP)
-            String spKey = petKey(slot.ownerUuid(), slot.petIndex());
-            int stored   = petSP.getOrDefault(spKey, 0);
-            currentSP    = Math.min(SP_MAX, stored + SP_PER_TURN);
-            actionDeadline = System.currentTimeMillis() + TURN_TIMEOUT_MS;
-            botActAt = 0L; // reset per-turn so tick handler reschedules it
-            return;
+        // SP: carry-over + 1 per turn
+        int stored = player.equals(p1) ? p1StoredSP : p2StoredSP;
+        currentSP = Math.min(SP_MAX, stored + SP_PER_TURN);
+
+        actionDeadline = System.currentTimeMillis() + TURN_TIMEOUT_MS;
+        botActAt = 0L;
+
+        if (pendingPetActions.isEmpty()) {
+            // All alive pets were stunned — skip silently (stun already consumed)
+            addLog((player.equals(p1) ? "Team 1" : "Team 2") + " has no pets that can act!");
+            // Save SP (nothing spent), switch without full effect-tick
+            saveSP(player);
+            UUID next = opponentOf(player);
+            if (player.equals(p2)) roundNumber++;
+            actionDeadline = 0L;
+            openPlayerTurn(next);
         }
     }
 
     /**
-     * Called when the current pet finishes spending AP or the owner passes.
-     * Ticks DOTs, decrements cooldowns, advances the turn pointer, and opens the next turn.
+     * Called by DuelManager after a pet finishes its action.
+     * Removes {@code petIdx} from {@link #pendingPetActions}; when the set is empty,
+     * ends the player's turn automatically.
      */
-    public void endTurn() {
-        TurnSlot slot = currentSlot();
-        if (slot != null) {
-            // Persist remaining SP for this pet before moving on
-            petSP.put(petKey(slot.ownerUuid(), slot.petIndex()), currentSP);
-            tickDotEffects(slot.ownerUuid(), slot.petIndex());
-            tickDurationEffects(slot.ownerUuid(), slot.petIndex());
+    public void endPetAction(int petIdx) {
+        pendingPetActions.remove(petIdx);
+        if (pendingPetActions.isEmpty()) {
+            endPlayerTurn();
         }
-        tickSkillCooldowns();
-        advanceToNextSlot();
-        openTurn();
     }
 
-    private void advanceToNextSlot() {
-        turnOrderIndex++;
-        if (turnOrderIndex >= turnOrder.size()) {
-            roundNumber++; // completed one full rotation of all living pets
-            rebuildTurnOrder();
+    public void endPlayerTurn() {
+        saveSP(currentTurnPlayer);
+
+        // Tick DOT and duration effects for the acting player's pets
+        for (int i = 0; i < 3; i++) {
+            tickDotEffects(currentTurnPlayer, i);
+            tickDurationEffects(currentTurnPlayer, i);
         }
+
+        // Tick all skill cooldowns once per player turn
+        tickSkillCooldowns();
+
+        // Clear GUARD tokens from the OPPONENT's team — their guard window just ended
+        // (this player just finished attacking, so the opponent's guards expire)
+        UUID opponent = opponentOf(currentTurnPlayer);
+        for (int i = 0; i < 3; i++) {
+            effectsFor(opponent, i).removeIf(e -> e.type == DuelStatusType.GUARD);
+        }
+
+        // Round increments after p2 completes their turn (full p1+p2 cycle = 1 round)
+        if (currentTurnPlayer.equals(p2)) roundNumber++;
+
+        openPlayerTurn(opponent);
+    }
+
+    private void saveSP(UUID player) {
+        if (player.equals(p1)) p1StoredSP = currentSP;
+        else                   p2StoredSP = currentSP;
     }
 
     // =========================================================================
@@ -295,10 +281,6 @@ public final class DuelSession {
         return effects.computeIfAbsent(petKey(player, petIdx), k -> new ArrayList<>());
     }
 
-    /**
-     * Applies an effect to a pet. DOTs (POISON, BURN) stack; all other types
-     * replace an existing instance of the same type.
-     */
     public void applyEffect(UUID player, int petIdx, ActiveEffect effect) {
         List<ActiveEffect> fx = effectsFor(player, petIdx);
         if (effect.type == DuelStatusType.POISON || effect.type == DuelStatusType.BURN) {
@@ -307,7 +289,6 @@ public final class DuelSession {
             fx.removeIf(e -> e.type == effect.type);
             fx.add(effect);
         }
-        // WITHER: immediately reduce maxHP
         if (effect.type == DuelStatusType.WITHER) {
             int[] maxHp = maxHpFor(player);
             int[] hp    = hpFor(player);
@@ -317,7 +298,6 @@ public final class DuelSession {
         }
     }
 
-    /** Ticks POISON / BURN effects on the given pet slot, dealing damage. */
     private void tickDotEffects(UUID player, int petIdx) {
         List<ActiveEffect> fx = effectsFor(player, petIdx);
         List<ActiveEffect> toRemove = new ArrayList<>();
@@ -325,8 +305,9 @@ public final class DuelSession {
             if (e.type == DuelStatusType.POISON || e.type == DuelStatusType.BURN) {
                 int dmg = Math.max(1, (int) e.magnitude);
                 applyRawDamage(player, petIdx, dmg);
-                String tag = e.type == DuelStatusType.POISON ? "poison" : "burn";
-                addLog(petName(player, petIdx) + " takes " + dmg + " " + tag + " damage!");
+                addLog(petName(player, petIdx) + " takes " + dmg
+                        + (e.type == DuelStatusType.POISON ? " poison" : " burn") + " damage!");
+                e.magnitude = Math.max(1, e.magnitude - 1); // fading DoT: -1 per tick
                 e.remainingTurns--;
                 if (e.remainingTurns <= 0) toRemove.add(e);
             }
@@ -334,13 +315,13 @@ public final class DuelSession {
         fx.removeAll(toRemove);
     }
 
-    /** Decrements duration on timed effects (FATIGUE, FORTIFY, EVA_BOOST) for the given pet. */
     private void tickDurationEffects(UUID player, int petIdx) {
         List<ActiveEffect> fx = effectsFor(player, petIdx);
         fx.removeIf(e -> {
             if (e.remainingTurns > 0
                     && e.type != DuelStatusType.POISON
-                    && e.type != DuelStatusType.BURN) {
+                    && e.type != DuelStatusType.BURN
+                    && e.type != DuelStatusType.GUARD) { // GUARD managed separately
                 e.remainingTurns--;
                 return e.remainingTurns <= 0;
             }
@@ -353,83 +334,77 @@ public final class DuelSession {
     // =========================================================================
 
     /**
-     * Full damage pipeline: FATIGUE → FOCUSED → CRIT → EVA → PHASED → REFLECT → SHIELD → FORTIFY.
+     * Full damage pipeline with GUARD intercept support.
+     * Order: FATIGUE → FOCUSED → CRIT → GUARD intercept → PHASED → EVA → REFLECT → SHIELD → FORTIFY.
      *
-     * @return actual HP removed from target (after all modifiers), or 0 on miss/dodge.
+     * @return actual HP removed (0 on dodge/GUARD intercept of original target)
      */
     public int resolveDamage(UUID attacker, int attackerPet,
                              UUID target, int targetPet,
                              int baseDamage) {
         DerivedPetStats targetStats = new DerivedPetStats(rosterFor(target)[targetPet]);
-        List<ActiveEffect> atkFx  = effectsFor(attacker, attackerPet);
-        List<ActiveEffect> tgtFx  = effectsFor(target, targetPet);
+        List<ActiveEffect> atkFx = effectsFor(attacker, attackerPet);
+        List<ActiveEffect> tgtFx = effectsFor(target, targetPet);
 
         float damage = baseDamage;
 
-        // ── Attacker modifiers ────────────────────────────────────────────────
-
-        // FATIGUE: reduce ATK
+        // FATIGUE
         for (ActiveEffect e : atkFx) {
-            if (e.type == DuelStatusType.FATIGUE) {
-                damage *= (1.0f - e.magnitude);
-                break;
-            }
+            if (e.type == DuelStatusType.FATIGUE) { damage *= (1.0f - e.magnitude); break; }
         }
 
-        // FOCUSED: next-attack multiplier (consumed)
-        ActiveEffect focused = atkFx.stream()
-                .filter(e -> e.type == DuelStatusType.FOCUSED)
-                .findFirst().orElse(null);
-        if (focused != null) {
-            damage *= focused.magnitude;
-            atkFx.remove(focused);
-        }
+        // FOCUSED (consumed)
+        ActiveEffect focused = atkFx.stream().filter(e -> e.type == DuelStatusType.FOCUSED).findFirst().orElse(null);
+        if (focused != null) { damage *= focused.magnitude; atkFx.remove(focused); }
 
-        // CRIT check — base chance + LUCKY_BONUS
+        // CRIT
         DerivedPetStats atkStats = new DerivedPetStats(rosterFor(attacker)[attackerPet]);
         int critPct = atkStats.critPct;
-        ActiveEffect lucky = atkFx.stream()
-                .filter(e -> e.type == DuelStatusType.LUCKY_BONUS)
-                .findFirst().orElse(null);
-        if (lucky != null) {
-            critPct += (int) lucky.magnitude;
-            atkFx.remove(lucky);
-        }
-        boolean isCrit = ThreadLocalRandom.current().nextInt(100) < critPct;
-        if (isCrit) {
+        ActiveEffect lucky = atkFx.stream().filter(e -> e.type == DuelStatusType.LUCKY_BONUS).findFirst().orElse(null);
+        if (lucky != null) { critPct += (int) lucky.magnitude; atkFx.remove(lucky); }
+        if (ThreadLocalRandom.current().nextInt(100) < critPct) {
             damage *= 1.5f;
             addLog("Critical hit!");
         }
 
-        // ── Target modifiers ──────────────────────────────────────────────────
+        // ── GUARD intercept: any alive ally of the target (not the target itself) ──
+        for (int guardPet = 0; guardPet < 3; guardPet++) {
+            if (guardPet == targetPet) continue;
+            if (!isAlive(target, guardPet)) continue;
+            List<ActiveEffect> guardFx = effectsFor(target, guardPet);
+            ActiveEffect guard = guardFx.stream()
+                    .filter(e -> e.type == DuelStatusType.GUARD)
+                    .findFirst().orElse(null);
+            if (guard != null && ThreadLocalRandom.current().nextInt(100) < (int) guard.magnitude) {
+                guardFx.remove(guard);
+                int interceptDmg = Math.max(0, (int)(damage * 0.6f));
+                addLog("🛡 " + petName(target, guardPet) + " intercepts for "
+                        + petName(target, targetPet) + "! (" + interceptDmg + " dmg, -40%)");
+                applyRawDamage(target, guardPet, interceptDmg);
+                return 0; // original target takes no damage
+            }
+        }
 
-        // PHASED: full immunity to next hit (consumed)
-        ActiveEffect phased = tgtFx.stream()
-                .filter(e -> e.type == DuelStatusType.PHASED)
-                .findFirst().orElse(null);
+        // PHASED (consumed, full immunity)
+        ActiveEffect phased = tgtFx.stream().filter(e -> e.type == DuelStatusType.PHASED).findFirst().orElse(null);
         if (phased != null) {
             tgtFx.remove(phased);
             addLog(petName(target, targetPet) + " phased through the attack!");
             return 0;
         }
 
-        // EVA check: base EVA + EVA_BOOST
+        // EVA dodge
         int evaPct = targetStats.evaPct;
         for (ActiveEffect e : tgtFx) {
-            if (e.type == DuelStatusType.EVA_BOOST) {
-                evaPct += (int) e.magnitude;
-                break;
-            }
+            if (e.type == DuelStatusType.EVA_BOOST) { evaPct += (int) e.magnitude; break; }
         }
         if (ThreadLocalRandom.current().nextInt(100) < evaPct) {
             addLog(petName(target, targetPet) + " dodged the attack!");
             return 0;
         }
 
-        // REFLECT: bounce a fraction back (consumed)
-        ActiveEffect reflect = tgtFx.stream()
-                .filter(e -> e.type == DuelStatusType.REFLECT)
-                .findFirst().orElse(null);
+        // REFLECT (consumed)
+        ActiveEffect reflect = tgtFx.stream().filter(e -> e.type == DuelStatusType.REFLECT).findFirst().orElse(null);
         if (reflect != null) {
             tgtFx.remove(reflect);
             int reflectDmg = Math.max(1, (int)(damage * reflect.magnitude));
@@ -437,21 +412,13 @@ public final class DuelSession {
             addLog(petName(attacker, attackerPet) + " takes " + reflectDmg + " reflected damage!");
         }
 
-        // SHIELD: reduce incoming damage (consumed)
-        ActiveEffect shield = tgtFx.stream()
-                .filter(e -> e.type == DuelStatusType.SHIELD)
-                .findFirst().orElse(null);
-        if (shield != null) {
-            tgtFx.remove(shield);
-            damage *= (1.0f - shield.magnitude);
-        }
+        // SHIELD (consumed)
+        ActiveEffect shield = tgtFx.stream().filter(e -> e.type == DuelStatusType.SHIELD).findFirst().orElse(null);
+        if (shield != null) { tgtFx.remove(shield); damage *= (1.0f - shield.magnitude); }
 
-        // FORTIFY: persistent damage reduction
+        // FORTIFY (persistent)
         for (ActiveEffect e : tgtFx) {
-            if (e.type == DuelStatusType.FORTIFY) {
-                damage *= (1.0f - e.magnitude);
-                break;
-            }
+            if (e.type == DuelStatusType.FORTIFY) { damage *= (1.0f - e.magnitude); break; }
         }
 
         int finalDmg = Math.max(0, (int) damage);
@@ -459,16 +426,10 @@ public final class DuelSession {
         return finalDmg;
     }
 
-    /**
-     * Applies raw damage to a pet, bypassing all mitigation checks.
-     * Handles the Second Life passive.
-     */
     public void applyRawDamage(UUID player, int petIdx, int damage) {
         int[] hp    = hpFor(player);
         int[] maxHp = maxHpFor(player);
         hp[petIdx] = Math.max(0, hp[petIdx] - damage);
-
-        // Second Life passive: revive at 2 HP (once per pet per duel)
         if (hp[petIdx] == 0 && hasSecondLifeSkill(player, petIdx)) {
             boolean[] used = secondLifeUsedFor(player);
             if (!used[petIdx]) {
@@ -479,17 +440,11 @@ public final class DuelSession {
         }
     }
 
-    /**
-     * Adds {@code amount} to a pet's stored SP (carried over between turns), capped at SP_MAX.
-     * Use this for off-turn SP restoration (e.g. spirit_burst hitting allies).
-     */
     public void addStoredSP(UUID player, int petIdx, int amount) {
-        String key = petKey(player, petIdx);
-        int current = petSP.getOrDefault(key, 0);
-        petSP.put(key, Math.min(SP_MAX, current + amount));
+        if (player.equals(p1)) p1StoredSP = Math.min(SP_MAX, p1StoredSP + amount);
+        else                   p2StoredSP = Math.min(SP_MAX, p2StoredSP + amount);
     }
 
-    /** Heal a pet by {@code amount}, capped at its current max HP. */
     public void heal(UUID player, int petIdx, int amount) {
         int[] hp    = hpFor(player);
         int[] maxHp = maxHpFor(player);
@@ -497,15 +452,9 @@ public final class DuelSession {
     }
 
     // =========================================================================
-    // Win-condition check
+    // Win condition
     // =========================================================================
 
-    /**
-     * Checks whether one side has all three pets at 0 HP.
-     * If so, sets {@link #winner} and {@link #phase} = FINISHED.
-     *
-     * @return true if the duel is now finished
-     */
     public boolean checkWinCondition() {
         if (isDefeated(p2)) { winner = p1; phase = DuelPhase.FINISHED; return true; }
         if (isDefeated(p1)) { winner = p2; phase = DuelPhase.FINISHED; return true; }
@@ -521,16 +470,12 @@ public final class DuelSession {
         while (combatLog.size() > MAX_LOG) combatLog.removeFirst();
     }
 
-    /** Returns an unmodifiable snapshot of the combat log (most-recent last). */
-    public List<String> getLog() {
-        return List.copyOf(combatLog);
-    }
+    public List<String> getLog() { return List.copyOf(combatLog); }
 
     // =========================================================================
     // Utility
     // =========================================================================
 
-    /** Human-readable pet name for use in combat log lines. */
     public String petName(UUID player, int petIdx) {
         PetData[] roster = rosterFor(player);
         if (petIdx < 0 || petIdx >= 3 || roster[petIdx] == null) return "???";
@@ -542,7 +487,6 @@ public final class DuelSession {
         return Character.toUpperCase(mob.charAt(0)) + mob.substring(1).replace('_', ' ');
     }
 
-    /** Checks whether a pet has the second_life skill at level ≥ 1. */
     private boolean hasSecondLifeSkill(UUID player, int petIdx) {
         PetData pet = rosterFor(player)[petIdx];
         if (pet == null) return false;
@@ -552,27 +496,18 @@ public final class DuelSession {
         return false;
     }
 
-    /** Returns the ATK value for a pet (used when building basic-attack damage). */
     public int getAtk(UUID player, int petIdx) {
         return new DerivedPetStats(rosterFor(player)[petIdx]).atk;
     }
 
-    /** Snapshot of all active effects for network serialisation. */
-    public Map<String, List<ActiveEffect>> getAllEffects() {
-        return Collections.unmodifiableMap(effects);
-    }
+    public Map<String, List<ActiveEffect>> getAllEffects() { return Collections.unmodifiableMap(effects); }
+    public Map<String, Integer> getAllCooldowns()          { return Collections.unmodifiableMap(skillCooldowns); }
 
-    /** Snapshot of all skill cooldowns. */
-    public Map<String, Integer> getAllCooldowns() {
-        return Collections.unmodifiableMap(skillCooldowns);
-    }
-
-    /** Current turn order snapshot. */
-    public List<TurnSlot> getTurnOrder() {
-        return Collections.unmodifiableList(turnOrder);
-    }
-
-    public int getTurnOrderIndex() {
-        return turnOrderIndex;
-    }
+    // ── Legacy stubs (kept so S2CDuelState.from() compiles with minimal changes) ──
+    /** @deprecated turn order is now player-based; returns empty list */
+    @Deprecated public List<TurnSlot> getTurnOrder()  { return Collections.emptyList(); }
+    /** @deprecated always returns 0 */
+    @Deprecated public int getTurnOrderIndex()        { return 0; }
+    /** @deprecated use {@link #currentTurnPlayer} and {@link #pendingPetActions} */
+    @Deprecated public TurnSlot currentSlot()         { return null; }
 }

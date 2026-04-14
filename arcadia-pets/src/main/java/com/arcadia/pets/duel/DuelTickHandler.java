@@ -10,16 +10,14 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
- * Enforces the per-turn action deadline defined in {@link DuelSession#TURN_TIMEOUT_MS}.
+ * Enforces the per-turn action deadline ({@link DuelSession#TURN_TIMEOUT_MS}) and
+ * drives the bot's artificial think delay.
  *
- * <p>Runs once per second on the server tick. If the acting pet's owner has not
- * submitted an action before the deadline, the turn is automatically passed with
- * a timeout notice in the combat log. SP is preserved (normal pass behaviour).</p>
+ * <p>Runs once per second on the server tick.</p>
  */
 @EventBusSubscriber(modid = ArcadiaPets.MOD_ID)
 public final class DuelTickHandler {
 
-    /** Tick counter — we only need to check once per second, not every tick. */
     private static int tick = 0;
 
     private DuelTickHandler() {}
@@ -40,11 +38,9 @@ public final class DuelTickHandler {
 
         for (DuelSession session : DuelManager.getActiveSessions()) {
             if (session.phase != DuelPhase.ACTIVE) continue;
+            if (session.currentTurnPlayer == null) continue;
 
-            TurnSlot slot = session.currentSlot();
-            if (slot == null) continue;
-
-            boolean isBotTurn = slot.ownerUuid().equals(DuelManager.BOT_UUID);
+            boolean isBotTurn = DuelManager.BOT_UUID.equals(session.currentTurnPlayer);
 
             if (isBotTurn) {
                 // Schedule bot think delay on first tick of bot's turn
@@ -52,7 +48,7 @@ public final class DuelTickHandler {
                     session.botActAt = now + 1_500L;
                     continue;
                 }
-                // Execute bot action once delay has passed
+                // Execute all bot pet actions once delay has passed
                 if (now >= session.botActAt) {
                     DuelManager.executeBotTurn(session);
                     if (session.checkWinCondition()) {
@@ -63,15 +59,14 @@ public final class DuelTickHandler {
                 continue;
             }
 
-            // Human turn timeout
+            // Human turn timeout: auto-pass all remaining pending pets
             if (session.actionDeadline <= 0 || now < session.actionDeadline) continue;
 
-            String petName = session.petName(slot.ownerUuid(), slot.petIndex());
-            session.addLog("⏰ " + petName + " timed out! Turn auto-passed, SP saved.");
-            session.endTurn();
+            session.addLog("⏰ Turn timed out! All remaining pet actions skipped. SP carried over.");
+            session.pendingPetActions.clear();
+            session.endPlayerTurn(); // ticks effects and opens opponent's turn
 
-            // Reset bot timer if bot's turn is next
-            session.botActAt = 0L;
+            session.botActAt = 0L; // reset bot timer if bot is next
 
             if (session.checkWinCondition()) {
                 DuelManager.endDuel(session, session.winner);

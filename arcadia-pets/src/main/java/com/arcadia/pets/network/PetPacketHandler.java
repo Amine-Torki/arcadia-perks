@@ -77,5 +77,15 @@ public final class PetPacketHandler {
                 C2SDuelAction.STREAM_CODEC,
                 C2SDuelAction::handle
         );
+        registrar.playToServer(
+                C2SDuelHint.TYPE,
+                C2SDuelHint.STREAM_CODEC,
+                C2SDuelHint::handle
+        );
+        registrar.playToClient(
+                S2CDuelHint.TYPE,
+                S2CDuelHint.STREAM_CODEC,
+                S2CDuelHint::handle
+        );
     }
 }

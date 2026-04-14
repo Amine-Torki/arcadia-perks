@@ -39,6 +39,7 @@ public final class ActiveEffect {
             case PHASED      -> "👻 Phased";
             case LUCKY_BONUS -> "⭐ Lucky";
             case EVA_BOOST   -> "💨 Agile";
+            case GUARD       -> "🛡 Guard";
         };
     }
 }
