@@ -48,7 +48,7 @@ public final class ArcadiaAH {
         com.arcadia.lib.ArcadiaModRegistry.registerCard(
                 new com.arcadia.lib.client.ArcadiaModCard("ah", "★",
                         "arcadia_ah.hub.auction.label", "arcadia_ah.hub.auction.sub",
-                        0xB87333, 3, true));
+                        0xB87333, 3, 1, true));
         LOGGER.info("[ArcadiaAH] Registered AH tab in ArcadiaModRegistry.");
     }
 

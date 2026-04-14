@@ -74,11 +74,11 @@ public class ArcadiaDashboard {
         com.arcadia.lib.ArcadiaModRegistry.registerCard(
                 new com.arcadia.lib.client.ArcadiaModCard("cosmetics", "✨",
                         "arcadia_prestige.hub.cosmetics.label", "arcadia_prestige.hub.cosmetics.sub",
-                        0x6BB8D4, 0, true));
+                        0x6BB8D4, 0, 1, true));
         com.arcadia.lib.ArcadiaModRegistry.registerCard(
                 new com.arcadia.lib.client.ArcadiaModCard("daily", "⭐",
                         "arcadia_prestige.hub.daily.label", "arcadia_prestige.hub.daily.sub",
-                        0xD4A847, 2, true));
+                        0xD4A847, 2, 1, true));
 
         // Register generic client-side tab opener (sends the C2SDashboardAction packet)
         com.arcadia.lib.ArcadiaModRegistry.registerClientTabOpener(tabIndex ->
