@@ -46,56 +46,81 @@ public class ArcadiaHubScreen extends Screen {
         // Dark overlay
         g.fill(0, 0, this.width, this.height, ArcadiaTheme.OVERLAY_BG);
 
-        int cardCount = cards.size();
-        if (cardCount == 0) {
+        if (cards.isEmpty()) {
             ArcadiaTheme.drawCenteredText(g, Component.translatable("arcadia_lib.hub.no_modules"),
                     this.width / 2, this.height / 2, ArcadiaTheme.TEXT_DIM);
             super.render(g, mouseX, mouseY, partialTick);
             return;
         }
 
-        int totalW = cardCount * CARD_W + (cardCount - 1) * CARD_GAP;
-        int startX = (this.width - totalW) / 2;
-        int startY = (this.height - CARD_H) / 2 - 10;
         int cx = this.width / 2;
 
-        // Title bar with copper decorations
+        // Group cards by row
+        java.util.Map<Integer, java.util.List<ArcadiaModCard>> rows = new java.util.TreeMap<>();
+        for (ArcadiaModCard card : cards) {
+            rows.computeIfAbsent(card.row(), k -> new java.util.ArrayList<>()).add(card);
+        }
+        int rowCount = rows.size();
+
+        // Calculate total height for vertical centering
+        int rowGap = 10;
+        int totalH = rowCount * CARD_H + (rowCount - 1) * rowGap;
+        int baseY = (this.height - totalH) / 2 - 10;
+
+        // Find widest row for title bar width
+        int maxRowW = 0;
+        for (var rowCards : rows.values()) {
+            int w = rowCards.size() * CARD_W + (rowCards.size() - 1) * CARD_GAP;
+            if (w > maxRowW) maxRowW = w;
+        }
+
+        // Title bar
         Component title = Component.translatable("arcadia_lib.hub.title");
-        ArcadiaTheme.drawTitleBar(g, title, cx, startY - 30, totalW + 40);
+        ArcadiaTheme.drawTitleBar(g, title, cx, baseY - 30, maxRowW + 40);
 
         // Subtitle
         Component sub = Component.translatable("arcadia_lib.hub.subtitle");
-        g.drawCenteredString(this.font, sub, cx, startY - 16, ArcadiaTheme.TEXT_SECONDARY);
+        g.drawCenteredString(this.font, sub, cx, baseY - 16, ArcadiaTheme.TEXT_SECONDARY);
 
         // Separator
-        ArcadiaTheme.drawSeparator(g, cx - totalW / 2 - 20, startY - 6,
-                totalW + 40, ArcadiaTheme.withAlpha(ArcadiaTheme.COPPER, 0x44));
+        ArcadiaTheme.drawSeparator(g, cx - maxRowW / 2 - 20, baseY - 6,
+                maxRowW + 40, ArcadiaTheme.withAlpha(ArcadiaTheme.COPPER, 0x44));
 
-        // Cards
+        // Render cards row by row
         hoveredCard = -1;
-        for (int i = 0; i < cardCount; i++) {
-            ArcadiaModCard card = cards.get(i);
-            int cardX = startX + i * (CARD_W + CARD_GAP);
-            boolean hovered = card.available()
-                    && mouseX >= cardX && mouseX < cardX + CARD_W
-                    && mouseY >= startY && mouseY < startY + CARD_H;
-            if (hovered) hoveredCard = i;
-            drawCard(g, card, cardX, startY, CARD_W, CARD_H, hovered,
-                    card.available() ? 1.0f : 0.35f);
-            if (!card.available()) {
-                g.drawCenteredString(this.font,
-                        Component.translatable("arcadia_lib.hub.not_installed"),
-                        cardX + CARD_W / 2, startY + CARD_H - 14, 0xFF554444);
+        int globalIdx = 0;
+        int currentRowY = baseY;
+        for (var entry : rows.entrySet()) {
+            java.util.List<ArcadiaModCard> rowCards = entry.getValue();
+            int rowW = rowCards.size() * CARD_W + (rowCards.size() - 1) * CARD_GAP;
+            int rowStartX = (this.width - rowW) / 2;
+
+            for (int i = 0; i < rowCards.size(); i++) {
+                ArcadiaModCard card = rowCards.get(i);
+                int cardX = rowStartX + i * (CARD_W + CARD_GAP);
+                boolean hovered = card.available()
+                        && mouseX >= cardX && mouseX < cardX + CARD_W
+                        && mouseY >= currentRowY && mouseY < currentRowY + CARD_H;
+                if (hovered) hoveredCard = globalIdx;
+                drawCard(g, card, cardX, currentRowY, CARD_W, CARD_H, hovered,
+                        card.available() ? 1.0f : 0.35f);
+                if (!card.available()) {
+                    g.drawCenteredString(this.font,
+                            Component.translatable("arcadia_lib.hub.not_installed"),
+                            cardX + CARD_W / 2, currentRowY + CARD_H - 14, 0xFF554444);
+                }
+                globalIdx++;
             }
+            currentRowY += CARD_H + rowGap;
         }
 
         // Bottom separator
-        ArcadiaTheme.drawSeparator(g, cx - totalW / 2 - 20, startY + CARD_H + 10,
-                totalW + 40, ArcadiaTheme.withAlpha(ArcadiaTheme.COPPER, 0x33));
+        ArcadiaTheme.drawSeparator(g, cx - maxRowW / 2 - 20, currentRowY,
+                maxRowW + 40, ArcadiaTheme.withAlpha(ArcadiaTheme.COPPER, 0x33));
 
         // Hint
         Component hint = Component.translatable("arcadia_lib.hub.close");
-        g.drawCenteredString(this.font, hint, cx, startY + CARD_H + 20, ArcadiaTheme.TEXT_DIM);
+        g.drawCenteredString(this.font, hint, cx, currentRowY + 10, ArcadiaTheme.TEXT_DIM);
 
         super.render(g, mouseX, mouseY, partialTick);
     }
