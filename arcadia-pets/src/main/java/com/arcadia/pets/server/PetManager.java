@@ -231,6 +231,11 @@ public final class PetManager {
         designatedPetId.put(player.getUUID(), data.petId());
         SkillHandler.triggerSummon(player);
         applyPetStatBonuses(player, data);
+
+        // Quest progress: PET_SUMMON
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(
+                new com.arcadia.lib.event.QuestProgressEvent(
+                        player.getUUID(), "PET_SUMMON", "", 1));
     }
 
     // ── Passive player-stat bonuses ───────────────────────────────────────────
@@ -1074,6 +1079,12 @@ public final class PetManager {
                 pd.happiness(),
                 pd.skills()));
         if (hpGain > 0) applyHpHeal(player, petId, hpGain);
+
+        // Quest progress: PET_FEED
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(
+                new com.arcadia.lib.event.QuestProgressEvent(
+                        playerUuid, "PET_FEED", "", 1));
+
         Mob mob = getActivePetMob(playerUuid);
         if (mob != null) {
             sendHpSync(player, mob.getHealth(), mob.getMaxHealth(), true);
@@ -1167,6 +1178,37 @@ public final class PetManager {
                 }
             }
         }
+    }
+
+    /**
+     * Adds {@code xpAmount} skill XP to a specific pet identified by {@code petId},
+     * regardless of which pet is currently active. Used to reward duel participants.
+     * Silently no-ops if the pet is not found or all skills are maxed.
+     */
+    public static void addSkillXpToPet(ServerPlayer player, UUID petId, int xpAmount) {
+        updatePetItem(player, petId, pd -> {
+            java.util.List<com.arcadia.pets.skill.SkillInstance> skills = pd.skills();
+            int idx = -1;
+            for (int i = 0; i < skills.size(); i++) {
+                com.arcadia.pets.skill.SkillInstance s = skills.get(i);
+                if (s.level() >= 1 && s.level() < 10) { idx = i; break; }
+            }
+            if (idx == -1) return pd; // all maxed — no-op
+
+            int chmStars  = pd.stats().getOrDefault(PetStat.CHARISMA, 0);
+            int boostedXp = Math.round(xpAmount * (1.0f + chmStars * 0.04f));
+
+            com.arcadia.pets.skill.SkillInstance target = skills.get(idx);
+            int xp  = target.xp() + boostedXp;
+            int lvl = target.level();
+            while (lvl < 10) {
+                int cost = com.arcadia.pets.skill.SkillInstance.xpForNextLevel(lvl);
+                if (xp >= cost) { xp -= cost; lvl++; }
+                else break;
+            }
+            if (lvl >= 10) xp = 0;
+            return buildSkillUpdatedData(pd, idx, lvl, xp);
+        });
     }
 
     private static PetData buildSkillUpdatedData(PetData pd, int skillIdx, int newLevel, int newXp) {

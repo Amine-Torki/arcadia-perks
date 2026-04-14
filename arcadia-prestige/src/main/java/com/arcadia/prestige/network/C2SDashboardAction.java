@@ -14,6 +14,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.slf4j.Logger;
 
+import com.arcadia.prestige.quest.QuestManager;
 public record C2SDashboardAction(int actionId, String payload) implements CustomPacketPayload {
 
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -26,6 +27,8 @@ public record C2SDashboardAction(int actionId, String payload) implements Custom
     public static final int SWITCH_TAB = 5;
     public static final int APPLY_STAR_ESSENCE = 6;
     public static final int OPEN_TAB = 7;
+    /** Claim a completed daily quest (payload = quest index "0"/"1"/"2"). */
+    public static final int CLAIM_QUEST = 8;
 
     public static final Type<C2SDashboardAction> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath("arcadia_prestige", "dashboard_action"));
@@ -54,7 +57,11 @@ public record C2SDashboardAction(int actionId, String payload) implements Custom
                 case SUMMON_PET      -> ArcadiaModRegistry.executeServerAction("pets.summon:" + payload, serverPlayer);
                 case UNSUMMON_PET    -> ArcadiaModRegistry.executeServerAction("pets.despawn", serverPlayer);
                 case FEED_PET        -> { /* Reserved */ }
-                case CLAIM_DAILY     -> DailyRewardHandler.tryClaim(serverPlayer);
+                case CLAIM_DAILY     -> {
+                    DailyRewardHandler.tryClaim(serverPlayer);
+                    QuestManager.trackProgress(serverPlayer.getUUID(), "DAILY_CLAIM", "", 1);
+                }
+                case CLAIM_QUEST     -> handleClaimQuest(serverPlayer, payload);
                 case SWITCH_TAB      -> handleSwitchTab(serverPlayer, payload);
                 case APPLY_STAR_ESSENCE -> ArcadiaModRegistry.executeServerAction("pets.star_essence:" + payload, serverPlayer);
                 case OPEN_TAB        -> handleOpenTab(serverPlayer, payload);
@@ -84,6 +91,18 @@ public record C2SDashboardAction(int actionId, String payload) implements Custom
             com.arcadia.prestige.server.DashboardMenu.openFor(player, tab);
         } catch (NumberFormatException e) {
             com.arcadia.prestige.server.DashboardMenu.openFor(player);
+        }
+    }
+
+    private static void handleClaimQuest(ServerPlayer player, String questIndexStr) {
+        try {
+            int idx = Integer.parseInt(questIndexStr);
+            QuestManager.claimQuest(player, QuestManager.todayKey(), idx);
+            if (player.containerMenu instanceof com.arcadia.prestige.server.DashboardMenu menu) {
+                menu.switchTab(4, player);
+            }
+        } catch (NumberFormatException e) {
+            LOGGER.warn("Invalid quest index from {}: {}", player.getName().getString(), questIndexStr);
         }
     }
 }

@@ -1,11 +1,15 @@
 package com.arcadia.pets;
 
 import com.arcadia.lib.DebugMode;
+import com.arcadia.pets.duel.DuelManager;
+import com.arcadia.pets.duel.DuelSession;
 import com.arcadia.pets.item.PetData;
 import com.arcadia.pets.item.PetRarity;
 import com.arcadia.pets.item.PetRoller;
 import com.arcadia.pets.item.PetStat;
 import com.arcadia.lib.ArcadiaModRegistry;
+import com.arcadia.pets.network.S2CDuelInvite;
+import com.arcadia.pets.network.S2CDuelRosterPick;
 import com.arcadia.pets.server.FusionMenu;
 import com.arcadia.pets.server.PetHistoryMenu;
 import com.arcadia.pets.server.PetHistorySavedData;
@@ -26,6 +30,7 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -231,6 +236,33 @@ public final class PetsCommands {
                     return Command.SINGLE_SUCCESS;
                 })
         );
+
+        event.getDispatcher().register(
+            Commands.literal("duel")
+                .then(Commands.argument("target", EntityArgument.player())
+                    .executes(ctx -> duelChallenge(ctx.getSource(),
+                            EntityArgument.getPlayer(ctx, "target")))
+                )
+                .then(Commands.literal("accept")
+                    .executes(ctx -> duelRespond(ctx.getSource(), true))
+                )
+                .then(Commands.literal("decline")
+                    .executes(ctx -> duelRespond(ctx.getSource(), false))
+                )
+                .then(Commands.literal("forfeit")
+                    .executes(ctx -> duelForfeit(ctx.getSource()))
+                )
+                .then(Commands.literal("bot")
+                    .requires(src -> src.hasPermission(2))
+                    .executes(ctx -> duelBot(ctx.getSource(), com.arcadia.pets.duel.BotDifficulty.EASY))
+                    .then(Commands.literal("easy")
+                        .executes(ctx -> duelBot(ctx.getSource(), com.arcadia.pets.duel.BotDifficulty.EASY)))
+                    .then(Commands.literal("medium")
+                        .executes(ctx -> duelBot(ctx.getSource(), com.arcadia.pets.duel.BotDifficulty.MEDIUM)))
+                    .then(Commands.literal("hard")
+                        .executes(ctx -> duelBot(ctx.getSource(), com.arcadia.pets.duel.BotDifficulty.HARD)))
+                )
+        );
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -298,6 +330,117 @@ public final class PetsCommands {
         com.arcadia.pets.server.PetHistoryMenu.openFor(op, hist.getAll(target.getUUID()));
         src.sendSuccess(() -> Component.literal("§6[Arcadia] Opening pet history for §e"
                 + target.getGameProfile().getName() + " §7(" + total + " total)"), false);
+        return Command.SINGLE_SUCCESS;
+    }
+
+    // ── Duel commands ─────────────────────────────────────────────────────────
+
+    private static int duelChallenge(CommandSourceStack src, ServerPlayer target) {
+        if (!(src.getEntity() instanceof ServerPlayer challenger)) {
+            src.sendFailure(Component.literal("Only players can duel."));
+            return 0;
+        }
+        if (challenger.getUUID().equals(target.getUUID())) {
+            src.sendFailure(Component.literal("§cYou cannot duel yourself."));
+            return 0;
+        }
+        if (DuelManager.isInDuel(challenger.getUUID())) {
+            src.sendFailure(Component.literal("§cYou are already in a duel."));
+            return 0;
+        }
+        if (DuelManager.isInDuel(target.getUUID())) {
+            src.sendFailure(Component.literal("§c" + target.getGameProfile().getName() + " is already in a duel."));
+            return 0;
+        }
+        boolean ok = DuelManager.challenge(challenger, target);
+        if (!ok) {
+            src.sendFailure(Component.literal("§c" + target.getGameProfile().getName()
+                    + " already has a pending challenge."));
+            return 0;
+        }
+        int petCount = com.arcadia.pets.server.PetCollectionSavedData
+                .getOrCreate(challenger.getServer()).size(challenger.getUUID());
+        PacketDistributor.sendToPlayer(target, new S2CDuelInvite(
+                challenger.getGameProfile().getName(), petCount));
+        challenger.sendSystemMessage(Component.literal(
+                "§6[Duel] §eChallenge sent to §f" + target.getGameProfile().getName()
+                + "§e. Waiting for response (60s)…"));
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int duelRespond(CommandSourceStack src, boolean accept) {
+        if (!(src.getEntity() instanceof ServerPlayer responder)) return 0;
+        UUID challengerUuid = DuelManager.getChallengerFor(responder.getUUID());
+        if (challengerUuid == null) {
+            src.sendFailure(Component.literal("§cNo pending duel challenge."));
+            return 0;
+        }
+        if (!accept) {
+            DuelManager.clearChallenge(responder.getUUID());
+            ServerPlayer challenger = responder.getServer().getPlayerList().getPlayer(challengerUuid);
+            if (challenger != null) {
+                challenger.sendSystemMessage(Component.literal(
+                        "§c[Duel] §f" + responder.getGameProfile().getName() + "§c declined your challenge."));
+            }
+            responder.sendSystemMessage(Component.literal("§7[Duel] Challenge declined."));
+            return Command.SINGLE_SUCCESS;
+        }
+        ServerPlayer challenger = responder.getServer().getPlayerList().getPlayer(challengerUuid);
+        if (challenger == null) {
+            DuelManager.clearChallenge(responder.getUUID());
+            src.sendFailure(Component.literal("§cChallenger is no longer online."));
+            return 0;
+        }
+        DuelSession session = DuelManager.accept(challenger, responder);
+        // Build roster-pick packet payload (full pet collections for both)
+        com.arcadia.pets.server.PetCollectionSavedData col =
+                com.arcadia.pets.server.PetCollectionSavedData.getOrCreate(responder.getServer());
+        java.util.List<net.minecraft.nbt.CompoundTag> p1Tags = col.getTagsFor(challenger.getUUID());
+        java.util.List<net.minecraft.nbt.CompoundTag> p2Tags = col.getTagsFor(responder.getUUID());
+        PacketDistributor.sendToPlayer(challenger, new S2CDuelRosterPick(
+                session.duelId, responder.getGameProfile().getName(), p1Tags));
+        PacketDistributor.sendToPlayer(responder, new S2CDuelRosterPick(
+                session.duelId, challenger.getGameProfile().getName(), p2Tags));
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int duelForfeit(CommandSourceStack src) {
+        if (!(src.getEntity() instanceof ServerPlayer player)) return 0;
+        if (!DuelManager.isInDuel(player.getUUID())) {
+            src.sendFailure(Component.literal("§cYou are not currently in a duel."));
+            return 0;
+        }
+        DuelSession session = DuelManager.getSessionFor(player.getUUID());
+        if (session == null) return 0;
+        UUID winner = session.opponentOf(player.getUUID());
+        session.addLog(session.petName(player.getUUID(), 0) + "'s team forfeits!");
+        DuelManager.endDuel(session, winner);
+        // Notify both players — C2SDuelAction.grantRewards handles the actual reward dispatch
+        // so here we just broadcast the final state
+        com.arcadia.pets.network.S2CDuelState finalState =
+                com.arcadia.pets.network.S2CDuelState.from(session);
+        ServerPlayer p1 = src.getServer().getPlayerList().getPlayer(session.p1);
+        ServerPlayer p2 = src.getServer().getPlayerList().getPlayer(session.p2);
+        if (p1 != null) PacketDistributor.sendToPlayer(p1, finalState);
+        if (p2 != null) PacketDistributor.sendToPlayer(p2, finalState);
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int duelBot(CommandSourceStack src, com.arcadia.pets.duel.BotDifficulty difficulty) {
+        if (!(src.getEntity() instanceof ServerPlayer player)) return 0;
+        if (DuelManager.isInDuel(player.getUUID())) {
+            src.sendFailure(Component.literal("§cYou are already in a duel."));
+            return 0;
+        }
+        DuelSession session = DuelManager.startBotDuel(player, difficulty);
+        if (session == null) {
+            src.sendFailure(Component.literal("§cYou need at least one pet in your collection to practice."));
+            return 0;
+        }
+        src.sendSuccess(() -> Component.literal("§6[Duel] §fStarting practice duel vs §e"
+                + difficulty.name().toLowerCase() + " §fbot. Good luck!"), false);
+        com.arcadia.pets.network.S2CDuelState state = com.arcadia.pets.network.S2CDuelState.from(session);
+        PacketDistributor.sendToPlayer(player, state);
         return Command.SINGLE_SUCCESS;
     }
 
