@@ -219,7 +219,7 @@ public class ArcadiaHubScreen extends Screen {
                     clickHandler.run();
                 } else {
                     // Default: open dashboard tab via prestige packet system
-                    ArcadiaModRegistry.openTabClient(card.sortOrder());
+                    ArcadiaModRegistry.openTabClient(card.tabIndex());
                     this.onClose();
                 }
                 return true;
