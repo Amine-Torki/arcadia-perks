@@ -1,12 +1,11 @@
 {
-  "arcadia_ah.cmd.enabled":   "§a[Arcadia] Auction House enabled for all players.",
-  "arcadia_ah.cmd.disabled":  "§c[Arcadia] Auction House disabled. Operators are unaffected.",
+  "arcadia_ah.cmd.enabled": "§a[Arcadia] Auction House enabled for all players.",
+  "arcadia_ah.cmd.disabled": "§c[Arcadia] Auction House disabled. Operators are unaffected.",
   "arcadia_ah.cmd.disabled_msg": "§c[Arcadia] The Auction House is currently disabled on this server.",
   "arcadia_ah.cmd.hold_item": "Hold the item you want to sell.",
   "arcadia_ah.hub.auction.label": "Auction House",
   "arcadia_ah.hub.auction.sub": "Buy & sell cross-server",
   "arcadia_ah.gui.tab.auction_house": "-=[ Auction House ]=-",
-
   "arcadia_ah.gui.sell.title": "Sell on Auction House",
   "arcadia_ah.gui.sell.price_label": "Price:",
   "arcadia_ah.gui.sell.price_hint": "Enter price...",
@@ -33,5 +32,12 @@
   "arcadia_ah.gui.nav.next": "Next ▶",
   "arcadia_ah.cmd.price_invalid": "Price must be greater than 0.",
   "arcadia_ah.cmd.blacklisted": "This item cannot be sold on the Auction House.",
-  "arcadia_ah.cmd.max_listings": "You already have %s active listings."
+  "arcadia_ah.cmd.max_listings": "You already have %s active listings.",
+  "arcadia_ah.gui.leaderboard.ranked": "Ranked by unique clients",
+  "arcadia_ah.gui.leaderboard.tiebreaker": "Tiebreaker: median deal size",
+  "arcadia_ah.gui.leaderboard.unique": "Unique clients: ",
+  "arcadia_ah.gui.leaderboard.median": "Median deal: ",
+  "arcadia_ah.gui.leaderboard.total_sales": "Total sales: ",
+  "arcadia_ah.gui.leaderboard.total_revenue": "Total revenue: ",
+  "arcadia_ah.gui.leaderboard.menu_title": "AH Leaderboard"
 }

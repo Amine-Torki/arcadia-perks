@@ -16,7 +16,7 @@ public class AhSearchScreen extends Screen {
     private final String initialQuery;
 
     public AhSearchScreen(String initialQuery) {
-        super(Component.literal("Search Auction House"));
+        super(Component.translatable("arcadia_ah.gui.search.title"));
         this.initialQuery = initialQuery;
     }
 

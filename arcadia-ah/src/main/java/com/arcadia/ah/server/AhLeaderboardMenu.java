@@ -64,8 +64,8 @@ public class AhLeaderboardMenu extends AbstractContainerMenu {
         ItemStack title = new ItemStack(Items.NETHER_STAR);
         setName(title, Component.literal("⭐ Top Business").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
         setLore(title, List.of(
-                Component.literal("Ranked by unique clients").withStyle(ChatFormatting.YELLOW),
-                Component.literal("Tiebreaker: median deal size").withStyle(ChatFormatting.GRAY),
+                Component.translatable("arcadia_ah.gui.leaderboard.ranked").withStyle(ChatFormatting.YELLOW),
+                Component.translatable("arcadia_ah.gui.leaderboard.tiebreaker").withStyle(ChatFormatting.GRAY),
                 Component.literal(" "),
                 Component.literal("§8Farming-resistant: only distinct").withStyle(ChatFormatting.DARK_GRAY),
                 Component.literal("§8buyers contribute to your rank.").withStyle(ChatFormatting.DARK_GRAY)
@@ -96,10 +96,10 @@ public class AhLeaderboardMenu extends AbstractContainerMenu {
                             : ChatFormatting.WHITE));
 
             List<Component> lore = new ArrayList<>();
-            lore.add(Component.literal("§6Unique clients: §f" + e.uniqueBuyers()));
-            lore.add(Component.literal("§6Median deal:    §f" + com.arcadia.lib.economy.EconomyService.formatPrice(e.medianAmountPerBuyer())));
-            lore.add(Component.literal("§7Total sales:    §f" + e.totalSales()));
-            lore.add(Component.literal("§7Total revenue:  §8" + com.arcadia.lib.economy.EconomyService.formatPrice(e.totalRevenue())));
+            lore.add(Component.literal("§6").append(Component.translatable("arcadia_ah.gui.leaderboard.unique")).append(Component.literal("§f" + e.uniqueBuyers())));
+            lore.add(Component.literal("§6").append(Component.translatable("arcadia_ah.gui.leaderboard.median")).append(Component.literal("§f" + com.arcadia.lib.economy.EconomyService.formatPrice(e.medianAmountPerBuyer()))));
+            lore.add(Component.literal("§7").append(Component.translatable("arcadia_ah.gui.leaderboard.total_sales")).append(Component.literal("§f" + e.totalSales())));
+            lore.add(Component.literal("§7").append(Component.translatable("arcadia_ah.gui.leaderboard.total_revenue")).append(Component.literal("§8" + com.arcadia.lib.economy.EconomyService.formatPrice(e.totalRevenue()))));
             setLore(icon, lore);
 
             if (rank == 1) icon.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
@@ -108,12 +108,12 @@ public class AhLeaderboardMenu extends AbstractContainerMenu {
 
         if (entries.isEmpty()) {
             ItemStack empty = new ItemStack(Items.BARRIER);
-            setName(empty, Component.literal("No sales recorded yet").withStyle(ChatFormatting.GRAY));
+            setName(empty, Component.translatable("arcadia_ah.gui.leaderboard.no_sales").withStyle(ChatFormatting.GRAY));
             container.setItem(22, empty);
         }
 
         ItemStack back = new ItemStack(Items.ARROW);
-        setName(back, Component.literal("← Back to Auction House").withStyle(ChatFormatting.YELLOW));
+        setName(back, Component.translatable("arcadia_ah.gui.leaderboard.back").withStyle(ChatFormatting.YELLOW));
         container.setItem(BACK_SLOT, back);
     }
 
@@ -152,7 +152,7 @@ public class AhLeaderboardMenu extends AbstractContainerMenu {
     public static void openFor(ServerPlayer player) {
         player.openMenu(new SimpleMenuProvider(
                 (id, inv, p) -> new AhLeaderboardMenu(id, inv),
-                Component.literal("AH Leaderboard")
+                Component.translatable("arcadia_ah.gui.leaderboard.menu_title")
         ));
     }
 }

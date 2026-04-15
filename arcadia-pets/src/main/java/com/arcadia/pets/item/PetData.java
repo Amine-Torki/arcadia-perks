@@ -239,8 +239,8 @@ public record PetData(
                     // Locked — identity hidden until previous skill reaches Lv 10
                     skillLine = Component.literal("\uD83D\uDD12 ").withStyle(ChatFormatting.DARK_GRAY)
                             .append(Component.literal("???").withStyle(ChatFormatting.DARK_GRAY))
-                            .append(Component.literal(" [Locked]").withStyle(ChatFormatting.DARK_RED))
-                            .append(Component.literal(" — Max previous skill to reveal").withStyle(ChatFormatting.DARK_GRAY));
+                            .append(Component.translatable("arcadia_pets.tooltip.locked").withStyle(ChatFormatting.DARK_RED))
+                            .append(Component.translatable("arcadia_pets.tooltip.max_prev").withStyle(ChatFormatting.DARK_GRAY));
                 } else {
                     PetSkill skill = instance.skill();
                     ChatFormatting badgeColor = instance.level() >= 10 ? ChatFormatting.GOLD

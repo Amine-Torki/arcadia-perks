@@ -21,7 +21,7 @@ public class AhSellScreen extends Screen {
     private EditBox priceInput;
 
     public AhSellScreen(ItemStack itemToSell, int slotIndex) {
-        super(Component.literal("Sell Item"));
+        super(Component.translatable("arcadia_ah.gui.sell.title"));
         this.itemToSell = itemToSell.copy();
         this.slotIndex = slotIndex;
     }

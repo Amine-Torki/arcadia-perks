@@ -66,7 +66,7 @@ public class PetHistoryMenu extends AbstractContainerMenu {
 
         sp.openMenu(new SimpleMenuProvider(
                 (syncId, inv, player) -> new PetHistoryMenu(syncId, inv, container),
-                Component.literal("Pet History")
+                Component.translatable("arcadia_pets.gui.history.title")
         ));
     }
 
