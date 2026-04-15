@@ -78,7 +78,7 @@ public class SkillHandler {
     // we maintain a targeted map of UUID → remaining ticks.
     // registerTemp() is called by skill code when spawning a temp entity.
 
-    private static final Map<UUID, Integer> TEMP_ENTITIES = new HashMap<>();
+    private static final Map<UUID, Integer> TEMP_ENTITIES = new java.util.concurrent.ConcurrentHashMap<>();
 
     /** Registers an entity for auto-discard after {@code ticks} server ticks. */
     public static void registerTemp(net.minecraft.world.entity.Entity entity, int ticks) {

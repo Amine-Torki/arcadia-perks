@@ -54,6 +54,8 @@ public final class ArcadiaAH {
 
     private void onServerAboutToStart(ServerAboutToStartEvent event) {
         // Tables are now created centrally by DatabaseManager via AuctionTableDefinition
+        // Load persisted AH listings for singleplayer
+        AuctionDatabase.setServer(event.getServer());
         LOGGER.info("[ArcadiaAH] Server starting. DB active: {}",
                 com.arcadia.lib.data.DatabaseManager.isDatabaseActive());
     }
