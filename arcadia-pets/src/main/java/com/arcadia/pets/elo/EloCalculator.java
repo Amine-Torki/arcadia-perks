@@ -1,4 +1,4 @@
-package com.arcadia.prestige.elo;
+package com.arcadia.pets.elo;
 
 /**
  * Standard ELO rating calculation.

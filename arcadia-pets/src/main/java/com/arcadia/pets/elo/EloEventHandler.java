@@ -1,7 +1,8 @@
-package com.arcadia.prestige.elo;
+package com.arcadia.pets.elo;
 
 import com.arcadia.lib.event.DuelResultEvent;
 import com.arcadia.lib.permissions.PermissionService;
+import com.arcadia.pets.ArcadiaPets;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -14,15 +15,9 @@ import java.util.UUID;
 /**
  * NeoForge event listener that updates ELO ratings when a pet duel ends.
  *
- * <p>Registered on the {@link net.neoforged.neoforge.common.NeoForge#EVENT_BUS}
- * (game bus, not mod bus) so it can receive events fired by arcadia-pets.</p>
- *
- * <p>Also grants the Arcadia Pass bonus XP (+1 per roster pet) to any pass holder,
- * whether they won or lost. Winners get base 2 XP + 1 pass = 3 XP total;
- * losers get base 1 XP + 1 pass = 2 XP total. Purely a progression-speed benefit,
- * not a PvP advantage.</p>
+ * <p>Registered on the game bus so it can receive events fired by arcadia-pets.</p>
  */
-@EventBusSubscriber(modid = "arcadia_prestige")
+@EventBusSubscriber(modid = ArcadiaPets.MOD_ID)
 public final class EloEventHandler {
 
     private EloEventHandler() {}
@@ -32,7 +27,7 @@ public final class EloEventHandler {
         // Skip ELO updates for bot practice duels
         UUID botUuid = UUID.fromString("00000000-0000-0000-0000-000000000B07");
         if (event.getWinnerUuid().equals(botUuid) || event.getLoserUuid().equals(botUuid)) return;
-        // Update ELO and capture deltas for feedback messages
+
         EloManager.EloResult elo = EloManager.updateAfterDuel(
                 event.getWinnerUuid(),
                 event.getLoserUuid(),
@@ -42,7 +37,6 @@ public final class EloEventHandler {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return;
 
-        // Send ELO delta message to both players (if online)
         sendEloMessage(server, event.getWinnerUuid(), elo.winnerDelta(), elo.newWinnerRating());
         sendEloMessage(server, event.getLoserUuid(),  elo.loserDelta(),  elo.newLoserRating());
 

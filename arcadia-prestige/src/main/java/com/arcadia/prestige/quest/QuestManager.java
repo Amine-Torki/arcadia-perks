@@ -59,6 +59,15 @@ public final class QuestManager {
     }
 
     /**
+     * Removes today's cached quests for a player, forcing regeneration on next access.
+     * Used by the /arcadia quest reset OP command for testing.
+     */
+    public static void resetToday(UUID playerUuid) {
+        Map<String, QuestInstance[]> dayMap = CACHE.get(playerUuid);
+        if (dayMap != null) dayMap.remove(todayKey());
+    }
+
+    /**
      * Records progress for all matching quests of a player.
      *
      * @return true if at least one quest was updated

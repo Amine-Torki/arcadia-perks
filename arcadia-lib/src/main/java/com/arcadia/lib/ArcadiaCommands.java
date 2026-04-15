@@ -19,7 +19,7 @@ public final class ArcadiaCommands {
 
     @SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event) {
-        event.getDispatcher().register(
+        var arcadiaNode = event.getDispatcher().register(
             Commands.literal("arcadia")
                 .executes(ctx -> {
                     if (ctx.getSource().getEntity() instanceof ServerPlayer player) {
@@ -32,5 +32,7 @@ public final class ArcadiaCommands {
                     return Command.SINGLE_SUCCESS;
                 })
         );
+        // /acd is a shorthand alias for /arcadia — all subcommands are shared
+        event.getDispatcher().register(Commands.literal("acd").redirect(arcadiaNode));
     }
 }

@@ -1,4 +1,4 @@
-package com.arcadia.prestige.elo;
+package com.arcadia.pets.elo;
 
 import com.arcadia.lib.data.DatabaseManager;
 import com.mojang.logging.LogUtils;
@@ -93,7 +93,6 @@ public final class EloManager {
      */
     public static List<PlayerEloData> getLeaderboard(int limit) {
         if (!CACHE.isEmpty()) {
-            // Sort cache — sufficient for moderate player counts
             return CACHE.values().stream()
                     .sorted(Comparator.comparingInt(PlayerEloData::rating).reversed())
                     .limit(limit)

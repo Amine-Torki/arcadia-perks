@@ -36,6 +36,23 @@ public final class PrestigeCoreTableDefinition implements TableDefinition {
                 claims INT NOT NULL DEFAULT 0,
                 PRIMARY KEY (uuid, cycle)
             )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS arcadia_prestige_daily_quests (
+                uuid          VARCHAR(36)  NOT NULL,
+                date_key      VARCHAR(16)  NOT NULL,
+                quest_index   TINYINT      NOT NULL,
+                quest_type    VARCHAR(32)  NOT NULL,
+                difficulty    VARCHAR(16)  NOT NULL,
+                context       VARCHAR(128) NOT NULL DEFAULT '',
+                target_amount INT          NOT NULL,
+                reward_coins  INT          NOT NULL DEFAULT 0,
+                reward_essence INT         NOT NULL DEFAULT 0,
+                progress      INT          NOT NULL DEFAULT 0,
+                claimed       TINYINT      NOT NULL DEFAULT 0,
+                PRIMARY KEY (uuid, date_key, quest_index),
+                INDEX idx_quest_date (uuid, date_key)
+            )
             """
         );
     }

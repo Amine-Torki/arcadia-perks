@@ -22,48 +22,50 @@ public final class AhCommands {
     @SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event) {
         event.getDispatcher().register(
-            Commands.literal("arcadia_ah")
-                .executes(ctx -> {
-                    if (!checkEnabled(ctx.getSource())) return 0;
-                    if (ctx.getSource().getEntity() instanceof ServerPlayer player) {
-                        AuctionManager.refreshCache();
-                        ArcadiaModRegistry.openTab(player, 3);
-                    }
-                    return Command.SINGLE_SUCCESS;
-                })
-                .then(Commands.literal("top")
+            Commands.literal("arcadia")
+                .then(Commands.literal("ah")
                     .executes(ctx -> {
                         if (!checkEnabled(ctx.getSource())) return 0;
                         if (ctx.getSource().getEntity() instanceof ServerPlayer player) {
-                            AhLeaderboardMenu.openFor(player);
+                            AuctionManager.refreshCache();
+                            ArcadiaModRegistry.openTab(player, 3);
                         }
                         return Command.SINGLE_SUCCESS;
                     })
-                )
-                .then(Commands.literal("enable")
-                    .requires(src -> src.hasPermission(2))
-                    .executes(ctx -> {
-                        AhGlobalFlags.AH_ENABLED = true;
-                        ctx.getSource().sendSuccess(() -> Component.translatable(
-                                "arcadia_ah.cmd.enabled"), true);
-                        return Command.SINGLE_SUCCESS;
-                    })
-                )
-                .then(Commands.literal("disable")
-                    .requires(src -> src.hasPermission(2))
-                    .executes(ctx -> {
-                        AhGlobalFlags.AH_ENABLED = false;
-                        ctx.getSource().sendSuccess(() -> Component.translatable(
-                                "arcadia_ah.cmd.disabled"), true);
-                        return Command.SINGLE_SUCCESS;
-                    })
-                )
-                .then(Commands.literal("sell")
-                    .then(Commands.argument("price", LongArgumentType.longArg(1))
-                        .executes(ctx -> executeSell(ctx, -1))
-                        .then(Commands.argument("quantity", IntegerArgumentType.integer(1, 64))
-                            .executes(ctx -> executeSell(ctx,
-                                    IntegerArgumentType.getInteger(ctx, "quantity")))
+                    .then(Commands.literal("top")
+                        .executes(ctx -> {
+                            if (!checkEnabled(ctx.getSource())) return 0;
+                            if (ctx.getSource().getEntity() instanceof ServerPlayer player) {
+                                AhLeaderboardMenu.openFor(player);
+                            }
+                            return Command.SINGLE_SUCCESS;
+                        })
+                    )
+                    .then(Commands.literal("enable")
+                        .requires(src -> src.hasPermission(2))
+                        .executes(ctx -> {
+                            AhGlobalFlags.AH_ENABLED = true;
+                            ctx.getSource().sendSuccess(() -> Component.translatable(
+                                    "arcadia_ah.cmd.enabled"), true);
+                            return Command.SINGLE_SUCCESS;
+                        })
+                    )
+                    .then(Commands.literal("disable")
+                        .requires(src -> src.hasPermission(2))
+                        .executes(ctx -> {
+                            AhGlobalFlags.AH_ENABLED = false;
+                            ctx.getSource().sendSuccess(() -> Component.translatable(
+                                    "arcadia_ah.cmd.disabled"), true);
+                            return Command.SINGLE_SUCCESS;
+                        })
+                    )
+                    .then(Commands.literal("sell")
+                        .then(Commands.argument("price", LongArgumentType.longArg(1))
+                            .executes(ctx -> executeSell(ctx, -1))
+                            .then(Commands.argument("quantity", IntegerArgumentType.integer(1, 64))
+                                .executes(ctx -> executeSell(ctx,
+                                        IntegerArgumentType.getInteger(ctx, "quantity")))
+                            )
                         )
                     )
                 )

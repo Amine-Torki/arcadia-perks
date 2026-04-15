@@ -27,6 +27,16 @@ public final class PetsTableDefinition implements TableDefinition {
                 INDEX idx_pet_hist_owner (owner_uuid),
                 INDEX idx_pet_hist_pet   (pet_id)
             )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS arcadia_duel_elo (
+                uuid              VARCHAR(36)  PRIMARY KEY,
+                rating            INT          NOT NULL DEFAULT 1000,
+                wins              INT          NOT NULL DEFAULT 0,
+                losses            INT          NOT NULL DEFAULT 0,
+                favorite_mob_type VARCHAR(128) NOT NULL DEFAULT '',
+                INDEX idx_elo_rating (rating)
+            )
             """
         );
     }
