@@ -50,10 +50,11 @@ public final class ArcadiaModRegistry {
         cards.put(card.id(), card);
     }
 
-    /** Returns all registered cards sorted by display order. */
+    /** Returns all registered cards sorted by row first, then sortOrder within each row. */
     public static List<ArcadiaModCard> getCards() {
         List<ArcadiaModCard> sorted = new ArrayList<>(cards.values());
-        sorted.sort(Comparator.comparingInt(ArcadiaModCard::sortOrder));
+        sorted.sort(Comparator.comparingInt(ArcadiaModCard::row)
+                .thenComparingInt(ArcadiaModCard::sortOrder));
         return sorted;
     }
 
