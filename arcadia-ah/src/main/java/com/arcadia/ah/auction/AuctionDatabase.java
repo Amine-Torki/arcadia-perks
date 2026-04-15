@@ -16,9 +16,32 @@ public final class AuctionDatabase {
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    // In-memory fallback for debug mode
+    // In-memory fallback for singleplayer/debug — persisted via AuctionSavedData
     private static final List<AuctionListing> DEBUG_LISTINGS  = new CopyOnWriteArrayList<>();
     private static final List<MailboxEntry>   DEBUG_MAILBOX   = new CopyOnWriteArrayList<>();
+
+    /** Server reference for SavedData persistence in singleplayer. */
+    private static net.minecraft.server.MinecraftServer serverRef;
+
+    /** Called on server start to load persisted listings in singleplayer. */
+    public static void setServer(net.minecraft.server.MinecraftServer server) {
+        serverRef = server;
+        if (DatabaseManager.isDebugMode() && server != null) {
+            AuctionSavedData saved = AuctionSavedData.getOrCreate(server);
+            DEBUG_LISTINGS.clear();
+            DEBUG_LISTINGS.addAll(saved.getListings());
+            LOGGER.info("[ArcadiaAH] Loaded {} listings from SavedData.", DEBUG_LISTINGS.size());
+        }
+    }
+
+    /** Syncs in-memory listings to SavedData for singleplayer persistence. */
+    private static void syncToSavedData() {
+        if (serverRef == null || !DatabaseManager.isDebugMode()) return;
+        AuctionSavedData saved = AuctionSavedData.getOrCreate(serverRef);
+        saved.getListings().clear();
+        saved.getListings().addAll(DEBUG_LISTINGS);
+        saved.setDirty();
+    }
 
     /** Debug-mode sales log: [sellerUuid, buyerUuid, amount] */
     private static final List<long[]> DEBUG_SALES_AMOUNTS = new CopyOnWriteArrayList<>();
@@ -33,7 +56,7 @@ public final class AuctionDatabase {
     // -------------------------------------------------------------------------
 
     public static void insertListing(AuctionListing listing) {
-        if (DatabaseManager.isDebugMode()) { DEBUG_LISTINGS.add(listing); return; }
+        if (DatabaseManager.isDebugMode()) { DEBUG_LISTINGS.add(listing); syncToSavedData(); return; }
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(
                      "INSERT INTO arcadia_prestige_auction_listings VALUES (?,?,?,?,?,?,?,?,?,?,?)")) {
@@ -57,6 +80,7 @@ public final class AuctionDatabase {
     public static void deleteListing(UUID listingId) {
         if (DatabaseManager.isDebugMode()) {
             DEBUG_LISTINGS.removeIf(l -> l.listingId().equals(listingId));
+            syncToSavedData();
             return;
         }
         try (Connection conn = DatabaseManager.getConnection();

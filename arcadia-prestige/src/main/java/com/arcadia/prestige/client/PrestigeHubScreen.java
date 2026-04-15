@@ -22,7 +22,7 @@ public class PrestigeHubScreen extends Screen {
     private int hoveredCard = -1;
 
     public PrestigeHubScreen() {
-        super(Component.literal("Arcadia Prestige"));
+        super(Component.translatable("arcadia_lib.hub.title"));
     }
 
     public static void open() {

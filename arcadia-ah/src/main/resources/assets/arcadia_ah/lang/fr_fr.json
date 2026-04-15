@@ -1,12 +1,11 @@
 {
-  "arcadia_ah.cmd.enabled":   "§a[Arcadia] Hôtel des Ventes activé pour tous les joueurs.",
-  "arcadia_ah.cmd.disabled":  "§c[Arcadia] Hôtel des Ventes désactivé. Les opérateurs ne sont pas affectés.",
+  "arcadia_ah.cmd.enabled": "§a[Arcadia] Hôtel des Ventes activé pour tous les joueurs.",
+  "arcadia_ah.cmd.disabled": "§c[Arcadia] Hôtel des Ventes désactivé. Les opérateurs ne sont pas affectés.",
   "arcadia_ah.cmd.disabled_msg": "§c[Arcadia] L'Hôtel des Ventes est actuellement désactivé sur ce serveur.",
   "arcadia_ah.cmd.hold_item": "Tiens l'objet que tu veux vendre en main.",
   "arcadia_ah.hub.auction.label": "Hôtel des Ventes",
   "arcadia_ah.hub.auction.sub": "Achète & vends entre serveurs",
   "arcadia_ah.gui.tab.auction_house": "-=[ Hôtel des Ventes ]=-",
-
   "arcadia_ah.gui.sell.title": "Vendre à l'Hôtel des Ventes",
   "arcadia_ah.gui.sell.price_label": "Prix :",
   "arcadia_ah.gui.sell.price_hint": "Entrer un prix...",
@@ -33,5 +32,12 @@
   "arcadia_ah.gui.nav.next": "Suivant ▶",
   "arcadia_ah.cmd.price_invalid": "Le prix doit être supérieur à 0.",
   "arcadia_ah.cmd.blacklisted": "Cet objet ne peut pas être vendu à l'Hôtel des Ventes.",
-  "arcadia_ah.cmd.max_listings": "Tu as déjà %s annonces actives."
+  "arcadia_ah.cmd.max_listings": "Tu as déjà %s annonces actives.",
+  "arcadia_ah.gui.leaderboard.ranked": "Classé par clients uniques",
+  "arcadia_ah.gui.leaderboard.tiebreaker": "Départage : médiane par acheteur",
+  "arcadia_ah.gui.leaderboard.unique": "Clients uniques : ",
+  "arcadia_ah.gui.leaderboard.median": "Médiane : ",
+  "arcadia_ah.gui.leaderboard.total_sales": "Ventes totales : ",
+  "arcadia_ah.gui.leaderboard.total_revenue": "Revenus totaux : ",
+  "arcadia_ah.gui.leaderboard.menu_title": "Classement HdV"
 }

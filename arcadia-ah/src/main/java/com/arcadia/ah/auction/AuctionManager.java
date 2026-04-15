@@ -234,7 +234,8 @@ public final class AuctionManager {
         ServerPlayer sellerOnline = server.getPlayerList().getPlayer(listing.sellerUuid());
         if (sellerOnline != null) {
             com.arcadia.lib.economy.EconomyService.add(sellerOnline, listing.price());
-            AuctionDatabase.deleteMailboxEntry(payment.entryId());
+            com.arcadia.lib.data.DatabaseManager.executeAsync(() ->
+                    AuctionDatabase.deleteMailboxEntry(payment.entryId()));
             sellerOnline.sendSystemMessage(com.arcadia.lib.ArcadiaMessages.success(
                     buyer.getGameProfile().getName() + " bought your "
                     + listing.itemDisplayName() + " for "

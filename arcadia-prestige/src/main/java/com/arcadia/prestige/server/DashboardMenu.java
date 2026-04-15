@@ -417,7 +417,7 @@ public class DashboardMenu extends AbstractContainerMenu {
             setName(stack, Component.literal(name).withStyle(selected ? ChatFormatting.GOLD : ChatFormatting.AQUA));
             List<Component> lore = new ArrayList<>();
             if (tierLabel != null) {
-                lore.add(Component.literal("Requires: " + tierLabel).withStyle(ChatFormatting.DARK_AQUA));
+                lore.add(Component.translatable("arcadia_prestige.gui.cosmetics.grade_req", tierLabel).withStyle(ChatFormatting.DARK_AQUA));
             } else {
                 lore.add(Component.literal("\u2736 Special").withStyle(ChatFormatting.LIGHT_PURPLE));
             }

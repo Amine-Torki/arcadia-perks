@@ -23,7 +23,7 @@ public class ArcadiaHubScreen extends Screen {
     private static final int CARD_H = 104;
     private static final int CARD_GAP = 14;
 
-    private int hoveredCard = -1;
+    private ArcadiaModCard hoveredCard = null;
     private List<ArcadiaModCard> cards;
 
     public ArcadiaHubScreen() {
@@ -87,8 +87,7 @@ public class ArcadiaHubScreen extends Screen {
                 maxRowW + 40, ArcadiaTheme.withAlpha(ArcadiaTheme.COPPER, 0x44));
 
         // Render cards row by row
-        hoveredCard = -1;
-        int globalIdx = 0;
+        hoveredCard = null;
         int currentRowY = baseY;
         for (var entry : rows.entrySet()) {
             java.util.List<ArcadiaModCard> rowCards = entry.getValue();
@@ -101,7 +100,7 @@ public class ArcadiaHubScreen extends Screen {
                 boolean hovered = card.available()
                         && mouseX >= cardX && mouseX < cardX + CARD_W
                         && mouseY >= currentRowY && mouseY < currentRowY + CARD_H;
-                if (hovered) hoveredCard = globalIdx;
+                if (hovered) hoveredCard = card;
                 drawCard(g, card, cardX, currentRowY, CARD_W, CARD_H, hovered,
                         card.available() ? 1.0f : 0.35f);
                 if (!card.available()) {
@@ -109,7 +108,6 @@ public class ArcadiaHubScreen extends Screen {
                             Component.translatable("arcadia_lib.hub.not_installed"),
                             cardX + CARD_W / 2, currentRowY + CARD_H - 14, 0xFF554444);
                 }
-                globalIdx++;
             }
             currentRowY += CARD_H + rowGap;
         }
@@ -209,21 +207,18 @@ public class ArcadiaHubScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button == 0 && hoveredCard >= 0) {
-            ArcadiaModCard card = cards.get(hoveredCard);
-            if (card.available()) {
-                // Check for standalone click handler first (e.g. admin panel)
-                Runnable clickHandler = ArcadiaModRegistry.getCardClickHandler(card.id());
-                if (clickHandler != null) {
-                    this.onClose();
-                    clickHandler.run();
-                } else {
-                    // Default: open dashboard tab via prestige packet system
-                    ArcadiaModRegistry.openTabClient(card.sortOrder());
-                    this.onClose();
-                }
-                return true;
+        if (button == 0 && hoveredCard != null && hoveredCard.available()) {
+            // Check for standalone click handler first (e.g. admin panel, lootbox, spawn)
+            Runnable clickHandler = ArcadiaModRegistry.getCardClickHandler(hoveredCard.id());
+            if (clickHandler != null) {
+                this.onClose();
+                clickHandler.run();
+            } else {
+                // Default: open dashboard tab via prestige packet system
+                ArcadiaModRegistry.openTabClient(hoveredCard.tabIndex());
+                this.onClose();
             }
+            return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);
     }

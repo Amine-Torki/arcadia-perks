@@ -203,12 +203,12 @@ public class FusionMenu extends AbstractContainerMenu {
         for (int idx : PET_SLOT_INDICES) {
             ItemStack s = fusionContainer.getItem(idx);
             if (s.isEmpty() || !(s.getItem() instanceof PetItem)) {
-                player.sendSystemMessage(Component.literal("Place 5 pets in all slots first.").withStyle(ChatFormatting.RED));
+                player.sendSystemMessage(Component.translatable("arcadia_pets.gui.fusion.place_all").withStyle(ChatFormatting.RED));
                 return;
             }
             PetData pd = PetData.fromStack(s);
             if (pd == null) {
-                player.sendSystemMessage(Component.literal("One of the pets is invalid.").withStyle(ChatFormatting.RED));
+                player.sendSystemMessage(Component.translatable("arcadia_pets.gui.fusion.invalid").withStyle(ChatFormatting.RED));
                 return;
             }
             pets.add(pd);
@@ -218,14 +218,14 @@ public class FusionMenu extends AbstractContainerMenu {
         PetRarity rarity = pets.get(0).rarity();
         for (PetData pd : pets) {
             if (pd.rarity() != rarity) {
-                player.sendSystemMessage(Component.literal("All 5 pets must be the same rarity!").withStyle(ChatFormatting.RED));
+                player.sendSystemMessage(Component.translatable("arcadia_pets.gui.fusion.same_rarity").withStyle(ChatFormatting.RED));
                 return;
             }
         }
 
         // Rarity must have a next tier
         if (rarity.next().isEmpty()) {
-            player.sendSystemMessage(Component.literal("Legendary pets cannot be fused further.").withStyle(ChatFormatting.RED));
+            player.sendSystemMessage(Component.translatable("arcadia_pets.gui.fusion.max_rarity").withStyle(ChatFormatting.RED));
             return;
         }
 
@@ -234,7 +234,7 @@ public class FusionMenu extends AbstractContainerMenu {
         if (active == null) active = PetManager.getPocketPetData(player.getUUID());
         for (PetData pd : pets) {
             if (active != null && active.petId().equals(pd.petId())) {
-                player.sendSystemMessage(Component.literal("Recall your active pet before fusing it.").withStyle(ChatFormatting.RED));
+                player.sendSystemMessage(Component.translatable("arcadia_pets.gui.fusion.recall_first").withStyle(ChatFormatting.RED));
                 return;
             }
         }
@@ -298,7 +298,7 @@ public class FusionMenu extends AbstractContainerMenu {
         // Back button — bottom row center
         ItemStack back = new ItemStack(Items.ARROW);
         setName(back, Component.literal("← Back to /pets").withStyle(ChatFormatting.YELLOW));
-        setLore(back, List.of(Component.literal("Return to your pet panel.").withStyle(ChatFormatting.GRAY)));
+        setLore(back, List.of(Component.translatable("arcadia_pets.gui.fusion.back_lore").withStyle(ChatFormatting.GRAY)));
         fusionContainer.setItem(BACK_SLOT, back);
     }
 
@@ -318,25 +318,25 @@ public class FusionMenu extends AbstractContainerMenu {
                                 .append(Component.literal(" → ").withStyle(ChatFormatting.GRAY))
                                 .append(nextRarity.getStyledName())
                                 .append(Component.literal(" Bag").withStyle(ChatFormatting.GRAY)),
-                        Component.literal("Click to fuse!").withStyle(ChatFormatting.GREEN)
+                        Component.translatable("arcadia_pets.gui.fusion.click_fuse").withStyle(ChatFormatting.GREEN)
                 ));
             }
             case MISMATCH -> {
                 btn = new ItemStack(Items.BARRIER);
                 setName(btn, Component.literal("✗ Rarity Mismatch").withStyle(ChatFormatting.RED));
-                setLore(btn, List.of(Component.literal("All 5 pets must share the same rarity.").withStyle(ChatFormatting.GRAY)));
+                setLore(btn, List.of(Component.translatable("arcadia_pets.gui.fusion.must_same").withStyle(ChatFormatting.GRAY)));
             }
             case MAX_RARITY -> {
                 btn = new ItemStack(Items.BARRIER);
                 setName(btn, Component.literal("✗ Cannot Fuse Further").withStyle(ChatFormatting.DARK_RED));
-                setLore(btn, List.of(Component.literal("Legendary pets are the fusion ceiling.").withStyle(ChatFormatting.GRAY)));
+                setLore(btn, List.of(Component.translatable("arcadia_pets.gui.fusion.ceiling").withStyle(ChatFormatting.GRAY)));
             }
             default -> { // INCOMPLETE
                 int filled = countFilled();
                 btn = new ItemStack(Items.GRAY_DYE);
-                setName(btn, Component.literal("Fusion Altar").withStyle(ChatFormatting.GRAY));
+                setName(btn, Component.translatable("arcadia_pets.gui.fusion.altar").withStyle(ChatFormatting.GRAY));
                 setLore(btn, List.of(
-                        Component.literal("Fill all 5 slots with pets").withStyle(ChatFormatting.DARK_GRAY),
+                        Component.translatable("arcadia_pets.gui.fusion.fill_slots").withStyle(ChatFormatting.DARK_GRAY),
                         Component.literal("of the same rarity to fuse.").withStyle(ChatFormatting.DARK_GRAY),
                         Component.literal(filled + " / 5 pets placed").withStyle(filled > 0 ? ChatFormatting.YELLOW : ChatFormatting.DARK_GRAY)
                 ));
@@ -425,7 +425,7 @@ public class FusionMenu extends AbstractContainerMenu {
     public static final class Provider implements MenuProvider {
         @Override
         public Component getDisplayName() {
-            return Component.literal("Pet Fusion").withStyle(ChatFormatting.LIGHT_PURPLE);
+            return Component.translatable("arcadia_pets.gui.fusion.title").withStyle(ChatFormatting.LIGHT_PURPLE);
         }
 
         @Override

@@ -40,7 +40,7 @@ public class DuelRosterScreen extends Screen {
     private static final int VISIBLE_ROWS = 2;
 
     public DuelRosterScreen(UUID duelId, String opponentName, List<CompoundTag> petTags) {
-        super(Component.literal("Choose Your Roster"));
+        super(Component.translatable("arcadia_pets.gui.duel.roster"));
         this.duelId       = duelId;
         this.opponentName = opponentName;
         for (CompoundTag tag : petTags) {

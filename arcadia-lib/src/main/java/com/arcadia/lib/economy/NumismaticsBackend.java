@@ -56,7 +56,8 @@ public final class NumismaticsBackend implements EconomyBackend {
 
         Class<?> accountClass = Class.forName("dev.ithundxr.createnumismatics.content.backend.BankAccount");
         getBalance = accountClass.getMethod("getBalance");
-        deductMethod = accountClass.getMethod("deduct", int.class);
+        // Numismatics API: deduct(int amount, boolean force) — force=false for normal deduction
+        deductMethod = accountClass.getMethod("deduct", int.class, boolean.class);
         depositMethod = accountClass.getMethod("deposit", int.class);
         markDirtyMethod = accountClass.getMethod("markDirty");
     }
@@ -83,7 +84,7 @@ public final class NumismaticsBackend implements EconomyBackend {
             Object account = getAccount(player);
             long balance = ((Number) getBalance.invoke(account)).longValue();
             if (balance < amount) return false;
-            deductMethod.invoke(account, (int) amount);
+            deductMethod.invoke(account, (int) Math.min(amount, Integer.MAX_VALUE), false);
             markDirtyMethod.invoke(account);
             return true;
         } catch (Throwable e) { return false; }
@@ -94,7 +95,7 @@ public final class NumismaticsBackend implements EconomyBackend {
         if (!isAvailable()) return;
         try {
             Object account = getAccount(player);
-            depositMethod.invoke(account, (int) amount);
+            depositMethod.invoke(account, (int) Math.min(amount, Integer.MAX_VALUE));
             markDirtyMethod.invoke(account);
         } catch (Throwable ignored) {}
     }

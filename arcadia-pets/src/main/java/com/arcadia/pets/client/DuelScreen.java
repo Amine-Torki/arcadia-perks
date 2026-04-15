@@ -53,7 +53,7 @@ public class DuelScreen extends Screen {
     private int lastSentHintPet  = -1;
 
     public DuelScreen() {
-        super(Component.literal("Pet Duel"));
+        super(Component.translatable("arcadia_pets.gui.duel.title"));
     }
 
     @Override public boolean isPauseScreen() { return false; }
@@ -603,7 +603,7 @@ public class DuelScreen extends Screen {
         int pw = 180, ph = 54;
         int px = cx - pw / 2, py = height / 2 - ph / 2;
         ArcadiaTheme.drawPanel(g, px, py, pw, ph, false, 0xFFCC3333);
-        ArcadiaTheme.drawCenteredText(g, Component.literal("Abandon duel?"),
+        ArcadiaTheme.drawCenteredText(g, Component.translatable("arcadia_pets.gui.duel.abandon"),
                 cx, py + 8, 0xFFFF8888);
 
         int yBtns = py + ph - BTN_H - 8;
