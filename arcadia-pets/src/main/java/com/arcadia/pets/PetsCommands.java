@@ -46,7 +46,8 @@ public final class PetsCommands {
     @SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event) {
         event.getDispatcher().register(
-            Commands.literal("arcadia_pets")
+            Commands.literal("arcadia")
+                .then(Commands.literal("pets")
                 .executes(ctx -> {
                     if (!checkEnabled(ctx.getSource())) return 0;
                     if (ctx.getSource().getEntity() instanceof ServerPlayer player) {
@@ -222,10 +223,10 @@ public final class PetsCommands {
                             })
                         )
                     )
-                )
+                ))
         );
 
-        // Keep /fuse as alias for convenience
+        // /fuse alias for convenience
         event.getDispatcher().register(
             Commands.literal("fuse")
                 .executes(ctx -> {
@@ -238,29 +239,31 @@ public final class PetsCommands {
         );
 
         event.getDispatcher().register(
-            Commands.literal("duel")
-                .then(Commands.argument("target", EntityArgument.player())
-                    .executes(ctx -> duelChallenge(ctx.getSource(),
-                            EntityArgument.getPlayer(ctx, "target")))
-                )
-                .then(Commands.literal("accept")
-                    .executes(ctx -> duelRespond(ctx.getSource(), true))
-                )
-                .then(Commands.literal("decline")
-                    .executes(ctx -> duelRespond(ctx.getSource(), false))
-                )
-                .then(Commands.literal("forfeit")
-                    .executes(ctx -> duelForfeit(ctx.getSource()))
-                )
-                .then(Commands.literal("bot")
-                    .requires(src -> src.hasPermission(2))
-                    .executes(ctx -> duelBot(ctx.getSource(), com.arcadia.pets.duel.BotDifficulty.EASY))
-                    .then(Commands.literal("easy")
-                        .executes(ctx -> duelBot(ctx.getSource(), com.arcadia.pets.duel.BotDifficulty.EASY)))
-                    .then(Commands.literal("medium")
-                        .executes(ctx -> duelBot(ctx.getSource(), com.arcadia.pets.duel.BotDifficulty.MEDIUM)))
-                    .then(Commands.literal("hard")
-                        .executes(ctx -> duelBot(ctx.getSource(), com.arcadia.pets.duel.BotDifficulty.HARD)))
+            Commands.literal("arcadia")
+                .then(Commands.literal("duel")
+                    .then(Commands.argument("target", EntityArgument.player())
+                        .executes(ctx -> duelChallenge(ctx.getSource(),
+                                EntityArgument.getPlayer(ctx, "target")))
+                    )
+                    .then(Commands.literal("accept")
+                        .executes(ctx -> duelRespond(ctx.getSource(), true))
+                    )
+                    .then(Commands.literal("decline")
+                        .executes(ctx -> duelRespond(ctx.getSource(), false))
+                    )
+                    .then(Commands.literal("forfeit")
+                        .executes(ctx -> duelForfeit(ctx.getSource()))
+                    )
+                    .then(Commands.literal("bot")
+                        .requires(src -> src.hasPermission(2))
+                        .executes(ctx -> duelBot(ctx.getSource(), com.arcadia.pets.duel.BotDifficulty.EASY))
+                        .then(Commands.literal("easy")
+                            .executes(ctx -> duelBot(ctx.getSource(), com.arcadia.pets.duel.BotDifficulty.EASY)))
+                        .then(Commands.literal("medium")
+                            .executes(ctx -> duelBot(ctx.getSource(), com.arcadia.pets.duel.BotDifficulty.MEDIUM)))
+                        .then(Commands.literal("hard")
+                            .executes(ctx -> duelBot(ctx.getSource(), com.arcadia.pets.duel.BotDifficulty.HARD)))
+                    )
                 )
         );
     }

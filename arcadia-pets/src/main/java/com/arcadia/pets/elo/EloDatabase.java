@@ -1,4 +1,4 @@
-package com.arcadia.prestige.elo;
+package com.arcadia.pets.elo;
 
 import com.arcadia.lib.data.DatabaseManager;
 import com.mojang.logging.LogUtils;
