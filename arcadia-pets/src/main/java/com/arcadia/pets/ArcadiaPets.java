@@ -79,16 +79,7 @@ public final class ArcadiaPets {
                     } catch (Exception ignored) {}
                 });
 
-        // Register client-side actions (so prestige's DashboardScreen can open our screens)
-        com.arcadia.lib.ArcadiaModRegistry.registerClientAction("pets.open_guide",
-                () -> net.minecraft.client.Minecraft.getInstance().setScreen(new com.arcadia.pets.client.PetGuideScreen()));
-        com.arcadia.lib.ArcadiaModRegistry.registerClientAction("pets.open_hud_settings",
-                () -> net.minecraft.client.Minecraft.getInstance().setScreen(new com.arcadia.pets.client.PetHudSettingsScreen()));
-
-        // Register menu screen initializers (so prestige doesn't need to import our screens)
-        com.arcadia.lib.ArcadiaModRegistry.registerMenuScreenInit("arcadia_pets", () -> {
-            net.neoforged.neoforge.client.event.RegisterMenuScreensEvent e = null; // handled in own client events
-        });
+        // Client-side actions are registered in PetsClientEvents (CLIENT dist only)
 
         // Register reward items (so DailyRewardHandler can give pet items without importing us)
         com.arcadia.lib.ArcadiaModRegistry.registerRewardItem("common_pet_bag",

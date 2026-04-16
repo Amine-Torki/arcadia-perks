@@ -7,6 +7,7 @@ import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
@@ -41,5 +42,16 @@ public final class PetsClientModEvents {
     @SubscribeEvent
     public static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
         event.register(PetKeyHandler.OPEN_PET_PANEL);
+    }
+
+    @SubscribeEvent
+    public static void onClientSetup(FMLClientSetupEvent event) {
+        event.enqueueWork(() -> {
+            // Register client-side actions (so prestige's DashboardScreen can open our screens)
+            com.arcadia.lib.ArcadiaModRegistry.registerClientAction("pets.open_guide",
+                    () -> net.minecraft.client.Minecraft.getInstance().setScreen(new PetGuideScreen()));
+            com.arcadia.lib.ArcadiaModRegistry.registerClientAction("pets.open_hud_settings",
+                    () -> net.minecraft.client.Minecraft.getInstance().setScreen(new PetHudSettingsScreen()));
+        });
     }
 }
